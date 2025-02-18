@@ -17,9 +17,9 @@ const LoginForm = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-300 to-orange-500 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-b from-[#FFCB8E]  via-[#FF8C03]  via-[#FF8C03]  via-[#FF8C03] via-[#BB6B0D] to-[#995B11] flex items-center justify-center p-4">
       <Card className="w-full max-w-md overflow-hidden">
-        <CardContent className="p-6">
+        <CardContent className="p-6 bg-white">
           <div className="flex justify-between items-start mb-8">
             <div>
               <h1 className="text-2xl font-bold tracking-wide text-gray-900">
@@ -28,16 +28,8 @@ const LoginForm = () => {
               <p className="text-sm text-gray-600 mt-1">
                 Ingresa tus credenciales
               </p>
-            </div>
-            <div className="w-32 h-32 relative">
-              <img
-                src="src\assets\images\log_in.png"
-                alt="CRM SEFIL"
-                className="object-cover rounded-lg"
-              />
-            </div>
+            </div> 
           </div>
-
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <Input
@@ -69,13 +61,13 @@ const LoginForm = () => {
               <Button
                 type="button"
                 variant="secondary"
-                className="w-1/2 bg-cyan-100 text-cyan-700 hover:bg-cyan-200 rounded-lg py-2"
+                className="w-1/2 bg-[#23AAA6] text-white hover:bg-[#009793] rounded-lg py-2"
               >
                 Restablecer
               </Button>
               <Button
                 type="submit"
-                className="w-1/2 bg-orange-500 text-white hover:bg-orange-600 rounded-lg py-2"
+                className="w-1/2 bg-[#FFAA44] text-white hover:bg-[#FF9619] rounded-lg py-2"
               >
                 Ingresar
               </Button>
@@ -87,4 +79,4 @@ const LoginForm = () => {
   );
 };
 
-export default LoginForm;
+export default LoginForm; 

@@ -35,6 +35,8 @@
     "eslint-plugin-react-refresh": "^0.4.18",
     "globals": "^15.14.0",
     "postcss": "^8.5.2",
+    "prettier": "^3.5.1",
+    "prettier-plugin-tailwindcss": "^0.6.11",
     "tailwindcss": "^4.0.6",
     "tailwinds": "^0.0.0",
     "vite": "^6.1.0"
