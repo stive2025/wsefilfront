@@ -1,19 +1,26 @@
 import { useState } from 'react';
+import { useNavigate } from "react-router-dom";
 import "tailwindcss";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 const LoginForm = () => {
+  const navigate = useNavigate();
   const [credentials, setCredentials] = useState({
     email: '',
     password: ''
   }); 
 
-  const handleSubmit = (e) => {
+  const handleLogin = (e) => {
     e.preventDefault();
-    // Aquí se conectaría con el backend
-    console.log('Enviando credenciales:', credentials);
+    
+    // Simulación de autenticación (puedes reemplazarlo con una API)
+    if (credentials.email === "user@sefil.com.ec" && credentials.password === "1234") {
+      navigate("/home"); // Redirige a la vista con NavSlideBar
+    } else {
+      alert("Credenciales incorrectas");
+    }
   };
 
   return (
@@ -34,7 +41,7 @@ const LoginForm = () => {
         </div>
         <p className="text-sm text-gray-600 mt-1  text-center">Ingresa tus credenciales</p>
         
-        <form onSubmit={handleSubmit} className="space-y-6 mt-4">
+        <form onSubmit={handleLogin} className="space-y-6 mt-4">
           <Input
             type="email"
             placeholder="Correo"
