@@ -17,7 +17,7 @@ const LoginForm = () => {
     
     // Simulación de autenticación (puedes reemplazarlo con una API)
     if (credentials.email === "user@sefil.com.ec" && credentials.password === "1234") {
-      navigate("/"); // Redirige a la vista con NavSlideBar
+      navigate("/chatList"); // Redirige a la vista con NavSlideBar
     } else {
       alert("Credenciales incorrectas");
     }

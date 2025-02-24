@@ -7,6 +7,7 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   server: {
     host: true, // o "0.0.0.0"
+    open: "/#/login",
   },
   plugins: [
     react(),

@@ -1,7 +1,7 @@
 import { HashRouter as Router, Routes, Route } from "react-router-dom";
 import LoginForm from './pages/auth/loginForm';
 import Navs from "./pages/Layout/generalLayout";
-import ChatList from "./pages/chats/chatList";
+import ChatList from "./components/chats/chatList_component";
 
 function App() {
 

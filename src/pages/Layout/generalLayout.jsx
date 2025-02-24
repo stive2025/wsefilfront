@@ -11,7 +11,7 @@ const generalLayout = () => {
     <div className="flex">
       <NavSlideBar role={userRole}/>
       <NavTopBar/>
-      <main className="mt-16 ml-16">
+      <main className="w-full">
         {/* Outlet renderiza la ruta hija*/}
         <Outlet />
       </main> 
