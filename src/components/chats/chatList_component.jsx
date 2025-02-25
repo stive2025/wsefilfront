@@ -6,7 +6,7 @@ import { useEffect, useState, useRef } from "react";
 // Componentes reutilizables
 
 const ChatHeader = () => (
-  <div className="p-4 border-b border-gray-700 flex items-center justify-between">
+  <div className="p-3 border-b border-gray-700 flex items-center justify-between bg-gray-900">
     <div className="flex items-center space-x-2">
       <img src="/src/assets/images/logoCRM.png" alt="Logo" className="w-30 h-12" />
     </div>
@@ -14,7 +14,6 @@ const ChatHeader = () => (
       <button className="p-2 hover:bg-gray-700 active:bg-gray-700 rounded-full">
         <MessageSquareShare size={20} />
       </button>
-
       <button className="p-2 hover:bg-gray-700 active:bg-gray-700 rounded-full">
         <MessageSquarePlus size={20} />
       </button>
@@ -26,7 +25,7 @@ const ChatHeader = () => (
 );
 
 const SearchInput = () => (
-  <div className="p-4">
+  <div className="p-4 border-b border-gray-700 bg-gray-900">
     <div className="relative">
       <input
         type="text"
@@ -54,7 +53,7 @@ const TagsBar = ({ tags }) => {
   };
 
   return (
-    <div className="relative flex items-center">
+    <div className="relative flex items-center border-b border-gray-700 bg-gray-900">
       {/* Botón izquierda */}
       <button
         onClick={scrollLeft}
@@ -82,7 +81,7 @@ const TagsBar = ({ tags }) => {
       {/* Botón derecha */}
       <button
         onClick={scrollRight}
-        className="absolute right-0 h-8 w-8  flex items-center justify-center bg-transparent hover:bg-gray-700 active:bg-gray-700 rounded-full z-10"
+        className="absolute right-0 h-8 w-8 flex items-center justify-center bg-transparent hover:bg-gray-700 active:bg-gray-700 rounded-full z-10"
       >
         <ChevronRightCircle size={20} />
       </button>
@@ -90,10 +89,9 @@ const TagsBar = ({ tags }) => {
   );
 };
 
-
 const ChatItems = () => (
-  <div className="flex-1 overflow-y-auto scrollStyle bg-gray-900">
-    {[1, 2, 3, 4, 5, 6, 7].map((item) => ( //viene el arreglo de chats
+  <div className="bg-gray-900">
+    {[1, 2, 3, 4, 5, 6, 7].map((item) => ( // viene el arreglo de chats
       <div
         key={item}
         className="flex items-center space-x-3 p-4 hover:bg-gray-800 cursor-pointer active:bg-gray-700"
@@ -115,7 +113,7 @@ const ChatItems = () => (
 const AgentSelect = ({ role, agents, selectedAgent, setSelectedAgent }) => {
   if (role !== "admin") return null;
   return (
-    <div className="cursor-pointer p-4 flex">
+    <div className="cursor-pointer p-4 flex border-b border-gray-700 bg-gray-900">
       <select
         className="text-xs border p-1 rounded bg-transparent text-white w-full sm:w-auto sm:p-2"
         value={selectedAgent ? selectedAgent.id : ""}
@@ -163,29 +161,40 @@ const ChatList = ({ role }) => {
     }
   }, [role]);
 
-  // Definición de contenedor según el dispositivo
   return isMobile ? (
-    <div className="w-full sm:w-80 border-r border-gray-700 flex flex-col 
-      sm:block  bg-gray-900 text-white pt-16 pb-16 h-screen
-      ">
-      <ChatHeader />
-      <SearchInput />
-      <AgentSelect role={role} agents={agents} selectedAgent={selectedAgent} setSelectedAgent={setSelectedAgent} />
-      <TagsBar tags={tags} />
-      <ChatItems />
+    <div className="w-full sm:w-80 border-r border-gray-700 flex flex-col bg-gray-900 text-white h-screen">
+      {/* Contenedor fijo para header, search, agent select y tags */}
+      <div className="flex flex-col flex-shrink-0 mt-14">
+        <ChatHeader />
+        <SearchInput />
+        <AgentSelect
+          role={role}
+          agents={agents}
+          selectedAgent={selectedAgent}
+          setSelectedAgent={setSelectedAgent}
+        />
+        <TagsBar tags={tags} />
+      </div>
+      {/* ChatItems ocupa el resto del espacio y tiene scroll */}
+      <div className="flex-1 overflow-y-auto">
+        <ChatItems />
+      </div>
     </div>
   ) : (
-    <div className="w-md border-r border-gray-700 flex flex-col 
-      sm:block bg-gray-900 text-white pt-16 pb-16 h-screen ml-16
-      ">
-      <ChatHeader />
-      <SearchInput />
-      <AgentSelect role={role} agents={agents} selectedAgent={selectedAgent} setSelectedAgent={setSelectedAgent} />
-      <TagsBar tags={tags} />
-      <ChatItems />
+    <div className="w-md border-r border-gray-700 flex flex-col bg-gray-900 text-white pt-16 pb-16 ml-16">
+      {/* Fijamos el header, search, agent select y tags */}
+      <div className="flex flex-col flex-shrink-0">
+        <ChatHeader />
+        <SearchInput />
+        <AgentSelect role={role} agents={agents} selectedAgent={selectedAgent} setSelectedAgent={setSelectedAgent} />
+        <TagsBar tags={tags} />
+      </div>
+      {/* ChatItems ocupará el espacio restante y tendrá scroll */}
+      <div className="flex-1 overflow-y-auto scrollbar-hide">
+        <ChatItems />
+      </div>
     </div>
-  )
-
+  );
 };
 
 export default ChatList;

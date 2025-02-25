@@ -1,7 +1,7 @@
 import { HashRouter as Router, Routes, Route } from "react-router-dom";
 import LoginForm from './pages/auth/loginForm';
 import Navs from "./pages/Layout/generalLayout";
-import ChatList from "./components/chats/chatList_component";
+import ChatComplete from "./pages/chats/chatComplete.jsx"
 
 function App() {
 
@@ -10,7 +10,7 @@ function App() {
       <Routes>
         <Route path="/login" element={<LoginForm />} />
         <Route path="/" element={<Navs />}>
-          <Route path="/chatList" element={<ChatList/>} />
+          <Route path="/chatList" element={<ChatComplete/>} />
         </Route>
       </Routes>
     </Router>
