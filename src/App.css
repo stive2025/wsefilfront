@@ -1,13 +1,2 @@
 @import "tailwindcss";
 
-@plugin "tailwindcss-animate";
-
-@theme {
-  --font-family-display: "Satoshi", "sans-serif";
-  --color-verde-base: rgb(0, 151, 147);
-  --color-naranja-base:rgb(255 150 25);
-  --color-naranja-medio: rgb(255 170 68);
-  --color-verde-medio: rgb(35 170 166);
-  --color-blanco: rgb(255 255 255);  
-}
-

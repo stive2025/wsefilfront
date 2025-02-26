@@ -1,13 +1,16 @@
 /* eslint-disable react/prop-types */
-import { motion } from "framer-motion";
-
+import { AnimatePresence, motion } from "framer-motion";
+import ContactInfo from "/src/components/chats/contactInfo.jsx";
+import { useState } from "react";
 import { Info, StickyNote, SquareCheck } from "lucide-react";
 
-const MenuInchat = ({ isOpen, onClose, infoOpen }) => {
+const MenuInchat = ({ isOpen, onClose }) => {
+    const [InfoOpen, setInfoOpen] = useState(false);
+
     const variants = {
-        hidden: { opacity: 0, y: -50 },
-        visible: { opacity: 1, y: 0 },
-        exit: { opacity: 0, y: 50 }
+        hidden: { opacity: 0, x: 50 }, 
+        visible: { opacity: 1, x: 0 },
+        exit: { opacity: 0, x: 50 }
     };
 
     if (!isOpen) return null;
@@ -38,7 +41,11 @@ const MenuInchat = ({ isOpen, onClose, infoOpen }) => {
                     </ul>
                 </motion.div>
             </div>
-            {InfoOpen && <ContactInfo isOpen={InfoOpen} />}  
+            
+            {/* Agregamos AnimatePresence para gestionar la animación de salida */}
+            <AnimatePresence>
+                {InfoOpen && <ContactInfo isOpen={InfoOpen} onClose={() => setInfoOpen(false)} />}  
+            </AnimatePresence>
         </>
     );
 };

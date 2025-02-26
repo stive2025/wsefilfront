@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import Resize from "/src/hooks/responsiveHook.jsx";
-import { Search, MessageSquareShare, EllipsisVertical, MessageSquarePlus, ChevronLeftCircle, ChevronRightCircle } from "lucide-react";
+import { Search, MessageSquareShare, MessageSquarePlus, ChevronLeftCircle, ChevronRightCircle } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 
 // Componentes reutilizables
@@ -16,9 +16,6 @@ const ChatHeader = () => (
       </button>
       <button className="p-2 hover:bg-gray-700 active:bg-gray-700 rounded-full">
         <MessageSquarePlus size={20} />
-      </button>
-      <button className="p-2 hover:bg-gray-700 active:bg-gray-700 rounded-full">
-        <EllipsisVertical size={20} />
       </button>
     </div>
   </div>
@@ -89,22 +86,24 @@ const TagsBar = ({ tags }) => {
   );
 };
 
-const ChatItems = () => (
+const ChatItems = ({ chats }) => (
   <div className="bg-gray-900">
-    {[1, 2, 3, 4, 5, 6, 7].map((item) => ( // viene el arreglo de chats
+    {chats.chats.map((item) => ( // viene el arreglo de chats
       <div
         key={item}
         className="flex items-center space-x-3 p-4 hover:bg-gray-800 cursor-pointer active:bg-gray-700"
       >
         <img
-          src="/api/placeholder/40/40"
+          src={item.avatar}
           alt="Avatar"
           className="w-10 h-10 rounded-full"
         />
         <div className="flex-1">
-          <div className="font-medium">José Sarmiento</div>
-          <div className="text-sm text-gray-400">Recent message preview...</div>
+          <div className="font-medium">{item.name}</div>
+          <div className="text-sm text-gray-400">{item.lastMessage}</div>
         </div>
+        <div className="text-xs text-gray-400">{item.timestamp}</div>
+        <div className="text-xs text-gray-400">{item.state}</div>
       </div>
     ))}
   </div>
@@ -146,10 +145,36 @@ const ChatList = ({ role }) => {
   const [agents, setAgents] = useState([]);
   const [selectedAgent, setSelectedAgent] = useState(null);
   const tags = {
-    label_all: "Revisión",
-    label_new: "Confirmar Pago",
-    label_proccess: "Pago pendiente",
-    label_check: "Llamar mas tarde",
+    label_all: "Todos",
+    label_rev: "Revisión",
+    label_pay: "Confirmar Pago",
+    label_pendingPay: "Pago pendiente",
+    label_callLater: "Llamar mas tarde",
+  };
+  const chats = {
+    chats: [
+      {
+        avatar: "/src/assets/images/agent1.jpg",
+        name: "José Sarmiento",
+        lastMessage: "Hola, ¿en qué puedo ayudarte?",
+        timestamp: "10:30",
+        state: "En línea",
+      },
+      {
+        avatar: "/src/assets/images/agent2.jpg",
+        name: "María Pérez",
+        lastMessage: "¿Cuándo puedo pasar a recoger mi pedido?",
+        timestamp: "09:45",
+        state: "Ocupado",
+      },
+      {
+        avatar: "/src/assets/images/agent3.jpg",
+        name: "Juan López",
+        lastMessage: "¿Cuál es el costo de envío?",
+        timestamp: "Ayer",
+        state: "Desconectado",
+      },
+    ],
   };
 
   useEffect(() => {
@@ -177,7 +202,7 @@ const ChatList = ({ role }) => {
       </div>
       {/* ChatItems ocupa el resto del espacio y tiene scroll */}
       <div className="flex-1 overflow-y-auto">
-        <ChatItems />
+        <ChatItems chats={chats} />
       </div>
     </div>
   ) : (
@@ -191,7 +216,7 @@ const ChatList = ({ role }) => {
       </div>
       {/* ChatItems ocupará el espacio restante y tendrá scroll */}
       <div className="flex-1 overflow-y-auto scrollbar-hide">
-        <ChatItems />
+        <ChatItems chats={chats} />
       </div>
     </div>
   );

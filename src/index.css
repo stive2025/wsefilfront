@@ -1,5 +1,5 @@
 @import "tailwindcss";
-
+/* src/index.css */
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
@@ -8,3 +8,41 @@
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
 }
+
+:root {
+  --color-verde-base: rgb(0, 151, 147);
+  --color-naranja-base: rgb(255, 150, 25);
+  --color-naranja-medio: rgb(255, 170, 64);
+  --color-verde-medio: rgb(83, 191, 188);
+  --color-blanco: rgb(255, 255, 255);
+}
+
+@layer utilities {
+  .bg-verde-base {
+    background-color: var(--color-verde-base);
+  }
+  .bg-naranja-base {
+    background-color: var(--color-naranja-base);
+  }
+  .bg-naranja-medio {
+    background-color: var(--color-naranja-medio);
+  }
+  .bg-verde-medio {
+    background-color: var(--color-verde-medio);
+  }
+  .bg-blanco {
+    background-color: var(--color-blanco);
+  }
+  .hover\:bg-naranja-base:hover { background-color: var(--color-naranja-base); }
+  .hover\:bg-verde-base:hover { background-color: var(--color-verde-base); }
+  .hover\:bg-verde-medio:hover { background-color: var(--color-verde-medio); }
+  .hover\:bg-naranja-medio:hover { background-color: var(--color-naranja-medio); }
+  .active\:bg-naranja-base:active { background-color: var(--color-naranja-base); }
+  .active\:bg-verde-base:active { background-color: var(--color-verde-base); }
+  .active\:bg-verde-medio:active { background-color: var(--color-verde-medio); }
+  .active\:bg-naranja-medio:active { background-color: var(--color-naranja-medio); }
+}
+
+
+
+
