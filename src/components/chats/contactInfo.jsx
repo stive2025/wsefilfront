@@ -1,53 +1,71 @@
 /* eslint-disable react/prop-types */
 import { AnimatePresence, motion } from "framer-motion";
-import ContactInfo from "/src/components/chats/contactInfo.jsx";
-import { useState } from "react";
 import { Info, StickyNote, SquareCheck } from "lucide-react";
 
-const MenuInchat = ({ isOpen, onClose }) => {
-    const [InfoOpen, setInfoOpen] = useState(false);
-
-    const variants = {
-        hidden: { opacity: 0, x: 50 }, 
-        visible: { opacity: 1, x: 0 },
-        exit: { opacity: 0, x: 50 }
-    };
-
-    if (!isOpen) return null;
-
+const ContactInfo = () => {
     return (
-        <>
-            <div className="fixed inset-0 bg-transparent z-10" onClick={onClose}></div>
-            <div className="absolute right-0 mt-2 w-15 rounded-lg shadow-lg z-20">
-                <motion.div
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                    variants={variants}
-                    className="fixed w-16 bg-transparent flex flex-col items-center py-4 shadow-lg mt-10"
-                    onClick={onClose}
-                >
-                    <ul className="flex flex-col gap-6 flex-1 mr-10">
-                        <li className="text-white cursor-pointer rounded-full p-2 bg-naranja-base hover:bg-naranja-medio"
-                         onClick={() => setInfoOpen(prev => !prev)}>
-                            <Info size={20} />
-                        </li>
-                        <li className="text-white cursor-pointer rounded-full p-2 bg-naranja-base hover:bg-naranja-medio">
-                            <StickyNote size={20} />
-                        </li>
-                        <li className="text-white cursor-pointer rounded-full p-2 bg-naranja-base hover:bg-naranja-medio">
-                            <SquareCheck size={20} />
-                        </li>
-                    </ul>
-                </motion.div>
+        <div className="w-full max-w-sm bg-gray-900 text-white rounded-b-lg overflow-hidden">
+            {/* Header */}
+            <div className="px-4 py-3 flex items-center border-b border-gray-700">
+                <span className="mr-2 text-xl font-bold cursor-pointer">×</span>
+                <span className="text-sm">Info. del Contacto</span>
             </div>
-            
-            {/* Agregamos AnimatePresence para gestionar la animación de salida */}
-            <AnimatePresence>
-                {InfoOpen && <ContactInfo isOpen={InfoOpen} onClose={() => setInfoOpen(false)} />}  
-            </AnimatePresence>
-        </>
+
+            {/* Profile Section */}
+            <div className="p-5 flex flex-col items-center border-b border-gray-700">
+                <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-700 mb-3">
+                    <img
+                        src="/placeholder-profile.jpg"
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                    />
+                </div>
+                <h2 className="text-lg mb-1">José Sarmiento Cliente 1</h2>
+                <p className="text-gray-400 text-sm mb-1">+593 98 393 7312</p>
+                <p className="text-green-500 text-sm">En línea</p>
+            </div>
+
+            {/* Client Status */}
+            <div className="py-3 bg-gray-800 text-gray-500 text-center text-sm">
+                estado del cliente
+            </div>
+
+            {/* Files Section */}
+            <div className="px-4 py-3 flex justify-between items-center border-b border-gray-700">
+                <span className="text-gray-400 text-sm">Archivos, enlaces y documentos</span>
+                <span className="text-gray-400 text-sm">563 &gt;</span>
+            </div>
+
+            {/* Thumbnails */}
+            <div className="p-4 flex gap-2 border-b border-gray-700">
+                <img
+                    src="/placeholder-fox.jpg"
+                    alt="Thumbnail"
+                    className="w-20 h-16 rounded object-cover"
+                />
+                <img
+                    src="/placeholder-sofa.jpg"
+                    alt="Thumbnail"
+                    className="w-20 h-16 rounded object-cover"
+                />
+                <img
+                    src="/placeholder-device.jpg"
+                    alt="Thumbnail"
+                    className="w-20 h-16 rounded object-cover"
+                />
+            </div>
+
+            {/* Credit Info */}
+            <div className="p-4">
+                <h3 className="mb-2 text-base">Info.Credito</h3>
+                <div className="text-gray-500 text-sm">
+                    <p className="mb-1">Nro.</p>
+                    <p className="mb-1">Garante:</p>
+                    <p className="mb-1">Monto:</p>
+                    <p className="mb-1">Fecha:</p>
+                </div>
+            </div>
+        </div>
     );
 };
-
-export default MenuInchat;
+export default ContactInfo;

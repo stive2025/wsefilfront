@@ -2,11 +2,9 @@ import { useState } from "react";
 import { Send, Search, MessageSquareShare, SquarePlus, Mic, Paperclip } from "lucide-react";
 import MenuInchat from "/src/components/mod/menuInchat.jsx";
 import ChatTransfer from "/src/components/mod/chatTransfer.jsx"
-import ContactInfo from "/src/components/chats/contactInfo.jsx";
 
 
 const ChatInterface = () => {
-    const [infoOpen, setInfoOpen] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
     const [transferOpen, settransferOpen] = useState(false);
     const [messages] = useState([
@@ -39,7 +37,7 @@ const ChatInterface = () => {
 
                     </button>
                     <>
-                        {menuOpen && <MenuInchat isOpen={menuOpen} onClose={() => setMenuOpen(false)} infoOpen={setInfoOpen} />}
+                        {menuOpen && <MenuInchat isOpen={menuOpen} onClose={() => setMenuOpen(false)}/>}
                     </>
                 </div>
             </div>
@@ -78,7 +76,6 @@ const ChatInterface = () => {
                     </button>
                 </div>
             </div>
-            {infoOpen && <ContactInfo />}
         </div>
     );
 };

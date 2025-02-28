@@ -90,7 +90,7 @@ const ChatItems = ({ chats }) => (
   <div className="bg-gray-900">
     {chats.chats.map((item) => ( // viene el arreglo de chats
       <div
-        key={item}
+        key={item.id}
         className="flex items-center space-x-3 p-4 hover:bg-gray-800 cursor-pointer active:bg-gray-700"
       >
         <img
@@ -154,6 +154,7 @@ const ChatList = ({ role }) => {
   const chats = {
     chats: [
       {
+        id:"1",
         avatar: "/src/assets/images/agent1.jpg",
         name: "José Sarmiento",
         lastMessage: "Hola, ¿en qué puedo ayudarte?",
@@ -161,6 +162,7 @@ const ChatList = ({ role }) => {
         state: "En línea",
       },
       {
+        id:"2",
         avatar: "/src/assets/images/agent2.jpg",
         name: "María Pérez",
         lastMessage: "¿Cuándo puedo pasar a recoger mi pedido?",
@@ -168,6 +170,7 @@ const ChatList = ({ role }) => {
         state: "Ocupado",
       },
       {
+        id:"3",
         avatar: "/src/assets/images/agent3.jpg",
         name: "Juan López",
         lastMessage: "¿Cuál es el costo de envío?",

@@ -1,16 +1,21 @@
 /* eslint-disable react/prop-types */
 import { motion } from "framer-motion";
-
 import { Info, StickyNote, SquareCheck } from "lucide-react";
+import { useContext } from "react";
+import { ContactInfoClick } from "/src/contexts/chats.js"
 
-const MenuInchat = ({ isOpen, onClose, infoOpen }) => {
+
+const MenuInchat = ({ onClose, isOpen }) => {
     const variants = {
         hidden: { opacity: 0, y: -50 },
         visible: { opacity: 1, y: 0 },
         exit: { opacity: 0, y: 50 }
     };
 
-    if (!isOpen) return null;
+    if (!isOpen) return null; // Si no está abierto, no se renderiza
+
+
+    const {infoOpen,setInfoOpen } = useContext(ContactInfoClick);
 
     return (
         <>
@@ -25,20 +30,21 @@ const MenuInchat = ({ isOpen, onClose, infoOpen }) => {
                     onClick={onClose}
                 >
                     <ul className="flex flex-col gap-6 flex-1 mr-10">
-                        <li className="text-white cursor-pointer rounded-full p-2 bg-naranja-base hover:bg-naranja-medio"
-                         onClick={() => setInfoOpen(prev => !prev)}>
+                        <li key="Info" className="text-white cursor-pointer rounded-full p-2 bg-naranja-base hover:bg-naranja-medio"
+                            onClick={() => {setInfoOpen(prev => !prev) ; console.log("IMPRESO DESDE EL BOTON   "+ infoOpen ) }
+                            }
+                        >
                             <Info size={20} />
                         </li>
-                        <li className="text-white cursor-pointer rounded-full p-2 bg-naranja-base hover:bg-naranja-medio">
+                        <li key="target" className="text-white cursor-pointer rounded-full p-2 bg-naranja-base hover:bg-naranja-medio">
                             <StickyNote size={20} />
                         </li>
-                        <li className="text-white cursor-pointer rounded-full p-2 bg-naranja-base hover:bg-naranja-medio">
+                        <li key="Finish" className="text-white cursor-pointer rounded-full p-2 bg-naranja-base hover:bg-naranja-medio">
                             <SquareCheck size={20} />
                         </li>
                     </ul>
                 </motion.div>
             </div>
-            {InfoOpen && <ContactInfo isOpen={InfoOpen} />}  
         </>
     );
 };
