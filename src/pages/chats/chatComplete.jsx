@@ -8,16 +8,20 @@ import { useContext } from "react";
 
 const chatComplete = () => {
 
-    const { infoOpen } = useContext(ContactInfoClick);  
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const { infoOpen } = useContext(ContactInfoClick);
 
     const isMobile = Resize();
     return isMobile ? (
         <ChatList />
     ) : (
-        <div className="flex h-screen bg-gray-900 text-white overflow-hidden">
-            <ChatList />
-            <ChatInterface />
-            {infoOpen && <ContactInfo />}
+        <div
+            className={`h-screen bg-gray-900 text-white overflow-hidden 
+                    ${infoOpen ? " grid  grid-cols-3" : "flex"}`} 
+        >
+            <ChatList  /> 
+            <ChatInterface  /> 
+            {infoOpen && <ContactInfo  />} 
         </div>
     );
 };

@@ -2,6 +2,8 @@
 import Resize from "/src/hooks/responsiveHook.jsx";
 import { Search, MessageSquareShare, MessageSquarePlus, ChevronLeftCircle, ChevronRightCircle } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
+import ChatInterface from "/src/components/chats/chatPanel_components.jsx";
+
 
 // Componentes reutilizables
 
@@ -92,6 +94,7 @@ const ChatItems = ({ chats }) => (
       <div
         key={item.id}
         className="flex items-center space-x-3 p-4 hover:bg-gray-800 cursor-pointer active:bg-gray-700"
+        onClick={() =>  <ChatInterface />}
       >
         <img
           src={item.avatar}
@@ -100,7 +103,7 @@ const ChatItems = ({ chats }) => (
         />
         <div className="flex-1">
           <div className="font-medium">{item.name}</div>
-          <div className="text-sm text-gray-400">{item.lastMessage}</div>
+          <div className="text-sm text-gray-400 overflow-hidden text-ellipsis whitespace-nowrap max-w-[200px]">{item.lastMessage}</div>
         </div>
         <div className="text-xs text-gray-400">{item.timestamp}</div>
         <div className="text-xs text-gray-400">{item.state}</div>
@@ -154,15 +157,15 @@ const ChatList = ({ role }) => {
   const chats = {
     chats: [
       {
-        id:"1",
+        id: "1",
         avatar: "/src/assets/images/agent1.jpg",
         name: "José Sarmiento",
-        lastMessage: "Hola, ¿en qué puedo ayudarte?",
+        lastMessage: "Hola, ¿en qué puedo ayudarte?Hola, ¿en qué puedo ayudarte?Hola, ¿en qué puedo ayudarte?Hola, ¿en qué puedo ayudarte?Hola, ¿en qué puedo ayudarte?Hola, ¿en qué puedo ayudarte?",
         timestamp: "10:30",
         state: "En línea",
       },
       {
-        id:"2",
+        id: "2",
         avatar: "/src/assets/images/agent2.jpg",
         name: "María Pérez",
         lastMessage: "¿Cuándo puedo pasar a recoger mi pedido?",
@@ -170,7 +173,7 @@ const ChatList = ({ role }) => {
         state: "Ocupado",
       },
       {
-        id:"3",
+        id: "3",
         avatar: "/src/assets/images/agent3.jpg",
         name: "Juan López",
         lastMessage: "¿Cuál es el costo de envío?",
@@ -209,7 +212,7 @@ const ChatList = ({ role }) => {
       </div>
     </div>
   ) : (
-    <div className="w-md border-r border-gray-700 flex flex-col bg-gray-900 text-white pt-16 pb-16 ml-16">
+    <div className="flex-1 border-r border-gray-700 flex flex-col bg-gray-900 text-white pt-16 pb-16 ml-16">
       {/* Fijamos el header, search, agent select y tags */}
       <div className="flex flex-col flex-shrink-0">
         <ChatHeader />

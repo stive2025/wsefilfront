@@ -12,10 +12,9 @@ const MenuInchat = ({ onClose, isOpen }) => {
         exit: { opacity: 0, y: 50 }
     };
 
-    if (!isOpen) return null; // Si no está abierto, no se renderiza
+    const { setInfoOpen } = useContext(ContactInfoClick);
 
-
-    const {infoOpen,setInfoOpen } = useContext(ContactInfoClick);
+    if (!isOpen) return null; 
 
     return (
         <>
@@ -31,7 +30,7 @@ const MenuInchat = ({ onClose, isOpen }) => {
                 >
                     <ul className="flex flex-col gap-6 flex-1 mr-10">
                         <li key="Info" className="text-white cursor-pointer rounded-full p-2 bg-naranja-base hover:bg-naranja-medio"
-                            onClick={() => {setInfoOpen(prev => !prev) ; console.log("IMPRESO DESDE EL BOTON   "+ infoOpen ) }
+                            onClick={() => { setInfoOpen(prev => !prev) }
                             }
                         >
                             <Info size={20} />
