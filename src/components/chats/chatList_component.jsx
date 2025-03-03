@@ -1,8 +1,9 @@
+
 /* eslint-disable react/prop-types */
 import Resize from "/src/hooks/responsiveHook.jsx";
 import { Search, MessageSquareShare, MessageSquarePlus, ChevronLeftCircle, ChevronRightCircle } from "lucide-react";
-import { useEffect, useState, useRef } from "react";
-import ChatInterface from "/src/components/chats/chatPanel_components.jsx";
+import { useEffect, useState, useRef, useContext } from "react";
+import { ChatInterfaceClick } from "/src/contexts/chats.js";  
 
 
 // Componentes reutilizables
@@ -87,14 +88,17 @@ const TagsBar = ({ tags }) => {
     </div>
   );
 };
+ 
 
-const ChatItems = ({ chats }) => (
+const ChatItems = ({ chats }) => {
+  const { setSelectedChatId } = useContext(ChatInterfaceClick);
+  return ( 
   <div className="bg-gray-900">
     {chats.chats.map((item) => ( // viene el arreglo de chats
       <div
         key={item.id}
         className="flex items-center space-x-3 p-4 hover:bg-gray-800 cursor-pointer active:bg-gray-700"
-        onClick={() =>  <ChatInterface />}
+        onClick={() => {setSelectedChatId(item.id);}}
       >
         <img
           src={item.avatar}
@@ -110,7 +114,8 @@ const ChatItems = ({ chats }) => (
       </div>
     ))}
   </div>
-);
+  );
+};
 
 const AgentSelect = ({ role, agents, selectedAgent, setSelectedAgent }) => {
   if (role !== "admin") return null;
