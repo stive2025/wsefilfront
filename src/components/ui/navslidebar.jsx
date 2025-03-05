@@ -1,7 +1,7 @@
-import { User, LogOut, Contact, Bolt, Users, Menu } from "lucide-react";
+import { User, LogOut, Contact, Bolt, Users, Menu, MessageSquare } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import Resize  from "/src/hooks/responsiveHook.jsx"
+import Resize from "/src/hooks/responsiveHook.jsx"
 
 // eslint-disable-next-line react/prop-types
 const NavSlideBar = ({ role }) => {
@@ -25,20 +25,23 @@ const NavSlideBar = ({ role }) => {
 
   const menuOptions = {
     admin: [
-      { icon: <User />, label: "Perfil" },
-      { icon: <Bolt />, label: "Configuración" },
-      { icon: <Contact />, label: "Contactos" },
-      { icon: <Users />, label: "Agentes" },
+      { icon: <User />, label: "Perfil", path: "/tagsConfig" },
+      { icon: <MessageSquare />, label: "Chats", path: "/chatList" },
+      { icon: <Bolt />, label: "Configuración", path: "/utilities/tags" },
+      { icon: <Contact />, label: "Contactos", path: "/tagsConfig" },
+      { icon: <Users />, label: "Agentes", path: "/tagsConfig" },
     ],
     user: [
-      { icon: <User />, label: "Perfil" },
-      { icon: <Users />, label: "Contactos" },
+      { icon: <User />, label: "Perfil", path: "/tagsConfig" },
+      { icon: <MessageSquare />,  label: "Chats", path: "/chatList"  },
+      { icon: <Users />, label: "Contactos", path: "/tagsConfig" },
     ],
     Supervisor: [
-      { icon: <User />, label: "Perfil" },
-      { icon: <Bolt />, label: "Configuración" },
-      { icon: <Contact />, label: "Contactos" },
-      { icon: <Users />, label: "Agentes" },
+      { icon: <User />, label: "Perfil", path: "/tagsConfig" },
+      { icon: <MessageSquare />,  label: "Chats", path: "/chatList" },
+      { icon: <Bolt />, label: "Configuración", path: "/utilities/tags" },
+      { icon: <Contact />, label: "Contactos", path: "/tagsConfig" },
+      { icon: <Users />, label: "Agentes", path: "/tagsConfig" },
     ],
   };
 
@@ -87,7 +90,8 @@ const NavSlideBar = ({ role }) => {
         <nav className="bg-gray-800 text-white h-screen w-full p-2 shadow-md absolute top-full left-0">
           <ul className="flex flex-col gap-4">
             {menuOptions[role]?.map((item, index) => (
-              <li key={index} className="flex items-center gap-2 cursor-pointer hover:text-gray-300 active:bg-gray-700 p-2">
+              <li key={index} className="flex items-center gap-2 cursor-pointer hover:text-gray-300 active:bg-gray-700 p-2" 
+              onClick={() => navigate(item.path)}>
                 {item.icon} {item.label}
               </li>
             ))}
@@ -99,7 +103,8 @@ const NavSlideBar = ({ role }) => {
     <div className="fixed h-screen w-16 bg-gray-800 flex flex-col items-center py-4">
       <ul className="flex flex-col gap-6 flex-1">
         {menuOptions[role]?.map((item, index) => (
-          <li key={index} className="text-gray-400 hover:text-white cursor-pointer active:bg-gray-700 rounded-full p-2">
+          <li key={index} className="text-gray-400 hover:text-white cursor-pointer active:bg-gray-700 rounded-full p-2"
+          onClick={() => navigate(item.path)}>
             {item.icon}
           </li>
         ))}

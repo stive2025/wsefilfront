@@ -1,7 +1,9 @@
 import { HashRouter as Router, Routes, Route } from "react-router-dom";
 import LoginForm from './pages/auth/loginForm';
 import Navs from "./pages/Layout/generalLayout";
+import UtilNavs from "./pages/Layout/utilitiesLayout";
 import ChatComplete from "/src/pages/chats/chatComplete.jsx"
+import TagsComplete from "/src/pages/util/tagsComplete.jsx"
 import { ContactInfoClick, ChatInterfaceClick, TagClick, ResolveClick } from "./contexts/chats.js"
 import { useState } from "react";
 
@@ -18,6 +20,9 @@ function App() {
     <Router>
       <Routes>
         <Route path="/login" element={<LoginForm />} />
+        <Route path="/utilities" element={<UtilNavs />}>
+          <Route path="/utilities/tags" element={<TagsComplete />} />
+        </Route>
         <Route path="/" element={<Navs />}>
           <Route path="/chatList" element={
             <ResolveClick.Provider value={{ resolveClick, setResolveClick }}>
