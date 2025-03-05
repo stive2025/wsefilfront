@@ -15,10 +15,10 @@ const LabelCreationModal = ({ onSave }) => {
   };
 
   return (
-    <div className={`bg-gray-800 rounded-lg w-full max-w-md p-6 space-y-4 h-max mt-16`}>
-      <label
-          className="block text-sm font-medium text-gray-300 mb-2"
-        >NUEVA ETIQUETA</label>
+    <div className={`bg-gray-800 rounded-lg w-full p-6 space-y-4 mt-16 h-max`}>
+      <h1 className="block text-sm font-medium text-gray-300 mb-2 "
+        >NUEVA ETIQUETA
+        </h1>
       <div>
         <label
           htmlFor="label-name"
@@ -48,7 +48,7 @@ const LabelCreationModal = ({ onSave }) => {
           placeholder="¿Para que sirve esta etiqueta?"
           value={labelDescription}
           onChange={(e) => setLabelDescription(e.target.value)}
-          className="w-full bg-gray-700 border-none text-white rounded-md p-3 focus:ring-2 focus:ring-blue-500 min-h-[100px]"
+          className="w-full bg-gray-700 border-none text-white rounded-md p-3 focus:ring-2 focus:ring-blue-500 min-h-[10px]"
         />
       </div>
 
@@ -60,7 +60,7 @@ const LabelCreationModal = ({ onSave }) => {
                      transition-colors duration-300"
       >
         Guardar
-      </button>
+      </button> 
     </div>
 
   );
