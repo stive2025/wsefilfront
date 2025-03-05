@@ -2,7 +2,7 @@
 import { motion } from "framer-motion";
 import { Info, StickyNote, SquareCheck } from "lucide-react";
 import { useContext } from "react";
-import { ContactInfoClick } from "/src/contexts/chats.js"
+import { ContactInfoClick, TagClick, ResolveClick } from "/src/contexts/chats.js"
 
 
 const MenuInchat = ({ onClose, isOpen }) => {
@@ -13,6 +13,8 @@ const MenuInchat = ({ onClose, isOpen }) => {
     };
 
     const { setInfoOpen } = useContext(ContactInfoClick);
+    const { setTagClick } = useContext(TagClick);
+    const { setResolveClick } = useContext(ResolveClick);
 
     if (!isOpen) return null; 
 
@@ -35,11 +37,15 @@ const MenuInchat = ({ onClose, isOpen }) => {
                         >
                             <Info size={20} />
                         </li>
-                        <li key="target" className="text-white cursor-pointer rounded-full p-2 bg-naranja-base hover:bg-naranja-medio">
+                        <li key="target" className="text-white cursor-pointer rounded-full p-2 bg-naranja-base hover:bg-naranja-medio"
+                         onClick={() => { setTagClick(prev => !prev) }}
+                         >
                             <StickyNote size={20} />
                         </li>
                         <li key="Finish" className="text-white cursor-pointer rounded-full p-2 bg-naranja-base hover:bg-naranja-medio">
-                            <SquareCheck size={20} />
+                            <SquareCheck size={20} 
+                            onClick={() => { setResolveClick(prev => !prev) }}
+                            />
                         </li>
                     </ul>
                 </motion.div>

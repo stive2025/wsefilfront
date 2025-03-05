@@ -11,22 +11,23 @@ const chatComplete = () => {
 
     const { infoOpen } = useContext(ContactInfoClick);
     const { selectedChatId } = useContext(ChatInterfaceClick);
-    console.log(selectedChatId);
     const isMobile = Resize();
     return isMobile ? (
         !selectedChatId ? (
             <ChatList />
         ) : (
-            <ChatInterface chatId={selectedChatId} />
+            <>
+                {infoOpen ? <ContactInfo contactId={selectedChatId} /> : <ChatInterface chatId={selectedChatId} />}
+            </>
         )
     ) : (
         <div
             className={`h-screen bg-gray-900 text-white 
-                    ${infoOpen ? " grid  grid-cols-3" : " grid grid-cols-[1fr_2fr]"}`}
+                    ${infoOpen ? " grid  grid-cols-3" : "grid grid-cols-[35%_65%]"}`}
         >
             <ChatList />
             <ChatInterface chatId={selectedChatId} />
-            {infoOpen && <ContactInfo />}
+            {infoOpen && <ContactInfo contactId={selectedChatId} />}
         </div>
     );
 };

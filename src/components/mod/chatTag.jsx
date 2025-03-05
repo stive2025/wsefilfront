@@ -2,9 +2,9 @@
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 
-const ChatTransfer = ({ isOpen, onClose, chatId }) => {
-    const [agents, setAgents] = useState([]);
-    const [selectedAgent, setSelectedAgent] = useState(null);
+const ChatTag = ({ isOpen, onClose, chatId }) => {
+    const [Tags, setTags] = useState([]);
+    const [selectedTag, setSelectedTag] = useState(null);
 
     const variants = {
         hidden: { opacity: 0, y: -50 },
@@ -13,10 +13,10 @@ const ChatTransfer = ({ isOpen, onClose, chatId }) => {
     };
 
     useEffect(() => {
-        fetch("https://listarAgentes") // Reemplaza con tu API real
+        fetch("https://listarTags") // Reemplaza con tu API real
             .then((response) => response.json())
-            .then((data) => setAgents(data))
-            .catch((error) => console.error("Error obteniendo agentes:", error));
+            .then((data) => setTags(data))
+            .catch((error) => console.error("Error obteniendo tags:", error));
     }, []);
 
     if (!isOpen) return null; // Si no está abierto, no se renderiza
@@ -34,34 +34,29 @@ const ChatTransfer = ({ isOpen, onClose, chatId }) => {
                 className="bg-gray-900 p-5 rounded-lg shadow-lg w-96 relative z-10"
                 onClick={(e) => e.stopPropagation()} //mas abajito reemplazar por el backend linea 38 (chatId)
             >
-                <h1 className="text-white text-lg mb-2">Transferir Chat</h1>
+                <h1 className="text-white text-lg mb-2">Etiquetar Chat</h1>
                 <label className="text-white text-sm">{chatId}</label> 
                 <div className="mb-2">
-                    <label className="text-white text-sm">Transferir a:</label>
+                    <label className="text-white text-sm">Selecciona una Etiqueta</label>
                     <select
                         className="text-xs border p-1 rounded bg-transparent text-white w-full sm:p-2"
-                        value={selectedAgent ? selectedAgent.id : ""}
+                        value={selectedTag ? selectedTag.id : ""}
                         onChange={(e) => {
-                            const agent = agents.find((a) => a.id === parseInt(e.target.value));
-                            setSelectedAgent(agent);
+                            const tag = Tags.find((t) => t.id === parseInt(e.target.value));
+                            setSelectedTag(tag);
                         }}
                     >
-                        <option value="" disabled>Seleccionar agente</option>
-                        {agents.length > 0 ? (
-                            agents.map((agent) => (
-                                <option key={agent.id} value={agent.id}>
-                                    {agent.name}
+                        <option value="" disabled>Seleccionar Etiqueta</option>
+                        {Tags.length > 0 ? (
+                            Tags.map((tag) => (
+                                <option key={tag.id} value={tag.id}>
+                                    {tag.name}
                                 </option>
                             ))
                         ) : (
-                            <option disabled>No hay agentes</option>
+                            <option disabled>No hay Etiquetas</option>
                         )}
                     </select>
-                </div>
-
-                <div className="mb-2">
-                    <label className="text-white text-sm">Observaciones:</label>
-                    <textarea className="text-xs border p-1 rounded bg-transparent text-white w-full" />
                 </div>
 
                 {/* Botones */}
@@ -73,7 +68,7 @@ const ChatTransfer = ({ isOpen, onClose, chatId }) => {
                         Cancelar
                     </button>
                     <button className="px-4 py-1 bg-green-600 text-white rounded hover:bg-green-700">
-                        Transferir
+                        Guardar
                     </button>
                 </div>
             </motion.div>
@@ -81,4 +76,4 @@ const ChatTransfer = ({ isOpen, onClose, chatId }) => {
     );
 };
 
-export default ChatTransfer;
+export default ChatTag;

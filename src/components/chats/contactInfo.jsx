@@ -3,12 +3,61 @@ import { X, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { ContactInfoClick } from "/src/contexts/chats.js"
 import { useContext } from "react";
+import Resize from "/src/hooks/responsiveHook.jsx";
 
+const ContactInfo = ({ contactId }) => {
 
-const ContactInfo = () => {
+    const contacts = [
+        {
+            id: 1,
+            name: "José Sarmiento",
+            phone: "+593 99 004 6508",
+            state: "En linea",
+            contactState: ":)",
+            multimedia: [
+                {id: "1", url:"https://static.inaturalist.org/photos/265916780/large.jpg"},
+                {id: "2", url:"https://static.inaturalist.org/photos/265916780/large.jpg"},
+                {id: "3", url:"https://static.inaturalist.org/photos/265916780/large.jpg"}
+            ],
+            creditoInfo: [
+                { idcredit: "112244", garante: "Ximena Gonzaga", mont: "1200", payDate: "04/01/2025" }
+            ]
+        },
+        {
+            id: 2,
+            name: "María López",
+            phone: "+593 99 004 6510",
+            state: "En linea",
+            contactState: ":)",
+            multimedia: [
+                {id: "1", url:"https://static.inaturalist.org/photos/265916780/large.jpg"},
+                {id: "2", url:"https://static.inaturalist.org/photos/265916780/large.jpg"},
+                {id: "3", url:"https://static.inaturalist.org/photos/265916780/large.jpg"}
+            ],
+            creditoInfo: [
+                { idcredit: "112243", garante: "Ximena Gonzaga", mont: "1200", payDate: "04/01/2025" }
+            ]
+        }, {
+            id: 3,
+            name: "Carlos Pérez",
+            phone: "+593 99 004 6509",
+            state: "En linea",
+            contactState: ":)",
+            multimedia: [
+                {id: "1", url:"https://static.inaturalist.org/photos/265916780/large.jpg"},
+                {id: "2", url:"https://static.inaturalist.org/photos/265916780/large.jpg"},
+                {id: "3", url:"https://static.inaturalist.org/photos/265916780/large.jpg"}
+            ],
+            creditoInfo: [
+                { idcredit: "1123244", garante: "Ximena Gonzaga", mont: "1200", payDate: "04/01/2025" }
+            ]
+        }
+    ];
+    const idContact = parseInt(contactId);
+    const contactFind = (contacts.find(contact => contact.id === idContact));
 
     const { setInfoOpen } = useContext(ContactInfoClick);
-
+    const isMobile = Resize();
     const variants = {
         hidden: { opacity: 0, x: 100 },
         visible: { opacity: 1, x: 0 },
@@ -16,12 +65,12 @@ const ContactInfo = () => {
     };
     return (
         <motion.div
-            className="w-full mt-15 bg-gray-900 text-white rounded-b-lg overflow-y-auto scrollbar-hide pl-4 pr-4"
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            variants={variants}
-            transition={{ duration: 0.5, ease: "easeOut" }}  // Suaviza la animación
+            className={`w-full mt-15 bg-gray-900 text-white rounded-b-lg overflow-y-auto scrollbar-hide pl-4 pr-4 ${isMobile ? "mb-8 h-screen" : ""}`}
+            initial={isMobile ? { y: "100%" } : "hidden"} // Comienza desde abajo en móvil
+            animate={isMobile ? { y: 0 } : "visible"} // Se mueve hacia arriba en móvil
+            exit={isMobile ? { y: " 100%" } : "exit"} // Vuelve a salir hacia abajo en móvil
+            variants={isMobile ? undefined : variants} // Usa las variantes solo si no es móvil
+            transition={isMobile ? { duration: 0.5, ease: "easeOut" } : { duration: 0.5, ease: "easeOut" }} // Suaviza la animación en ambos casos
         >
             <div>
                 {/* Header */}
@@ -42,14 +91,14 @@ const ContactInfo = () => {
                             className="w-full h-full object-cover"
                         />
                     </div>
-                    <h2 className="text-lg mb-1">José Sarmiento Cliente 1</h2>
-                    <p className="text-gray-400 text-sm mb-1">+593 98 393 7312</p>
-                    <p className="text-green-500 text-sm">En línea</p>
+                    <h2 className="text-lg mb-1">{contactFind.name}</h2>
+                    <p className="text-gray-400 text-sm mb-1">{contactFind.phone}</p>
+                    <p className="text-green-500 text-sm">{contactFind.state}</p>
                 </div>
 
                 {/* Client Status */}
                 <div className="py-3 bg-gray-800 text-gray-500 text-center text-sm">
-                    estado del cliente
+                    {contactFind.contactState}
                 </div>
 
                 {/* Files Section */}
@@ -65,21 +114,13 @@ const ContactInfo = () => {
 
                 {/* Thumbnails */}
                 <div className="p-4 flex gap-2 ">
-                    <img
-                        src="/placeholder-fox.jpg"
-                        alt="Thumbnail"
-                        className="w-20 h-16 rounded object-cover"
-                    />
-                    <img
-                        src="/placeholder-sofa.jpg"
-                        alt="Thumbnail"
-                        className="w-20 h-16 rounded object-cover"
-                    />
-                    <img
-                        src="/placeholder-device.jpg"
-                        alt="Thumbnail"
-                        className="w-20 h-16 rounded object-cover"
-                    />
+                    {contactFind.multimedia.map((imgItem) => (
+                        <img key={imgItem.id}
+                            src={imgItem.url}
+                            alt="Thumbnail"
+                            className="w-20 h-16 rounded object-cover"
+                        />
+                    ))}
                 </div>
 
                 {/* Credit Info */}
@@ -87,9 +128,13 @@ const ContactInfo = () => {
                     <h3 className="mb-2 text-base">Info.Credito</h3>
                     <div className="text-gray-500 text-sm">
                         <p className="mb-1">Nro.</p>
+                        <p className="mb-1">{contactFind.creditoInfo[0].idcredit}.</p>
                         <p className="mb-1">Garante:</p>
+                        <p className="mb-1">{contactFind.creditoInfo[0].garante}.</p>
                         <p className="mb-1">Monto:</p>
+                        <p className="mb-1">{contactFind.creditoInfo[0].mont}.</p>
                         <p className="mb-1">Fecha:</p>
+                        <p className="mb-1">{contactFind.creditoInfo[0].payDate}.</p>
                     </div>
                 </div>
             </div>

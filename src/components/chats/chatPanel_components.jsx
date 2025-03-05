@@ -3,8 +3,10 @@ import { Send, Search, MessageSquareShare, SquarePlus, Mic, Paperclip } from "lu
 import Resize from "/src/hooks/responsiveHook.jsx";
 import MenuInchat from "/src/components/mod/menuInchat.jsx";
 import ChatTransfer from "/src/components/mod/chatTransfer.jsx"
-
-
+import ChatTag from "/src/components/mod/chatTag.jsx"
+import ChatResolved from "/src/components/mod/chatResolved.jsx"
+import { TagClick, ResolveClick } from "/src/contexts/chats.js"
+import { useContext } from "react";
 
 
 // eslint-disable-next-line react/prop-types
@@ -12,6 +14,9 @@ const ChatInterface = ({ chatId }) => {
     const isMobile = Resize();
     const [menuOpen, setMenuOpen] = useState(false);
     const [transferOpen, settransferOpen] = useState(false);
+    const {tagClick, setTagClick} = useContext(TagClick);
+    const {resolveClick,setResolveClick} = useContext(ResolveClick);
+
     const chats = [
         {
             id: 1,
@@ -70,7 +75,9 @@ const ChatInterface = ({ chatId }) => {
                     </div>
 
                     {/* Chat Transfer */}
-                    {transferOpen && <ChatTransfer isOpen={transferOpen} onClose={() => settransferOpen(false)} />}
+                    {transferOpen && <ChatTransfer isOpen={transferOpen} onClose={() => settransferOpen(false)} chatId={idChatSelected} />}
+                    {tagClick && <ChatTag isOpen={tagClick} onClose={() => setTagClick(false)} chatId={idChatSelected} />}
+                    {resolveClick && <ChatResolved isOpen={resolveClick} onClose={() => setResolveClick(false)} chatId={idChatSelected} />}
 
                     {/* Messages Area */}
                     <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">

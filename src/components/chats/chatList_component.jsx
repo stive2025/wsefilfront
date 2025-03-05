@@ -3,7 +3,7 @@
 import Resize from "/src/hooks/responsiveHook.jsx";
 import { Search, MessageSquareShare, MessageSquarePlus, ChevronLeftCircle, ChevronRightCircle } from "lucide-react";
 import { useEffect, useState, useRef, useContext } from "react";
-import { ChatInterfaceClick } from "/src/contexts/chats.js";  
+import { ChatInterfaceClick } from "/src/contexts/chats.js";
 
 
 // Componentes reutilizables
@@ -88,32 +88,41 @@ const TagsBar = ({ tags }) => {
     </div>
   );
 };
- 
+
 
 const ChatItems = ({ chats }) => {
   const { setSelectedChatId } = useContext(ChatInterfaceClick);
-  return ( 
-  <div className="bg-gray-900">
-    {chats.chats.map((item) => ( // viene el arreglo de chats
-      <div
-        key={item.id}
-        className="flex items-center space-x-3 p-4 hover:bg-gray-800 cursor-pointer active:bg-gray-700"
-        onClick={() => {setSelectedChatId(item.id);}}
-      >
-        <img
-          src={item.avatar}
-          alt="Avatar"
-          className="w-10 h-10 rounded-full"
-        />
-        <div className="flex-1">
-          <div className="font-medium">{item.name}</div>
-          <div className="text-sm text-gray-400 overflow-hidden text-ellipsis whitespace-nowrap max-w-[200px]">{item.lastMessage}</div>
+  return (
+    <div className="bg-gray-900">
+  {chats.chats.map((item) => (
+    <div
+      key={item.id}
+      className="w-full flex items-center space-x-3 p-4 hover:bg-gray-800 cursor-pointer active:bg-gray-700"
+      onClick={() => { setSelectedChatId(item.id); }}
+    >
+      {/* Avatar */}
+      <img
+        src={item.avatar}
+        alt="Avatar"
+        className="w-10 h-10 rounded-full"
+      />
+      
+      {/* Chat Details */}
+      <div className="flex-1">
+        <div className="font-medium text-sm md:text-base">{item.name}</div>
+        <div className="text-xs md:text-sm text-gray-400 overflow-hidden text-ellipsis whitespace-nowrap max-w-[150px] sm:max-w-[200px]">
+          {item.lastMessage}
         </div>
-        <div className="text-xs text-gray-400">{item.timestamp}</div>
-        <div className="text-xs text-gray-400">{item.state}</div>
       </div>
-    ))}
-  </div>
+
+      {/* Timestamp and State */}
+      <div className="text-xs text-gray-400">
+        <div>{item.timestamp}</div>
+        <div>{item.state}</div>
+      </div>
+    </div>
+  ))}
+</div>
   );
 };
 
