@@ -226,7 +226,7 @@ const ChatList = ({ role }) => {
       </div>
     </div>
   ) : (
-    <div className="flex-1 border-r border-gray-700 flex flex-col bg-gray-900 text-white pt-16 pb-16 ml-16">
+    <div className="flex-1 border-r border-gray-700 flex flex-col bg-gray-900 text-white pt-16 ml-16 overflow-y-auto">
       {/* Fijamos el header, search, agent select y tags */}
       <div className="flex flex-col flex-shrink-0">
         <ChatHeader />
