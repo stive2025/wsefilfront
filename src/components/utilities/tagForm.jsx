@@ -17,8 +17,8 @@ const LabelCreationModal = ({ onSave }) => {
   return (
     <div className={`bg-gray-800 rounded-lg w-full p-6 space-y-4 mt-16 h-max`}>
       <h1 className="block text-sm font-medium text-gray-300 mb-2 "
-        >NUEVA ETIQUETA
-        </h1>
+      >NUEVA ETIQUETA
+      </h1>
       <div>
         <label
           htmlFor="label-name"
@@ -55,12 +55,11 @@ const LabelCreationModal = ({ onSave }) => {
       <button
         onClick={handleSave}
         disabled={!labelName.trim()}
-        className="w-full bg-blue-500 text-white py-3 rounded-md hover:bg-blue-600 
-                     disabled:bg-gray-600 disabled:cursor-not-allowed 
-                     transition-colors duration-300"
+        className="w-full py-3 rounded-md disabled:bg-gray-600 disabled:cursor-not-allowed disabled:hover:bg-gray-600
+                     transition-colors duration-300 text-white cursor-pointer rounded-full p-2 bg-naranja-base hover:bg-naranja-medio"
       >
         Guardar
-      </button> 
+      </button>
     </div>
 
   );

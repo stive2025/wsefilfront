@@ -8,10 +8,10 @@ const utilitiesLayout = () => {
   const userRole = "admin"; // Puedes obtenerlo de un contexto o API
 
   return (
-    <div className="overflow-hidden">
+    <div className="flex flex-col">
       <NavSlideBar role={userRole}/>
       <NavUtilities/>
-      <main className="h-screen w-full flex flex-col">
+      <main className="w-full flex flex-col">
         {/* Outlet renderiza la ruta hija*/}
         <Outlet />
       </main> 

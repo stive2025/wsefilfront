@@ -33,14 +33,14 @@ const TagList = () => {
   ];
 
   return (
-    <div className={`bg-gray-800 rounded-lg p-4 ${isMobile ? "mx-auto" : "max-w-xs ml-16"} mt-16  h-scren min-h-0`}>
+    <div className={`bg-gray-800 rounded-lg p-4 ${isMobile ? "mx-auto" : "ml-16"} mt-16  max-h-[80vh] flex flex-col`}>
       <div className='flex items-center justify-between '>
         <h2 className="text-lg font-semibold mb-4 ">Etiquetas</h2>
-        <button className={`bg-blue-500 text-white rounded-full p-2 flex items-center justify-center shadow-lg hover:bg-blue-600 ${isMobile ? "" : "hidden"}`}>
+        <button className={`rounded-full p-2 flex items-center justify-center shadow-lg text-white cursor-pointer rounded-full p-2 bg-naranja-base hover:bg-naranja-medio ${isMobile ? "" : "hidden"}`}>
           <Plus size={10} />
         </button>
       </div>
-      <div className={`bg-gray-800 rounded-lg p-4 mt-2 overflow-y-auto`}>
+      <div className={`bg-gray-800 rounded-lg p-4 overflow-y-auto scrollbar-hide  flex-grow`}>
         {labels.map((label) => (
           <div
             key={label.id}
