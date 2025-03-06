@@ -2,11 +2,11 @@ import { useState } from 'react';
 import Resize from "/src/hooks/responsiveHook.jsx";
 
 // eslint-disable-next-line react/prop-types
-const LabelCreationModal = ({ onSave }) => {
+const CustomForm = ({ onSave }) => {
   const [labelName, setLabelName] = useState('');
   const [labelDescription, setLabelDescription] = useState('');
   const isMobile = Resize();
-  
+
   const handleSave = () => {
     if (labelName.trim()) {
       onSave({
@@ -19,14 +19,14 @@ const LabelCreationModal = ({ onSave }) => {
   return (
     <div className={`bg-gray-800 rounded-lg w-full p-6 space-y-4 ${isMobile?"":"mt-16"} h-max`}>
       <h1 className="block text-sm font-medium text-gray-300 mb-2 "
-      >NUEVA ETIQUETA
+      >NUEVO MENSAJE  PERSONALIZADO
       </h1>
       <div>
         <label
           htmlFor="label-name"
           className="block text-sm font-medium text-gray-300 mb-2"
         >
-          Nombre de la Etiqueta
+          Nombre del Mensaje Personalizado
         </label>
         <input
           id="label-name"
@@ -47,7 +47,7 @@ const LabelCreationModal = ({ onSave }) => {
         </label>
         <textarea
           id="label-description"
-          placeholder="¿Para que sirve esta etiqueta?"
+          placeholder="¿Que mensaje deseas enviar?"
           value={labelDescription}
           onChange={(e) => setLabelDescription(e.target.value)}
           className="w-full bg-gray-700 border-none text-white rounded-md p-3 focus:ring-2 focus:ring-blue-500 min-h-[10px]"
@@ -67,4 +67,4 @@ const LabelCreationModal = ({ onSave }) => {
   );
 };
 
-export default LabelCreationModal;
+export default CustomForm;

@@ -1,47 +1,46 @@
 import { Pencil, Trash2, Plus } from 'lucide-react';
 import Resize from "/src/hooks/responsiveHook.jsx";
 import { useContext } from "react";
-import { TagsCreateForm } from "/src/contexts/chats.js"
+import { AutoCreateForm } from "/src/contexts/chats.js"
 
 
-
-const TagList = () => {
-  const { setTagsClick } = useContext(TagsCreateForm);
+const AutoList = () => {
   const isMobile = Resize();
+  const { setAutoClick } = useContext(AutoCreateForm);
   const labels = [
     {
       id: 1,
-      title: 'Llamar mas tarde',
-      description: 'Menú descripción',
+      title: 'Saludo',
+      Mensaje: 'Hola',
     },
     {
       id: 2,
-      title: 'Confirmar Pago',
-      description: 'Menú descripción',
+      title: 'Agradecimiento',
+      Mensaje: 'Gracias por su tiempo',
     },
     {
       id: 3,
-      title: 'Pago Pendiente',
-      description: 'Menú descripción',
+      title: 'Info. Atención',
+      Mensaje: 'Ahora no estamos atendiendo',
     },
     {
       id: 4,
-      title: 'Revisión',
-      description: 'Menú descripción',
+      title: 'Direccion',
+      Mensaje: 'Nuestra direccion es',
     },
     {
       id: 5,
-      title: 'Pasar a Legal',
-      description: 'Menú descripción',
+      title: 'Menú',
+      Mensaje: 'Marca 1,2,3 según el menú:...',
     }
   ];
 
   return (
     <div className={`bg-gray-800 rounded-lg p-4 ${isMobile ? "mx-auto" : "ml-16"} mt-16  max-h-[80vh] flex flex-col`}>
       <div className='flex items-center justify-between '>
-        <h2 className="text-lg font-semibold mb-4 ">Etiquetas</h2>
+        <h2 className="text-lg font-semibold mb-4 ">Mensajes Automáticos</h2>
         <button className={`rounded-full p-2 flex items-center justify-center shadow-lg text-white cursor-pointer rounded-full p-2 bg-naranja-base hover:bg-naranja-medio ${isMobile ? "" : "hidden"}`}
-         onClick={() =>{setTagsClick (prev => !prev) }}>
+         onClick={() =>{setAutoClick (prev => !prev) }}>
           <Plus size={10} />
         </button>
       </div>
@@ -53,7 +52,7 @@ const TagList = () => {
             <div className="w-full flex items-center">
               <div>
                 <p className="font-medium">{label.title}</p>
-                <p className="text-sm text-gray-400">{label.description}</p>
+                <p className="text-sm text-gray-400">{label.Mensaje}</p>
               </div>
             </div>
             <div className="flex">
@@ -72,4 +71,4 @@ const TagList = () => {
   );
 };
 
-export default TagList;
+export default AutoList;

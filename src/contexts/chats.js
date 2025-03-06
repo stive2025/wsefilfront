@@ -8,5 +8,12 @@ export const TagClick = createContext(false);
 
 export const ResolveClick = createContext(false);
 
+export const TagsCreateForm = createContext(false);
+
+export const CustomCreateForm = createContext(false);
+
+export const AutoCreateForm = createContext(false);
+
+export const newContactForm = createContext(false);
 
 

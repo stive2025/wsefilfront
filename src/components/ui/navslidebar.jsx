@@ -28,19 +28,19 @@ const NavSlideBar = ({ role }) => {
       { icon: <User />, label: "Perfil", path: "/tagsConfig" },
       { icon: <MessageSquare />, label: "Chats", path: "/chatList" },
       { icon: <Bolt />, label: "Configuración", path: "/utilities/tags" },
-      { icon: <Contact />, label: "Contactos", path: "/tagsConfig" },
+      { icon: <Contact />, label: "Contactos", path: "/contacts" },
       { icon: <Users />, label: "Agentes", path: "/tagsConfig" },
     ],
     user: [
       { icon: <User />, label: "Perfil", path: "/tagsConfig" },
       { icon: <MessageSquare />,  label: "Chats", path: "/chatList"  },
-      { icon: <Users />, label: "Contactos", path: "/tagsConfig" },
+      { icon: <Users />, label: "Contactos", path: "/contacts" },
     ],
     Supervisor: [
       { icon: <User />, label: "Perfil", path: "/tagsConfig" },
       { icon: <MessageSquare />,  label: "Chats", path: "/chatList" },
       { icon: <Bolt />, label: "Configuración", path: "/utilities/tags" },
-      { icon: <Contact />, label: "Contactos", path: "/tagsConfig" },
+      { icon: <Contact />, label: "Contactos", path: "/contacts" },
       { icon: <Users />, label: "Agentes", path: "/tagsConfig" },
     ],
   };

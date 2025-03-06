@@ -3,8 +3,8 @@ import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 
 const ChatTransfer = ({ isOpen, onClose, chatId }) => {
-    const [agents, setAgents] = useState([]);
-    const [selectedAgent, setSelectedAgent] = useState(null);
+        const [agents, setAgents] = useState([]);
+        const [selectedAgent, setSelectedAgent] = useState(null);
 
     const variants = {
         hidden: { opacity: 0, y: -50 },
