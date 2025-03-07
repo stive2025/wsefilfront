@@ -1,19 +1,18 @@
 import { useState } from 'react';
-import { ArrowLeft, User, Phone, Download, ChevronDown } from 'lucide-react';
+import { User, Phone, Download, ChevronDown } from 'lucide-react';
+import Resize from "/src/hooks/responsiveHook.jsx";
 
 const NewContact = () => {
+  const isMobile = Resize();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
 
   return (
-    <div className="bg-gray-900 text-white min-h-screen flex flex-col">
+    <div className={`bg-gray-900 rounded-lg w-full p-6 space-y-4 h-max ${isMobile?"":"mt-5"}`}>
       {/* Header */}
       <div className="flex items-center p-4 bg-gray-800">
-        <button className="mr-4">
-          <ArrowLeft size={24} color="#fff" />
-        </button>
-        <h1 className="text-xl font-normal">New contact</h1>
+        <h1 className="text-xl font-normal">Nuevo Contacto</h1>
       </div>
 
       {/* Form */}

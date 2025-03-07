@@ -9,7 +9,7 @@ import CustomComplete from "/src/pages/util/customMComplete.jsx"
 import ContactsComplete from "/src/pages/contacts/contactsComplete.jsx"
 import {
   ContactInfoClick, ChatInterfaceClick, TagClick, ResolveClick, TagsCreateForm,
-  AutoCreateForm, CustomCreateForm, newContactForm
+  AutoCreateForm, CustomCreateForm, NewContactForm
 } from "./contexts/chats.js"
 import { useState } from "react";
 
@@ -50,9 +50,9 @@ function App() {
         </Route>
         <Route path="/" element={<Navs />}>
           <Route path="/contacts" element={
-            <newContactForm.Provider value={{ contactNew, setContactNew }}>
+            <NewContactForm.Provider value={{ contactNew, setContactNew }}>
               <ContactsComplete />
-            </newContactForm.Provider>
+            </NewContactForm.Provider>
           } />
           <Route path="/chatList" element={
             <ResolveClick.Provider value={{ resolveClick, setResolveClick }}>

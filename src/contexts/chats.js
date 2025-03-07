@@ -14,6 +14,6 @@ export const CustomCreateForm = createContext(false);
 
 export const AutoCreateForm = createContext(false);
 
-export const newContactForm = createContext(false);
+export const NewContactForm = createContext(false);
 
 

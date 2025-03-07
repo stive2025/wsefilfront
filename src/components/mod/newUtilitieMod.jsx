@@ -25,7 +25,7 @@ const Tagmod = ({ onClose, isOpen, option }) => {
                 onClick={(e) => e.stopPropagation()} //mas abajito reemplazar por el backend linea 38 (chatId)
             >
                 <div className="mx-auto p-4 bg-gray-900 text-white">
-                {option === 1 ? <TagForm /> : option === 2 ? <CustomForm /> : option === 3 ? <AutoForm /> : null}
+                {option === 1 ? <TagForm /> : option === 2 ? <CustomForm /> : option === 3 ? <AutoForm />:  option === 4 ? <AutoForm /> : null}
                 </div>
 
             </motion.div>

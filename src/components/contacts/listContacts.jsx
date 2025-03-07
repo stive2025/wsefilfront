@@ -1,108 +1,158 @@
-import { Search, Star } from 'lucide-react';
 
-const ListContacts = () => {
-  // Sample contact data
-  const contacts = [
-    {
-      id: 1,
-      name: "Samy",
-      emoji: "😊",
-      isFavorite: true,
-      note: "Envía mensajes a este mismo número.",
-      avatar: "/api/placeholder/50/50",
-      isPrimary: true
-    },
-    {
-      id: 2,
-      name: ".",
-      avatar: "/api/placeholder/50/50",
-      isEmpty: true
-    },
-    {
-      id: 3,
-      name: "Andreina Burneo",
-      phone: "+593 93 961 4409",
-      avatar: "/api/placeholder/50/50",
-      hasCustomIcon: true
-    },
-    {
-      id: 4,
-      phone: "+593 96 764 9684",
-      avatar: "/api/placeholder/50/50"
-    },
-    {
-      id: 5,
-      phone: "+593 98 661 9610",
-      note: "Hair & Makeup Artist ✨",
-      avatar: "/api/placeholder/50/50",
-      hasHeart: true
-    }
-  ];
+/* eslint-disable react/prop-types */
+import Resize from "/src/hooks/responsiveHook.jsx";
+import { Search, Plus } from "lucide-react";
+import { useContext } from "react";
+import { NewContactForm } from "/src/contexts/chats.js";
 
+
+// Componentes reutilizables
+
+const SearchInput = () => (
+  <div className="p-2 bg-gray-900">
+    <div className="relative flex items-center">
+      <input
+        type="text"
+        placeholder="Search..."
+        className="w-full bg-gray-800 rounded-lg pl-8 pr-2 py-1 text-white placeholder-gray-400"
+      />
+      <Search className="absolute left-1 text-gray-400" size={18} />
+    </div>
+  </div>
+);
+
+const ContactItems = ({ contacts }) => {
   return (
-    <div className="bg-gray-900 text-white p-4">
-      {/* Search bar */}
-      <div className=" mb-6">
-        <div className="left-3 flex items-center">
-          <Search size={20} className="text-gray-400" />
-        </div>
-        <input
-          type="text"
-          placeholder="Busca un nombre o número"
-          className="w-full bg-gray-800 text-gray-300 py-3 pl-10 pr-4 rounded-md focus:outline-none"
-        />
-      </div>
+    <div className="bg-gray-900">
+      {contacts.contacts.map((item) => (
+        <div
+          key={item.id}
+          className="w-full flex items-center space-x-3 p-4 hover:bg-gray-800 cursor-pointer active:bg-gray-700"
+        >
+          {/* Avatar */}
+          <img
+            src={item.avatar}
+            alt="Avatar"
+            className="w-10 h-10 rounded-full"
+          />
 
-      {/* Contacts header */}
-      <div className="mb-4">
-        <h2 className="text-teal-500 text-lg font-medium tracking-wide">CONTACTOS EN WHATSAPP</h2>
-        <div className="h-px bg-gray-700 mt-2"></div>
-      </div>
-
-      {/* Contacts list */}
-      <div className="space-y-4">
-        {contacts.map((contact) => (
-          <div key={contact.id} className="flex items-center py-2">
-            <div className="w-12 h-12 rounded-full overflow-hidden mr-3">
-              <img
-                src={contact.avatar}
-                alt={contact.name || "Contact"}
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <div className="flex-1 border-b border-gray-700 pb-4">
-              <div className="flex items-center">
-                {contact.isPrimary && (
-                  <div className="flex items-center">
-                    <span className="mr-1">{contact.name}</span>
-                    {contact.emoji && <span className="mr-1">{contact.emoji}</span>}
-                    {contact.isFavorite && <Star size={16} className="fill-yellow-400 text-yellow-400 mr-1" />}
-                    <span className="text-gray-300">Samy (Tú)</span>
-                  </div>
-                )}
-                {contact.hasCustomIcon && (
-                  <div className="flex items-center">
-                    <span className="text-gray-300">{contact.phone}</span>
-                    <div className="flex ml-2">
-                      <div className="w-4 h-6 bg-pink-600 rounded-sm mx-px"></div>
-                      <div className="w-4 h-6 bg-pink-600 rounded-sm mx-px"></div>
-                    </div>
-                  </div>
-                )}
-                {contact.isEmpty && <span className="text-gray-300">{contact.name}</span>}
-                {!contact.isPrimary && !contact.hasCustomIcon && !contact.isEmpty && (
-                  <span className="text-gray-300">{contact.phone}</span>
-                )}
-              </div>
-              {contact.note && (
-                <div className="text-gray-400 text-sm mt-1 flex items-center">
-                  {contact.note}
-                  {contact.hasHeart && <span className="text-pink-500 ml-1">💕</span>}
-                </div>
-              )}
+          {/* Chat Details */}
+          <div className="flex-1">
+            <div className="font-medium text-sm md:text-base">{item.name}</div>
+            <div className="text-xs md:text-sm text-gray-400 overflow-hidden text-ellipsis whitespace-nowrap max-w-[150px] sm:max-w-[200px]">
+              {item.lastMessage}
             </div>
           </div>
-        ))}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+
+
+// FIN Componentes reutilizables
+
+const ListContacts = () => {
+  const { setContactNew } = useContext(NewContactForm);
+  const isMobile = Resize();
+  const contacts = {
+    contacts: [
+      {
+        id: "1",
+        avatar: "/src/assets/images/agent1.jpg",
+        name: "José Sarmiento",
+        lastMessage: "Hola, ¿en qué puedo ayudarte?Hola, ¿en qué puedo ayudarte?Hola, ¿en qué puedo ayudarte?Hola, ¿en qué puedo ayudarte?Hola, ¿en qué puedo ayudarte?Hola, ¿en qué puedo ayudarte?",
+        timestamp: "10:30",
+        state: "En línea",
+      },
+      {
+        id: "2",
+        avatar: "/src/assets/images/agent2.jpg",
+        name: "María Pérez",
+        lastMessage: "¿Cuándo puedo pasar a recoger mi pedido?",
+        timestamp: "09:45",
+        state: "Ocupado",
+      },
+      {
+        id: "3",
+        avatar: "/src/assets/images/agent3.jpg",
+        name: "Juan López",
+        lastMessage: "¿Cuál es el costo de envío?",
+        timestamp: "Ayer",
+        state: "Desconectado",
+      },
+      {
+        id: "3",
+        avatar: "/src/assets/images/agent3.jpg",
+        name: "Juan López",
+        lastMessage: "¿Cuál es el costo de envío?",
+        timestamp: "Ayer",
+        state: "Desconectado",
+      },
+      {
+        id: "3",
+        avatar: "/src/assets/images/agent3.jpg",
+        name: "Juan López",
+        lastMessage: "¿Cuál es el costo de envío?",
+        timestamp: "Ayer",
+        state: "Desconectado",
+      },
+      {
+        id: "3",
+        avatar: "/src/assets/images/agent3.jpg",
+        name: "Juan López",
+        lastMessage: "¿Cuál es el costo de envío?",
+        timestamp: "Ayer",
+        state: "Desconectado",
+      },
+      {
+        id: "3",
+        avatar: "/src/assets/images/agent3.jpg",
+        name: "Juan López",
+        lastMessage: "¿Cuál es el costo de envío?",
+        timestamp: "Ayer",
+        state: "Desconectado",
+      },
+      {
+        id: "3",
+        avatar: "/src/assets/images/agent3.jpg",
+        name: "Juan López",
+        lastMessage: "¿Cuál es el costo de envío?",
+        timestamp: "Ayer",
+        state: "Desconectado",
+      }
+    ],
+  };
+
+  return isMobile ? (
+    <div className="w-full sm:w-80  flex flex-col bg-gray-900 text-white h-screen">
+      {/* Contenedor fijo para header, search, agent select y tags */}
+      <div className="flex flex-col flex-shrink-0 mt-14">
+        <SearchInput />
+      </div>
+      {/* ChatItems ocupa el resto del espacio y tiene scroll */}
+      <div className="flex-1 overflow-y-auto">
+        <ContactItems contacts={contacts} />
+
+      </div>
+      <button
+        className={`absolute bottom-4 right-4 mb-15 rounded-full p-3 shadow-lg text-white cursor-pointer bg-naranja-base hover:bg-naranja-medio ${isMobile ? "" : "hidden"
+          }`}
+        onClick={() => setContactNew((prev) => !prev)}
+      >
+        <Plus size={18} />
+      </button>
+    </div>
+  ) : (
+    <div className="flex-1 border-r border-gray-700 flex flex-col bg-gray-900 text-white pt-10 ml-10 overflow-y-auto">
+      {/* Fijamos el header, search, agent select y tags */}
+      <div className="flex flex-col flex-shrink-0">
+        <SearchInput />
+      </div>
+      {/* ChatItems ocupará el espacio restante y tendrá scroll */}
+      <div className="flex-1 overflow-y-auto scrollbar-hide">
+        <ContactItems contacts={contacts} />
       </div>
     </div>
   );
