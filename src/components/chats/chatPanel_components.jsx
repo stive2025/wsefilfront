@@ -55,7 +55,7 @@ const ChatInterface = ({ chatId }) => {
             {chatSelected ? (
                 <>
                     {/* Chat Header */}
-                    <div className="flex p-5 border-b border-gray-700 bg-gray-800 sticky mt-14 z-10 justify-between items-center">
+                    <div className="flex p-2 border-b border-gray-700 bg-gray-800 sticky mt-10 z-10 justify-between items-center">
                         <div className="flex items-center space-x-3">
                             <img src={chatSelected.avatar} alt="Current chat" className="w-10 h-10 rounded-full" />
                             <span className="font-medium">{chatSelected.name}</span>
@@ -99,7 +99,7 @@ const ChatInterface = ({ chatId }) => {
                     </div>
 
                     {/* Input Area */}
-                    <div className={`p-4 border-t border-gray-700 bg-gray-800 sticky bottom-0 ${isMobile ? "mb-10" : ""}`}>
+                    <div className={`p-2 border-t border-gray-700 bg-gray-800 sticky bottom-0 ${isMobile ? "mb-10" : ""}`}>
                         <div className="flex items-center space-x-2">
                             <input type="text" placeholder="Type a message..." className="flex-1 bg-gray-900 rounded-lg px-4 py-2 w-full" />
                             <button className="p-2 bg-transparent rounded-lg hover:bg-gray-700 active:bg-gray-900">

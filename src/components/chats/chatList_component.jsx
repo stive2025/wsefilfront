@@ -9,30 +9,30 @@ import { ChatInterfaceClick } from "/src/contexts/chats.js";
 // Componentes reutilizables
 
 const ChatHeader = () => (
-  <div className="p-3 border-b border-gray-700 flex items-center justify-between bg-gray-900">
+  <div className="p-1 flex items-center justify-between bg-gray-900">
     <div className="flex items-center space-x-2">
-      <img src="/src/assets/images/logoCRM.png" alt="Logo" className="w-30 h-12" />
+      <img src="/src/assets/images/logoCRM.png" alt="Logo" className="w-22 h-9" />
     </div>
     <div className="flex space-x-2">
       <button className="p-2 hover:bg-gray-700 active:bg-gray-700 rounded-full">
-        <MessageSquareShare size={20} />
+        <MessageSquareShare size={15} />
       </button>
       <button className="p-2 hover:bg-gray-700 active:bg-gray-700 rounded-full">
-        <MessageSquarePlus size={20} />
+        <MessageSquarePlus size={15} />
       </button>
     </div>
   </div>
 );
 
 const SearchInput = () => (
-  <div className="p-4 border-b border-gray-700 bg-gray-900">
-    <div className="relative">
+  <div className="p-2 bg-gray-900">
+    <div className="relative flex items-center">
       <input
         type="text"
         placeholder="Search..."
-        className="w-full bg-gray-800 rounded-lg px-4 py-2 pl-10"
+        className="w-full bg-gray-800 rounded-lg pl-8 pr-2 py-1 text-white placeholder-gray-400"
       />
-      <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
+      <Search className="absolute left-1 text-gray-400" size={18} />
     </div>
   </div>
 );
@@ -53,18 +53,18 @@ const TagsBar = ({ tags }) => {
   };
 
   return (
-    <div className="relative flex items-center border-b border-gray-700 bg-gray-900">
+    <div className="relative flex items-center bg-gray-900">
       {/* Botón izquierda */}
       <button
         onClick={scrollLeft}
-        className="absolute left-0 h-8 w-8 flex items-center justify-center bg-transparent hover:bg-gray-700 active:bg-gray-700 rounded-full z-10"
+        className="absolute left-0 h-5 w-5 ml-2 flex items-center justify-center bg-transparent hover:bg-gray-700 active:bg-gray-700 rounded-full z-10"
       >
-        <ChevronLeftCircle size={20} />
+        <ChevronLeftCircle size={15} />
       </button>
 
       <div
         ref={containerRef}
-        className="bg-transparent text-white h-10 w-full shadow-md flex items-center p-1 overflow-x-auto scrollbar-hide mx-8"
+        className="bg-transparent text-white h-8 w-full overflow-hidden shadow-md flex items-center p-1 overflow-x-auto scrollbar-hide mx-8"
       >
         <ul className="flex whitespace-nowrap">
           {Object.values(tags).map((item, index) => (
@@ -81,9 +81,9 @@ const TagsBar = ({ tags }) => {
       {/* Botón derecha */}
       <button
         onClick={scrollRight}
-        className="absolute right-0 h-8 w-8 flex items-center justify-center bg-transparent hover:bg-gray-700 active:bg-gray-700 rounded-full z-10"
+        className="absolute right-0  h-5 w-5 mr-2 flex items-center justify-center bg-transparent hover:bg-gray-700 active:bg-gray-700 rounded-full z-10"
       >
-        <ChevronRightCircle size={20} />
+        <ChevronRightCircle size={15} />
       </button>
     </div>
   );
@@ -94,35 +94,35 @@ const ChatItems = ({ chats }) => {
   const { setSelectedChatId } = useContext(ChatInterfaceClick);
   return (
     <div className="bg-gray-900">
-  {chats.chats.map((item) => (
-    <div
-      key={item.id}
-      className="w-full flex items-center space-x-3 p-4 hover:bg-gray-800 cursor-pointer active:bg-gray-700"
-      onClick={() => { setSelectedChatId(item.id); }}
-    >
-      {/* Avatar */}
-      <img
-        src={item.avatar}
-        alt="Avatar"
-        className="w-10 h-10 rounded-full"
-      />
-      
-      {/* Chat Details */}
-      <div className="flex-1">
-        <div className="font-medium text-sm md:text-base">{item.name}</div>
-        <div className="text-xs md:text-sm text-gray-400 overflow-hidden text-ellipsis whitespace-nowrap max-w-[150px] sm:max-w-[200px]">
-          {item.lastMessage}
-        </div>
-      </div>
+      {chats.chats.map((item) => (
+        <div
+          key={item.id}
+          className="w-full flex items-center space-x-3 p-4 hover:bg-gray-800 cursor-pointer active:bg-gray-700"
+          onClick={() => { setSelectedChatId(item.id); }}
+        >
+          {/* Avatar */}
+          <img
+            src={item.avatar}
+            alt="Avatar"
+            className="w-10 h-10 rounded-full"
+          />
 
-      {/* Timestamp and State */}
-      <div className="text-xs text-gray-400">
-        <div>{item.timestamp}</div>
-        <div>{item.state}</div>
-      </div>
+          {/* Chat Details */}
+          <div className="flex-1">
+            <div className="font-medium text-sm md:text-base">{item.name}</div>
+            <div className="text-xs md:text-sm text-gray-400 overflow-hidden text-ellipsis whitespace-nowrap max-w-[150px] sm:max-w-[200px]">
+              {item.lastMessage}
+            </div>
+          </div>
+
+          {/* Timestamp and State */}
+          <div className="text-xs text-gray-400">
+            <div>{item.timestamp}</div>
+            <div>{item.state}</div>
+          </div>
+        </div>
+      ))}
     </div>
-  ))}
-</div>
   );
 };
 
@@ -226,7 +226,7 @@ const ChatList = ({ role }) => {
       </div>
     </div>
   ) : (
-    <div className="flex-1 border-r border-gray-700 flex flex-col bg-gray-900 text-white pt-16 ml-16 overflow-y-auto">
+    <div className="flex-1 border-r border-gray-700 flex flex-col bg-gray-900 text-white pt-10 ml-10 overflow-y-auto">
       {/* Fijamos el header, search, agent select y tags */}
       <div className="flex flex-col flex-shrink-0">
         <ChatHeader />

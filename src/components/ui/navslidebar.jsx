@@ -100,7 +100,7 @@ const NavSlideBar = ({ role }) => {
       </div>
     </header>
   ) : (
-    <div className="fixed h-screen w-16 bg-gray-800 flex flex-col items-center py-4">
+    <div className="fixed h-screen w-10 bg-gray-800 flex flex-col items-center py-4">
       <ul className="flex flex-col gap-6 flex-1">
         {menuOptions[role]?.map((item, index) => (
           <li key={index} className="text-gray-400 hover:text-white cursor-pointer active:bg-gray-700 rounded-full p-2"

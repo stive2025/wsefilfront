@@ -43,14 +43,14 @@ function App() {
             </CustomCreateForm.Provider>
           } />
           <Route path="/utilities/autoMessages" element={
-            <AutoCreateForm.Provider value={{ contactNew, setAutoClick }}>
+            <AutoCreateForm.Provider value={{ autoClick, setAutoClick }}>
               <AutoComplete />
             </AutoCreateForm.Provider>
           } />
         </Route>
         <Route path="/" element={<Navs />}>
           <Route path="/contacts" element={
-            <newContactForm.Provider value={{ autoClick, setContactNew }}>
+            <newContactForm.Provider value={{ contactNew, setContactNew }}>
               <ContactsComplete />
             </newContactForm.Provider>
           } />
