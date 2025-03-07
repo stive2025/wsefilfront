@@ -5,7 +5,7 @@ import MenuInchat from "/src/components/mod/menuInchat.jsx";
 import ChatTransfer from "/src/components/mod/chatTransfer.jsx"
 import ChatTag from "/src/components/mod/chatTag.jsx"
 import ChatResolved from "/src/components/mod/chatResolved.jsx"
-import { TagClick, ResolveClick } from "/src/contexts/chats.js"
+import { TagClick, ResolveClick,SearchInChatClick } from "/src/contexts/chats.js"
 import { useContext } from "react";
 
 
@@ -16,6 +16,8 @@ const ChatInterface = ({ chatId }) => {
     const [transferOpen, settransferOpen] = useState(false);
     const {tagClick, setTagClick} = useContext(TagClick);
     const {resolveClick,setResolveClick} = useContext(ResolveClick);
+    const {setSearchInChat} = useContext(SearchInChatClick);
+
 
     const chats = [
         {
@@ -61,7 +63,7 @@ const ChatInterface = ({ chatId }) => {
                             <span className="font-medium">{chatSelected.name}</span>
                         </div>
                         <div className="flex space-x-2">
-                            <button className="p-2 hover:bg-gray-700 active:bg-gray-700 rounded-full">
+                            <button className="p-2 hover:bg-gray-700 active:bg-gray-700 rounded-full" onClick={() => setSearchInChat(prev => !prev)}>
                                 <Search size={20} />
                             </button>
                             <button className="p-2 hover:bg-gray-700 active:bg-gray-700 rounded-full" onClick={() => settransferOpen(prev => !prev)}>

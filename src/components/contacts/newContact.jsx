@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { User, Phone, Download, ChevronDown } from 'lucide-react';
+import { User, Phone } from 'lucide-react';
 import Resize from "/src/hooks/responsiveHook.jsx";
 
 const NewContact = () => {
@@ -7,35 +7,32 @@ const NewContact = () => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-
   return (
-    <div className={`bg-gray-900 rounded-lg w-full p-6 space-y-4 h-max ${isMobile?"":"mt-5"}`}>
+    <div className={`bg-gray-900 rounded-lg w-full p-6 space-y-4 h-max ${isMobile ? "" : "mt-5"}`}>
       {/* Header */}
-      <div className="flex items-center p-4 bg-gray-800">
+      <div className="flex items-center p-4 bg-gray-800 rounded-lg">
+        <User size={20} className="text-[#FF9619] mr-4" />
         <h1 className="text-xl font-normal">Nuevo Contacto</h1>
       </div>
 
       {/* Form */}
       <div className="p-4 flex-1 flex flex-col">
         {/* First name */}
-        <div className="mb-6 border-b border-gray-700 pb-2">
-          <div className="flex items-center">
-            <User size={20} className="text-gray-400 mr-4" />
-            <input
-              type="text"
-              placeholder="First name"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              className="w-full bg-transparent text-white outline-none"
-            />
-          </div>
+        <div className="mb-6 border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
+          <input
+            type="text"
+            placeholder="Nombres"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            className="w-full bg-transparent text-white outline-none"
+          />
         </div>
 
         {/* Last name */}
-        <div className="mb-6 border-b border-gray-700 pb-2">
+        <div className="mb-6 border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
           <input
             type="text"
-            placeholder="Last name"
+            placeholder="Apellidos"
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
             className="w-full bg-transparent text-white outline-none"
@@ -47,18 +44,11 @@ const NewContact = () => {
           <div className="flex items-center">
             <Phone size={20} className="text-gray-400 mr-4" />
             <div className="flex-1">
-              <div className="text-xs text-gray-400">
-                <span>Count...</span>
-                <span className="ml-8 text-teal-500">Phone</span>
-              </div>
               <div className="flex mt-1">
-                <div className="flex items-center bg-transparent border-b border-gray-700 mr-2 pb-1">
-                  <span className="text-gray-200">US +1</span>
-                  <ChevronDown size={16} className="text-gray-400 ml-1" />
-                </div>
-                <div className="flex-1 border-b border-teal-500 pb-1">
+                <div className="flex-1 border-b border-gray-700 focus-within:border-[#FF9619] pb-1">
                   <input
                     type="tel"
+                    placeholder="Número"
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
                     className="w-full bg-transparent text-white outline-none"
@@ -69,38 +59,16 @@ const NewContact = () => {
           </div>
         </div>
 
-        {/* Save to */}
-        <div className="mb-6 border-b border-gray-700 pb-2">
-          <div className="flex items-center">
-            <Download size={20} className="text-gray-400 mr-4" />
-            <div className="flex-1">
-              <div className="text-gray-400 text-xs mb-1">Save to</div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-200">Phone</span>
-                <ChevronDown size={20} className="text-gray-400" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Add Information */}
-        <button className="text-teal-500 text-left mt-4">
-          Add Information
-        </button>
-
-        {/* Spacer */}
-        <div className="flex-1"></div>
 
         {/* Save button */}
         <div className="mt-4 mb-6">
-          <button className="w-full bg-teal-500 text-white py-3 rounded-full font-medium">
-            Save
+          <button
+            disabled={!phoneNumber.trim()}
+            className="w-full py-3 rounded-md disabled:bg-gray-600 disabled:cursor-not-allowed disabled:hover:bg-gray-600
+                     transition-colors duration-300 text-white cursor-pointer rounded-full p-2 bg-naranja-base hover:bg-naranja-medio"
+          >
+            Guardar
           </button>
-        </div>
-
-        {/* Bottom bar indicator */}
-        <div className="flex justify-center mb-4">
-          <div className="w-16 h-1 bg-gray-600 rounded-full"></div>
         </div>
       </div>
     </div>

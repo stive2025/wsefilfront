@@ -9,7 +9,7 @@ import CustomComplete from "/src/pages/util/customMComplete.jsx"
 import ContactsComplete from "/src/pages/contacts/contactsComplete.jsx"
 import {
   ContactInfoClick, ChatInterfaceClick, TagClick, ResolveClick, TagsCreateForm,
-  AutoCreateForm, CustomCreateForm, NewContactForm
+  AutoCreateForm, CustomCreateForm, NewContactForm, SearchInChatClick
 } from "./contexts/chats.js"
 import { useState } from "react";
 
@@ -25,6 +25,7 @@ function App() {
   const [customClick, setCustomClick] = useState(null);
   const [autoClick, setAutoClick] = useState(null);
   const [contactNew, setContactNew] = useState(null);
+  const [searchInChat, setSearchInChat] = useState(null);
 
 
   return (
@@ -59,7 +60,9 @@ function App() {
               <TagClick.Provider value={{ tagClick, setTagClick }}>
                 <ChatInterfaceClick.Provider value={{ selectedChatId, setSelectedChatId }}>
                   <ContactInfoClick.Provider value={{ infoOpen, setInfoOpen }}>
-                    <ChatComplete />
+                    <SearchInChatClick.Provider value={{ searchInChat, setSearchInChat }}>
+                      <ChatComplete />
+                    </SearchInChatClick.Provider>
                   </ContactInfoClick.Provider>
                 </ChatInterfaceClick.Provider>
               </TagClick.Provider>

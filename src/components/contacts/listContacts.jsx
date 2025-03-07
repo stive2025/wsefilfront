@@ -40,7 +40,7 @@ const ContactItems = ({ contacts }) => {
           <div className="flex-1">
             <div className="font-medium text-sm md:text-base">{item.name}</div>
             <div className="text-xs md:text-sm text-gray-400 overflow-hidden text-ellipsis whitespace-nowrap max-w-[150px] sm:max-w-[200px]">
-              {item.lastMessage}
+              {item.number}
             </div>
           </div>
         </div>
@@ -62,65 +62,19 @@ const ListContacts = () => {
         id: "1",
         avatar: "/src/assets/images/agent1.jpg",
         name: "José Sarmiento",
-        lastMessage: "Hola, ¿en qué puedo ayudarte?Hola, ¿en qué puedo ayudarte?Hola, ¿en qué puedo ayudarte?Hola, ¿en qué puedo ayudarte?Hola, ¿en qué puedo ayudarte?Hola, ¿en qué puedo ayudarte?",
-        timestamp: "10:30",
-        state: "En línea",
+        number: "0990046508",
       },
       {
         id: "2",
         avatar: "/src/assets/images/agent2.jpg",
         name: "María Pérez",
-        lastMessage: "¿Cuándo puedo pasar a recoger mi pedido?",
-        timestamp: "09:45",
-        state: "Ocupado",
+        number: "0990046508",
       },
       {
         id: "3",
         avatar: "/src/assets/images/agent3.jpg",
         name: "Juan López",
-        lastMessage: "¿Cuál es el costo de envío?",
-        timestamp: "Ayer",
-        state: "Desconectado",
-      },
-      {
-        id: "3",
-        avatar: "/src/assets/images/agent3.jpg",
-        name: "Juan López",
-        lastMessage: "¿Cuál es el costo de envío?",
-        timestamp: "Ayer",
-        state: "Desconectado",
-      },
-      {
-        id: "3",
-        avatar: "/src/assets/images/agent3.jpg",
-        name: "Juan López",
-        lastMessage: "¿Cuál es el costo de envío?",
-        timestamp: "Ayer",
-        state: "Desconectado",
-      },
-      {
-        id: "3",
-        avatar: "/src/assets/images/agent3.jpg",
-        name: "Juan López",
-        lastMessage: "¿Cuál es el costo de envío?",
-        timestamp: "Ayer",
-        state: "Desconectado",
-      },
-      {
-        id: "3",
-        avatar: "/src/assets/images/agent3.jpg",
-        name: "Juan López",
-        lastMessage: "¿Cuál es el costo de envío?",
-        timestamp: "Ayer",
-        state: "Desconectado",
-      },
-      {
-        id: "3",
-        avatar: "/src/assets/images/agent3.jpg",
-        name: "Juan López",
-        lastMessage: "¿Cuál es el costo de envío?",
-        timestamp: "Ayer",
-        state: "Desconectado",
+        number: "0990046508",
       }
     ],
   };

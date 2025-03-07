@@ -3,6 +3,8 @@ import { motion } from "framer-motion";
 import TagForm from "/src/components/utilities/tagForm.jsx";
 import CustomForm from "/src/components/utilities/customForm.jsx";
 import AutoForm from "/src/components/utilities/autoMForm.jsx";
+import NewContact from "/src/components/contacts/newContact.jsx";
+
 
 const Tagmod = ({ onClose, isOpen, option }) => {
 
@@ -25,7 +27,7 @@ const Tagmod = ({ onClose, isOpen, option }) => {
                 onClick={(e) => e.stopPropagation()} //mas abajito reemplazar por el backend linea 38 (chatId)
             >
                 <div className="mx-auto p-4 bg-gray-900 text-white">
-                {option === 1 ? <TagForm /> : option === 2 ? <CustomForm /> : option === 3 ? <AutoForm />:  option === 4 ? <AutoForm /> : null}
+                {option === 1 ? <TagForm /> : option === 2 ? <CustomForm /> : option === 3 ? <AutoForm />:  option === 4 ? <NewContact /> : null}
                 </div>
 
             </motion.div>

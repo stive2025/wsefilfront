@@ -7,9 +7,9 @@ const NavUtilities = () => {
     const isMobile = Resize();
     const navigate = useNavigate();
     const menuOptions = [
-        { icon: <Tag />, label: "Etiquetas", path: "/utilities/tags" },
-        { icon: <MessageCirclePlus />, label: "Mensajes Personalizados", path: "/utilities/customMessages" },
-        { icon: <MessageSquareCode />, label: "Mensajes Automáticos", path: "/utilities/autoMessages" },
+        { icon: <Tag  size={18}/>, label: "Etiquetas", path: "/utilities/tags" },
+        { icon: <MessageCirclePlus  size={18}/>, label: "Mensajes Personalizados", path: "/utilities/customMessages" },
+        { icon: <MessageSquareCode  size={18}/>, label: "Mensajes Automáticos", path: "/utilities/autoMessages" },
     ];
 
     return isMobile ? (
