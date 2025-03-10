@@ -4,6 +4,8 @@ import TagForm from "/src/components/utilities/tagForm.jsx";
 import CustomForm from "/src/components/utilities/customForm.jsx";
 import AutoForm from "/src/components/utilities/autoMForm.jsx";
 import NewContact from "/src/components/contacts/newContact.jsx";
+import NewAgent from "/src/components/agents/newAgent.jsx";
+import ProfileQR from "/src/components/profile/profileQR.jsx";
 
 
 const Tagmod = ({ onClose, isOpen, option }) => {
@@ -27,7 +29,9 @@ const Tagmod = ({ onClose, isOpen, option }) => {
                 onClick={(e) => e.stopPropagation()} //mas abajito reemplazar por el backend linea 38 (chatId)
             >
                 <div className="mx-auto p-4 bg-gray-900 text-white">
-                {option === 1 ? <TagForm /> : option === 2 ? <CustomForm /> : option === 3 ? <AutoForm />:  option === 4 ? <NewContact /> : null}
+                {option === 1 ? <TagForm /> : option === 2 ? <CustomForm />
+                 : option === 3 ? <AutoForm />:  option === 4 ? <NewContact /> :option === 5 ? <NewAgent /> : 
+                 option === 6 ? <ProfileQR /> : null}
                 </div>
 
             </motion.div>

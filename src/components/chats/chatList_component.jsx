@@ -1,7 +1,7 @@
 
 /* eslint-disable react/prop-types */
 import Resize from "/src/hooks/responsiveHook.jsx";
-import { Search, MessageSquareShare, MessageSquarePlus, ChevronLeftCircle, ChevronRightCircle } from "lucide-react";
+import { Search, MessageSquarePlus, ChevronLeftCircle, ChevronRightCircle } from "lucide-react";
 import { useEffect, useState, useRef, useContext } from "react";
 import { ChatInterfaceClick } from "/src/contexts/chats.js";
 
@@ -14,9 +14,6 @@ const ChatHeader = () => (
       <img src="/src/assets/images/logoCRM.png" alt="Logo" className="w-22 h-9" />
     </div>
     <div className="flex space-x-2">
-      <button className="p-2 hover:bg-gray-700 active:bg-gray-700 rounded-full">
-        <MessageSquareShare size={15} />
-      </button>
       <button className="p-2 hover:bg-gray-700 active:bg-gray-700 rounded-full">
         <MessageSquarePlus size={15} />
       </button>

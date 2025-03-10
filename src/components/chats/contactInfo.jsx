@@ -65,7 +65,7 @@ const ContactInfo = ({ contactId }) => {
     };
     return (
         <motion.div
-            className={`w-full mt-15 bg-gray-900 text-white rounded-b-lg overflow-y-auto scrollbar-hide pl-4 pr-4 ${isMobile ? "mb-8 h-screen" : ""}`}
+            className={`w-full mt-9 bg-gray-900 text-white rounded-b-lg overflow-y-auto scrollbar-hide pl-4 pr-4 ${isMobile ? "mb-8 h-screen" : ""}`}
             initial={isMobile ? { y: "100%" } : "hidden"} // Comienza desde abajo en móvil
             animate={isMobile ? { y: 0 } : "visible"} // Se mueve hacia arriba en móvil
             exit={isMobile ? { y: " 100%" } : "exit"} // Vuelve a salir hacia abajo en móvil

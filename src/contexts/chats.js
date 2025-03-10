@@ -18,4 +18,6 @@ export const AutoCreateForm = createContext(false);
 
 export const NewContactForm = createContext(false);
 
+export const NewAgentForm = createContext(false);
 
+export const ProfileInfoPanel = createContext(false);

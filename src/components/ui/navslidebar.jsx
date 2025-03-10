@@ -25,28 +25,28 @@ const NavSlideBar = ({ role }) => {
 
   const menuOptions = {
     admin: [
-      { icon: <User />, label: "Perfil", path: "/tagsConfig" },
+      { icon: <User />, label: "Perfil", path: "/profile" },
       { icon: <MessageSquare />, label: "Chats", path: "/chatList" },
       { icon: <Bolt />, label: "Configuración", path: "/utilities/tags" },
       { icon: <Contact />, label: "Contactos", path: "/contacts" },
-      { icon: <Users />, label: "Agentes", path: "/tagsConfig" },
+      { icon: <Users />, label: "Agentes", path: "/agents" },
     ],
     user: [
-      { icon: <User />, label: "Perfil", path: "/tagsConfig" },
+      { icon: <User />, label: "Perfil", path: "/profile" },
       { icon: <MessageSquare />,  label: "Chats", path: "/chatList"  },
-      { icon: <Users />, label: "Contactos", path: "/contacts" },
+      { icon: <Users />, label: "Contactos", path: "/agents" },
     ],
     Supervisor: [
-      { icon: <User />, label: "Perfil", path: "/tagsConfig" },
+      { icon: <User />, label: "Perfil", path: "/profile" },
       { icon: <MessageSquare />,  label: "Chats", path: "/chatList" },
       { icon: <Bolt />, label: "Configuración", path: "/utilities/tags" },
       { icon: <Contact />, label: "Contactos", path: "/contacts" },
-      { icon: <Users />, label: "Agentes", path: "/tagsConfig" },
+      { icon: <Users />, label: "Agentes", path: "/agents" },
     ],
   };
 
   return isMobile ? (
-    <header className="bg-gray-800 text-white fixed w-full top-0 z-20 h-16">
+    <header className="bg-gray-800 text-white fixed w-full top-0 z-20 h-10">
       <div className="flex justify-between items-center">
         <div className="flex flex-row gap-4">
           <div className="text-xl cursor-pointer p-4 flex" onClick={toggleMenu}>
