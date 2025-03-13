@@ -1,7 +1,7 @@
 
 /* eslint-disable react/prop-types */
 import Resize from "/src/hooks/responsiveHook.jsx";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus ,Pencil,Trash2} from "lucide-react";
 import { useContext } from "react";
 import { NewAgentForm } from "/src/contexts/chats.js";
 
@@ -24,9 +24,9 @@ const SearchInput = () => (
 const AgentsItems = ({ agents }) => {
   return (
     <div className="bg-gray-900">
-      {agents.agents.map((item) => (
+    {agents.agents.map((item) => (
+      <div key={item.id} className="w-full flex items-center space-x-3 p-4">
         <div
-          key={item.id}
           className="w-full flex items-center space-x-3 p-4 hover:bg-gray-800 cursor-pointer active:bg-gray-700"
         >
           {/* Avatar */}
@@ -44,8 +44,17 @@ const AgentsItems = ({ agents }) => {
             </div>
           </div>
         </div>
-      ))}
-    </div>
+        <div className="flex">
+          <button className="mr-2 text-gray-400 hover:text-white">
+            <Pencil size={16} />
+          </button>
+          <button className="text-gray-400 hover:text-white">
+            <Trash2 size={16} />
+          </button>
+        </div>
+      </div>
+    ))}
+  </div>
   );
 };
 

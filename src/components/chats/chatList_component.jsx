@@ -3,23 +3,25 @@
 import Resize from "/src/hooks/responsiveHook.jsx";
 import { Search, MessageSquarePlus, ChevronLeftCircle, ChevronRightCircle } from "lucide-react";
 import { useEffect, useState, useRef, useContext } from "react";
-import { ChatInterfaceClick } from "/src/contexts/chats.js";
+import { ChatInterfaceClick, NewMessage } from "/src/contexts/chats.js";
 
 
 // Componentes reutilizables
 
-const ChatHeader = () => (
-  <div className="p-1 flex items-center justify-between bg-gray-900">
+const ChatHeader = () => {
+  const {setNewMessage} = useContext(NewMessage);
+  return (<div className="p-1 flex items-center justify-between bg-gray-900">
     <div className="flex items-center space-x-2">
       <img src="/src/assets/images/logoCRM.png" alt="Logo" className="w-22 h-9" />
     </div>
     <div className="flex space-x-2">
-      <button className="p-2 hover:bg-gray-700 active:bg-gray-700 rounded-full">
+      <button className="p-2 hover:bg-gray-700 active:bg-gray-700 rounded-full" onClick={() => setNewMessage(true)}>
         <MessageSquarePlus size={15} />
       </button>
     </div>
   </div>
-);
+  )
+};
 
 const SearchInput = () => (
   <div className="p-2 bg-gray-900">
@@ -88,14 +90,14 @@ const TagsBar = ({ tags }) => {
 
 
 const ChatItems = ({ chats }) => {
-  const { setSelectedChatId } = useContext(ChatInterfaceClick);
+  const { selectedChatId, setSelectedChatId } = useContext(ChatInterfaceClick);
   return (
     <div className="bg-gray-900">
       {chats.chats.map((item) => (
         <div
           key={item.id}
           className="w-full flex items-center space-x-3 p-4 hover:bg-gray-800 cursor-pointer active:bg-gray-700"
-          onClick={() => { setSelectedChatId(item.id); }}
+          onClick={() => { setSelectedChatId(item.id);console.log(selectedChatId); }}
         >
           {/* Avatar */}
           <img

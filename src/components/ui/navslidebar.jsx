@@ -1,5 +1,6 @@
 import { User, LogOut, Contact, Bolt, Users, Menu, MessageSquare } from "lucide-react";
-import { useState, useEffect } from "react";
+import { ChatInterfaceClick } from "/src/contexts/chats.js"
+import { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import Resize from "/src/hooks/responsiveHook.jsx"
 
@@ -10,6 +11,8 @@ const NavSlideBar = ({ role }) => {
   const navigate = useNavigate();
   const [agents, setAgents] = useState([]);
   const [selectedAgent, setSelectedAgent] = useState(null);
+  const { setSelectedChatId } = useContext(ChatInterfaceClick);
+
 
   useEffect(() => {
     if (role === "admin") {
@@ -33,12 +36,12 @@ const NavSlideBar = ({ role }) => {
     ],
     user: [
       { icon: <User />, label: "Perfil", path: "/profile" },
-      { icon: <MessageSquare />,  label: "Chats", path: "/chatList"  },
+      { icon: <MessageSquare />, label: "Chats", path: "/chatList" },
       { icon: <Users />, label: "Contactos", path: "/agents" },
     ],
     Supervisor: [
       { icon: <User />, label: "Perfil", path: "/profile" },
-      { icon: <MessageSquare />,  label: "Chats", path: "/chatList" },
+      { icon: <MessageSquare />, label: "Chats", path: "/chatList" },
       { icon: <Bolt />, label: "Configuración", path: "/utilities/tags" },
       { icon: <Contact />, label: "Contactos", path: "/contacts" },
       { icon: <Users />, label: "Agentes", path: "/agents" },
@@ -47,7 +50,7 @@ const NavSlideBar = ({ role }) => {
 
   return isMobile ? (
     <header className="bg-gray-800 text-white fixed w-full top-0 z-20 h-10">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center h-10">
         <div className="flex flex-row gap-4">
           <div className="text-xl cursor-pointer p-4 flex" onClick={toggleMenu}>
             <Menu />
@@ -90,8 +93,13 @@ const NavSlideBar = ({ role }) => {
         <nav className="bg-gray-800 text-white h-screen w-full p-2 shadow-md absolute top-full left-0">
           <ul className="flex flex-col gap-4">
             {menuOptions[role]?.map((item, index) => (
-              <li key={index} className="flex items-center gap-2 cursor-pointer hover:text-gray-300 active:bg-gray-700 p-2" 
-              onClick={() => navigate(item.path)}>
+              <li key={index} className="flex items-center gap-2 cursor-pointer hover:text-gray-300 active:bg-gray-700 p-2"
+                onClick={() => { 
+                  setSelectedChatId(null);
+                  navigate(item.path);
+                  setShowMenu(false);
+                }}
+                >
                 {item.icon} {item.label}
               </li>
             ))}
@@ -104,7 +112,8 @@ const NavSlideBar = ({ role }) => {
       <ul className="flex flex-col gap-6 flex-1">
         {menuOptions[role]?.map((item, index) => (
           <li key={index} className="text-gray-400 hover:text-white cursor-pointer active:bg-gray-700 rounded-full p-2"
-          onClick={() => navigate(item.path)}>
+            onClick={() => { setSelectedChatId(null); navigate(item.path); }}
+            >
             {item.icon}
           </li>
         ))}

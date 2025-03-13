@@ -13,7 +13,7 @@ import ProfileComplete from "/src/pages/profile/profileComplete.jsx"
 
 import {
   ContactInfoClick, ChatInterfaceClick, TagClick, ResolveClick, TagsCreateForm,
-  AutoCreateForm, CustomCreateForm, NewContactForm, SearchInChatClick, NewAgentForm, ProfileInfoPanel
+  AutoCreateForm, CustomCreateForm, NewContactForm, SearchInChatClick, NewAgentForm, ProfileInfoPanel, NewMessage
 } from "./contexts/chats.js"
 import { useState } from "react";
 
@@ -31,62 +31,66 @@ function App() {
   const [contactNew, setContactNew] = useState(null);
   const [agentNew, setAgentNew] = useState(null);
   const [searchInChat, setSearchInChat] = useState(null);
-  const [profileInfoOpen, SetProfileInfoOpen  ] = useState(null);
+  const [profileInfoOpen, SetProfileInfoOpen] = useState(null);
+  const [newMessage, setNewMessage] = useState(false)
 
 
 
   return (
     <Router>
-      <Routes>
-        <Route path="/login" element={<LoginForm />} />
-        <Route path="/utilities" element={<UtilNavs />}>
-          <Route path="/utilities/tags" element={
-            <TagsCreateForm.Provider value={{ tagsClick, setTagsClick }}>
-              <TagsComplete />
-            </TagsCreateForm.Provider>
-          } />
-          <Route path="/utilities/customMessages" element={
-            <CustomCreateForm.Provider value={{ customClick, setCustomClick }}>
-              <CustomComplete />
-            </CustomCreateForm.Provider>
-          } />
-          <Route path="/utilities/autoMessages" element={
-            <AutoCreateForm.Provider value={{ autoClick, setAutoClick }}>
-              <AutoComplete />
-            </AutoCreateForm.Provider>
-          } />
-        </Route>
-        <Route path="/" element={<Navs />}>
-          <Route path="/contacts" element={
-            <NewContactForm.Provider value={{ contactNew, setContactNew }}>
-              <ContactsComplete />
-            </NewContactForm.Provider>
-          } />
-          <Route path="/profile" element={
-            <ProfileInfoPanel.Provider value={{ profileInfoOpen, SetProfileInfoOpen }}>
-              <ProfileComplete />
-            </ProfileInfoPanel.Provider>
-          } />
-          <Route path="/agents" element={
-            <NewAgentForm.Provider value={{ agentNew, setAgentNew }}>
-              <AgentsComplete />
-            </NewAgentForm.Provider>
-          } />
-          <Route path="/chatList" element={
-            <ResolveClick.Provider value={{ resolveClick, setResolveClick }}>
-              <TagClick.Provider value={{ tagClick, setTagClick }}>
-                <ChatInterfaceClick.Provider value={{ selectedChatId, setSelectedChatId }}>
-                  <ContactInfoClick.Provider value={{ infoOpen, setInfoOpen }}>
-                    <SearchInChatClick.Provider value={{ searchInChat, setSearchInChat }}>
-                      <ChatComplete />
-                    </SearchInChatClick.Provider>
-                  </ContactInfoClick.Provider>
-                </ChatInterfaceClick.Provider>
-              </TagClick.Provider>
-            </ResolveClick.Provider>
-          } />
-        </Route>
-      </Routes>
+      <NewMessage.Provider value={{ newMessage, setNewMessage }}>
+        <ChatInterfaceClick.Provider value={{ selectedChatId, setSelectedChatId }}>
+          <Routes>
+            <Route path="/login" element={<LoginForm />} />
+            <Route path="/utilities" element={<UtilNavs />}>
+              <Route path="/utilities/tags" element={
+                <TagsCreateForm.Provider value={{ tagsClick, setTagsClick }}>
+                  <TagsComplete />
+                </TagsCreateForm.Provider>
+              } />
+              <Route path="/utilities/customMessages" element={
+                <CustomCreateForm.Provider value={{ customClick, setCustomClick }}>
+                  <CustomComplete />
+                </CustomCreateForm.Provider>
+              } />
+              <Route path="/utilities/autoMessages" element={
+                <AutoCreateForm.Provider value={{ autoClick, setAutoClick }}>
+                  <AutoComplete />
+                </AutoCreateForm.Provider>
+              } />
+            </Route>
+            <Route path="/" element={<Navs />}>
+              <Route path="/contacts" element={
+                <NewContactForm.Provider value={{ contactNew, setContactNew }}>
+                  <ContactsComplete />
+                </NewContactForm.Provider>
+              } />
+              <Route path="/profile" element={
+                <ProfileInfoPanel.Provider value={{ profileInfoOpen, SetProfileInfoOpen }}>
+                  <ProfileComplete />
+                </ProfileInfoPanel.Provider>
+              } />
+              <Route path="/agents" element={
+                <NewAgentForm.Provider value={{ agentNew, setAgentNew }}>
+                  <AgentsComplete />
+                </NewAgentForm.Provider>
+              } />
+              <Route path="/chatList" element={
+                <ResolveClick.Provider value={{ resolveClick, setResolveClick }}>
+                  <TagClick.Provider value={{ tagClick, setTagClick }}>
+                    <ContactInfoClick.Provider value={{ infoOpen, setInfoOpen }}>
+                      <SearchInChatClick.Provider value={{ searchInChat, setSearchInChat }}>
+                        <ChatComplete />
+                      </SearchInChatClick.Provider>
+                    </ContactInfoClick.Provider>
+                  </TagClick.Provider>
+                </ResolveClick.Provider>
+
+              } />
+            </Route>
+          </Routes>
+        </ChatInterfaceClick.Provider>
+      </NewMessage.Provider>
     </Router>
   );
 }
