@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import Resize from "/src/hooks/responsiveHook.jsx";
-import { Search, Plus, Pencil, Trash2 } from "lucide-react";
+import { Search, Plus, Pencil, Trash2, ArrowLeft } from "lucide-react";
 import { useContext } from "react";
 import { NewContactForm, ChatInterfaceClick, NewMessage } from "/src/contexts/chats.js";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -82,7 +82,16 @@ const ListContacts = () => {
 
   return isMobile ? (
     <div className="w-full sm:w-80 flex flex-col bg-gray-900 text-white h-screen">
-      <div className="flex flex-col flex-shrink-0 mt-14">
+      {location.pathname === "/chatList" && (
+        <div className="flex flex-row flex-shrink-0 mt-12">
+          <button className="text-white rounded-full cursor-pointer hover:bg-gray-700 active:bg-gray-700 active:text-black p-1"
+            onClick={() => setNewMessage(null)}      >
+            <ArrowLeft size={15} />
+          </button>
+          <label className="p-1">CONTACTOS</label>
+        </div>
+      )}
+      <div className="flex flex-col flex-shrink-0">
         <SearchInput />
       </div>
       <div className="flex-1 overflow-y-auto">
@@ -99,6 +108,16 @@ const ListContacts = () => {
     </div>
   ) : (
     <div className="flex-1 border-r border-gray-700 flex flex-col bg-gray-900 text-white pt-10 ml-10 overflow-y-auto">
+      {location.pathname === "/chatList" && (
+        <div className="flex flex-row items-center flex-shrink-0 p-2">
+          <button className="text-white rounded-full cursor-pointer hover:bg-gray-700 active:bg-gray-700 active:text-black p-1"
+            onClick={() => setNewMessage(null)}      >
+            <ArrowLeft size={15} />
+          </button>
+          <label className="p-1">CONTACTOS</label>
+          
+        </div>
+      )}
       <div className="flex flex-col flex-shrink-0">
         <SearchInput />
       </div>

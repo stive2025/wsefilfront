@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Search, MessageSquareShare, SquarePlus, Mic, Paperclip, X } from "lucide-react";
+import { Send, Search, MessageSquareShare, SquarePlus, Mic, Paperclip, X, ArrowLeft } from "lucide-react";
 import Resize from "/src/hooks/responsiveHook.jsx";
 import MenuInchat from "/src/components/mod/menuInchat.jsx";
 import ChatTransfer from "/src/components/mod/chatTransfer.jsx";
 import ChatTag from "/src/components/mod/chatTag.jsx";
 import ChatResolved from "/src/components/mod/chatResolved.jsx";
-import { TagClick, ResolveClick, SearchInChatClick } from "/src/contexts/chats.js";
+import { TagClick, ResolveClick, SearchInChatClick, NewMessage } from "/src/contexts/chats.js";
 import { useContext } from "react";
 
 // eslint-disable-next-line react/prop-types
@@ -16,13 +16,14 @@ const ChatInterface = ({ chatId }) => {
     const { tagClick, setTagClick } = useContext(TagClick);
     const { resolveClick, setResolveClick } = useContext(ResolveClick);
     const { setSearchInChat } = useContext(SearchInChatClick);
-    
+    const { setNewMessage } = useContext(NewMessage);
+
     // Estados para gestionar mensajes y archivos
     const [messageText, setMessageText] = useState("");
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [isRecording, setIsRecording] = useState(false);
     const [recordedAudio, setRecordedAudio] = useState(null);
-    
+
     // Referencias
     const fileInputRef = useRef(null);
     const mediaRecorderRef = useRef(null);
@@ -82,15 +83,15 @@ const ChatInterface = ({ chatId }) => {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 const mediaRecorder = new MediaRecorder(stream);
-                
+
                 audioChunksRef.current = [];
-                
+
                 mediaRecorder.ondataavailable = (e) => {
                     if (e.data.size > 0) {
                         audioChunksRef.current.push(e.data);
                     }
                 };
-                
+
                 mediaRecorder.onstop = () => {
                     const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
                     const audioUrl = URL.createObjectURL(audioBlob);
@@ -99,11 +100,11 @@ const ChatInterface = ({ chatId }) => {
                         url: audioUrl,
                         name: `audio_${new Date().toISOString()}.wav`
                     });
-                    
+
                     // Detener todas las pistas del stream
                     stream.getTracks().forEach(track => track.stop());
                 };
-                
+
                 mediaRecorderRef.current = mediaRecorder;
                 mediaRecorder.start();
                 setIsRecording(true);
@@ -119,14 +120,14 @@ const ChatInterface = ({ chatId }) => {
         if (messageText.trim() === "" && selectedFiles.length === 0 && !recordedAudio) {
             return; // No hay nada que enviar
         }
-        
+
         // Aquí implementarías la lógica para enviar el mensaje al backend
         console.log("Enviando mensaje:", {
             text: messageText,
             files: selectedFiles,
             audio: recordedAudio
         });
-        
+
         // Limpiar estados después de enviar
         setMessageText("");
         setSelectedFiles([]);
@@ -166,6 +167,15 @@ const ChatInterface = ({ chatId }) => {
                     {/* Chat Header */}
                     <div className="flex p-2 border-b border-gray-700 bg-gray-800 sticky mt-10 z-10 justify-between items-center">
                         <div className="flex items-center space-x-3">
+                            {location.pathname === "/chatList" && isMobile (
+                                <>
+                                    <button className="text-white rounded-full cursor-pointer hover:bg-gray-700 active:bg-gray-700 active:text-black p-1"
+                                        onClick={() => setNewMessage(null)}      >
+                                        <ArrowLeft size={15} />
+                                    </button>
+                                </>
+
+                            )}
                             <img src={chatSelected.avatar} alt="Current chat" className="w-10 h-10 rounded-full" />
                             <span className="font-medium">{chatSelected.name}</span>
                         </div>
@@ -215,20 +225,20 @@ const ChatInterface = ({ chatId }) => {
                                 {selectedFiles.map((file, index) => (
                                     <div key={index} className="bg-gray-700 rounded p-2 flex items-center">
                                         <span className="text-sm truncate max-w-xs">{file.name}</span>
-                                        <button 
-                                            className="ml-2 text-gray-400 hover:text-white" 
+                                        <button
+                                            className="ml-2 text-gray-400 hover:text-white"
                                             onClick={() => removeFile(index)}
                                         >
                                             <X size={16} />
                                         </button>
                                     </div>
                                 ))}
-                                
+
                                 {recordedAudio && (
                                     <div className="bg-gray-700 rounded p-2 flex items-center">
                                         <audio controls src={recordedAudio.url} className="h-8 w-32" />
-                                        <button 
-                                            className="ml-2 text-gray-400 hover:text-white" 
+                                        <button
+                                            className="ml-2 text-gray-400 hover:text-white"
                                             onClick={removeAudio}
                                         >
                                             <X size={16} />
@@ -242,27 +252,27 @@ const ChatInterface = ({ chatId }) => {
                     {/* Input Area */}
                     <div className={`p-2 border-t border-gray-700 bg-gray-800 sticky bottom-0 ${isMobile ? "mb-10" : ""}`}>
                         <div className="flex items-center space-x-2">
-                            <input 
-                                type="text" 
-                                placeholder="Type a message..." 
-                                className="flex-1 bg-gray-900 rounded-lg px-4 py-2 w-full" 
+                            <input
+                                type="text"
+                                placeholder="Type a message..."
+                                className="flex-1 bg-gray-900 rounded-lg px-4 py-2 w-full"
                                 value={messageText}
                                 onChange={(e) => setMessageText(e.target.value)}
                                 onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                             />
-                            <button 
+                            <button
                                 className="p-2 bg-transparent rounded-lg hover:bg-gray-700 active:bg-gray-900"
                                 onClick={handleSendMessage}
                             >
                                 <Send size={20} color="var(--color-verde-base)" />
                             </button>
-                            <button 
+                            <button
                                 className={`p-2 bg-transparent rounded-lg hover:bg-gray-700 active:bg-gray-900 ${isRecording ? "bg-red-600 bg-opacity-50" : ""}`}
                                 onClick={handleMicClick}
                             >
                                 <Mic size={20} color={isRecording ? "red" : "var(--color-verde-base)"} />
                             </button>
-                            <button 
+                            <button
                                 className="p-2 bg-transparent rounded-lg hover:bg-gray-700 active:bg-gray-900"
                                 onClick={handlePaperclipClick}
                             >
