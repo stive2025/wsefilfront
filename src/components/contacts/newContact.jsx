@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { User, Phone } from 'lucide-react';
 import Resize from "/src/hooks/responsiveHook.jsx";
 
+
 const NewContact = () => {
   const isMobile = Resize();
   const [firstName, setFirstName] = useState('');

@@ -1,15 +1,14 @@
-import { ENV_VARIABLES } from 'config/config';
-import { getLocalStorageItem, removeLocalStorageItem } from '@/utilities';
-import { createLogoutAuth } from '../redux/states/auth';
+import { ENV_VARIABLES } from '/config/config';
+import { GetCookieItem, RemoveCookieItem } from '../utilities/cookies.js';
 
 const baseURL = ENV_VARIABLES.API_URL;
 
-const customFetch = async (endpoint, options = {}) => {
-  const token = getLocalStorageItem('token');
+const CustomFetch = async (endpoint, options = {}) => {
+  const token = GetCookieItem('token');
 
   const headers = {
     'Content-Type': 'application/json',
-    ...(token && { Authorization: Bearer ${token} })
+    ...(token && { Authorization: `Bearer ${token}`})
   };
 
   const config = {
@@ -18,14 +17,13 @@ const customFetch = async (endpoint, options = {}) => {
   };
 
   try {
-    const response = await fetch(${baseURL}${endpoint}, config);
+    const response = await fetch(`${baseURL}${endpoint}`, config);
     
     if (!response.ok) {
       if (response.status === 401) {
-        removeLocalStorageItem('token');
-        createLogoutAuth();
+        RemoveCookieItem('token');
       }
-      throw new Error(Error ${response.status}: ${response.statusText});
+      throw new Error(`Error ${response.status}: ${response.statusText}`);
     }
 
     return await response.json();
@@ -34,4 +32,4 @@ const customFetch = async (endpoint, options = {}) => {
   }
 };
 
-export default customFetch;
+export default CustomFetch;
