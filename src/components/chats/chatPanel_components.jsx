@@ -5,18 +5,21 @@ import MenuInchat from "/src/components/mod/menuInchat.jsx";
 import ChatTransfer from "/src/components/mod/chatTransfer.jsx";
 import ChatTag from "/src/components/mod/chatTag.jsx";
 import ChatResolved from "/src/components/mod/chatResolved.jsx";
-import { TagClick, ResolveClick, SearchInChatClick, NewMessage } from "/src/contexts/chats.js";
+import { TagClick, ResolveClick, SearchInChatClick, ChatInterfaceClick } from "/src/contexts/chats.js";
 import { useContext } from "react";
+import { useLocation } from "react-router-dom";
+
 
 // eslint-disable-next-line react/prop-types
 const ChatInterface = ({ chatId }) => {
     const isMobile = Resize();
+    const location = useLocation();
     const [menuOpen, setMenuOpen] = useState(false);
     const [transferOpen, setTransferOpen] = useState(false);
     const { tagClick, setTagClick } = useContext(TagClick);
     const { resolveClick, setResolveClick } = useContext(ResolveClick);
     const { setSearchInChat } = useContext(SearchInChatClick);
-    const { setNewMessage } = useContext(NewMessage);
+    const { setSelectedChatId } = useContext(ChatInterfaceClick);
 
     // Estados para gestionar mensajes y archivos
     const [messageText, setMessageText] = useState("");
@@ -167,14 +170,12 @@ const ChatInterface = ({ chatId }) => {
                     {/* Chat Header */}
                     <div className="flex p-2 border-b border-gray-700 bg-gray-800 sticky mt-10 z-10 justify-between items-center">
                         <div className="flex items-center space-x-3">
-                            {location.pathname === "/chatList" && isMobile (
-                                <>
-                                    <button className="text-white rounded-full cursor-pointer hover:bg-gray-700 active:bg-gray-700 active:text-black p-1"
-                                        onClick={() => setNewMessage(null)}      >
-                                        <ArrowLeft size={15} />
-                                    </button>
-                                </>
-
+                            {location.pathname === "/chatList" && isMobile && (<button
+                                className="p-1 text-white rounded-full cursor-pointer hover:bg-gray-700 active:bg-gray-700 active:text-black"
+                                onClick={() => setSelectedChatId(null)}
+                            >
+                                <ArrowLeft size={15} />
+                            </button>
                             )}
                             <img src={chatSelected.avatar} alt="Current chat" className="w-10 h-10 rounded-full" />
                             <span className="font-medium">{chatSelected.name}</span>
