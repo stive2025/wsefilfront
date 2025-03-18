@@ -12,7 +12,7 @@ import ProfileComplete from "/src/pages/profile/profileComplete.jsx"
 
 
 import {
-  ContactInfoClick, ChatInterfaceClick, TagClick, ResolveClick, TagsCreateForm,
+  ContactInfoClick, ChatInterfaceClick, TagClick, ResolveClick, TagsCreateForm, UpdateAgentForm, AgentHandle,
   AutoCreateForm, CustomCreateForm, NewContactForm, SearchInChatClick, NewAgentForm, ProfileInfoPanel, NewMessage
 } from "./contexts/chats.js"
 import { useState } from "react";
@@ -33,7 +33,8 @@ function App() {
   const [searchInChat, setSearchInChat] = useState(null);
   const [profileInfoOpen, SetProfileInfoOpen] = useState(null);
   const [newMessage, setNewMessage] = useState(false)
-
+  const [agentFind, setAgentFind] = useState(null)
+  const [agentHandle, setAgentHandle] = useState(null)
 
 
   return (
@@ -71,9 +72,13 @@ function App() {
                 </ProfileInfoPanel.Provider>
               } />
               <Route path="/agents" element={
-                <NewAgentForm.Provider value={{ agentNew, setAgentNew }}>
-                  <AgentsComplete />
-                </NewAgentForm.Provider>
+                <AgentHandle.Provider value={{ agentHandle, setAgentHandle }}>
+                  <UpdateAgentForm.Provider value={{ agentFind, setAgentFind }}>
+                    <NewAgentForm.Provider value={{ agentNew, setAgentNew }}>
+                      <AgentsComplete />
+                    </NewAgentForm.Provider>
+                  </UpdateAgentForm.Provider>
+                </AgentHandle.Provider>
               } />
               <Route path="/chatList" element={
                 <ResolveClick.Provider value={{ resolveClick, setResolveClick }}>
@@ -85,7 +90,6 @@ function App() {
                     </ContactInfoClick.Provider>
                   </TagClick.Provider>
                 </ResolveClick.Provider>
-
               } />
             </Route>
           </Routes>

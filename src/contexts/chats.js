@@ -20,6 +20,12 @@ export const NewContactForm = createContext(false);
 
 export const NewAgentForm = createContext(false);
 
+export const UpdateAgentForm = createContext(false);
+
+export const AgentFind = createContext(false);
+
+export const AgentHandle = createContext(false);
+
 export const ProfileInfoPanel = createContext(false);
 
 export const NewMessage = createContext(false);

@@ -2,6 +2,8 @@ import { User, LogOut, Contact, Bolt, Users, Menu, MessageSquare } from "lucide-
 import { ChatInterfaceClick } from "/src/contexts/chats.js"
 import { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
+import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
+import { getAgents } from "/src/services/agents.js";
 import Resize from "/src/hooks/responsiveHook.jsx"
 
 // eslint-disable-next-line react/prop-types
@@ -12,16 +14,33 @@ const NavSlideBar = ({ role }) => {
   const [agents, setAgents] = useState([]);
   const [selectedAgent, setSelectedAgent] = useState(null);
   const { setSelectedChatId } = useContext(ChatInterfaceClick);
+  const { callEndpoint } = useFetchAndLoad();
+  const [setError] = useState(null);
 
 
   useEffect(() => {
     if (role === "admin") {
-      fetch("https://listarAgentes") // Reemplaza con tu API real
-        .then((response) => response.json())
-        .then((data) => setAgents(data))
-        .catch((error) => console.error("Error obteniendo agentes:", error));
+      fetchAgents();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [role]);
+
+  const fetchAgents = async () => {
+    try {
+      // Llamar a getAgents() para obtener el objeto con call y abortController
+      const agentsCall = getAgents();
+      // Pasar el objeto completo a callEndpoint
+      console.log("Cargando agentes...");
+      const response = await callEndpoint(agentsCall);
+      setAgents(response);
+    } catch (error) {
+      // Solo actualizar el estado de error si no es un error de abort
+      if (error.name !== 'AbortError') {
+        console.error("Error buscando agentes:", error);
+        setError("No se pudieron cargar los agentes");
+      }
+    }
+  };
 
   const toggleMenu = () => setShowMenu(!showMenu);
   const handleLogout = () => navigate("/login");
@@ -59,7 +78,7 @@ const NavSlideBar = ({ role }) => {
             {role === "admin" && (
               <div className="cursor-pointerflex">
                 <select
-                  className="text-xs border p-1 rounded bg-transparant text-white w-full sm:w-auto sm:p-2 "
+                  className={`text-xs border p-1 rounded bg-gray-900 text-white w-full sm:w-auto sm:p-2 ${selectedAgent ? 'text-white' : 'text-gray-400'}`}
                   value={selectedAgent ? selectedAgent.id : ""}
                   onChange={(e) => {
                     const agent = agents.find((a) => a.id === parseInt(e.target.value));
@@ -94,12 +113,12 @@ const NavSlideBar = ({ role }) => {
           <ul className="flex flex-col gap-4">
             {menuOptions[role]?.map((item, index) => (
               <li key={index} className="flex items-center gap-2 cursor-pointer hover:text-gray-300 active:bg-gray-700 p-2"
-                onClick={() => { 
+                onClick={() => {
                   setSelectedChatId(null);
                   navigate(item.path);
                   setShowMenu(false);
                 }}
-                >
+              >
                 {item.icon} {item.label}
               </li>
             ))}
@@ -113,7 +132,7 @@ const NavSlideBar = ({ role }) => {
         {menuOptions[role]?.map((item, index) => (
           <li key={index} className="text-gray-400 hover:text-white cursor-pointer active:bg-gray-700 rounded-full p-2"
             onClick={() => { setSelectedChatId(null); navigate(item.path); }}
-            >
+          >
             {item.icon}
           </li>
         ))}
