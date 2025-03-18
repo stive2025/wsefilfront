@@ -1,37 +1,46 @@
-import { useEffect, useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
-const useFetchAndLoad = () => {
+export const useFetchAndLoad = () => {
   const [loading, setLoading] = useState(false);
-  let controller = new AbortController();
+  const controllerRef = useRef(new AbortController());
 
-  const callEndpoint = async (url, options = {}) => {
-    controller = new AbortController();  // Crear un nuevo controlador por cada petición
+  const callEndpoint = async (apiCall) => {
+    if (!apiCall || !apiCall.call) {
+      throw new Error("API call is required");
+    }
+
+    // Cancelar petición anterior si existe
+    if (controllerRef.current) {
+      controllerRef.current.abort();
+    }
+    
+    // Usar el controlador proporcionado por la llamada API
+    controllerRef.current = apiCall.abortController.controller;
+
     setLoading(true);
-
+    
     try {
-      const response = await fetch(url, { ...options, signal: controller.signal });
-      if (!response.ok) throw new Error("Error: ${response.statusText}");
-      const data = await response.json();
-      return data;
-    } catch (err) {
-      return Promise.reject(err);
-    } finally {
+      const response = await apiCall.call;
       setLoading(false);
+      return response;
+    } catch (error) {
+      setLoading(false);
+      throw error;
     }
   };
 
-  const cancelEndpoint = () => {
-    setLoading(false);
-    controller.abort();
-  };
-
+  // Limpieza al desmontar el componente
   useEffect(() => {
     return () => {
-      cancelEndpoint();
+      if (controllerRef.current) {
+        controllerRef.current.abort();
+      }
     };
   }, []);
 
   return { loading, callEndpoint };
 };
 
-export default useFetchAndLoad;
+export const loadAbort = () => {
+  return { controller: new AbortController() };
+};

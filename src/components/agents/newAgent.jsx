@@ -1,41 +1,54 @@
 import { useState, useCallback } from 'react';
 import { User } from 'lucide-react';
 import Resize from "/src/hooks/responsiveHook.jsx";
-import CustomFetch from "/src/services/apiService.js";
+import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
+import { createAgent } from "/src/services/agents.js";
 
 const NewAgent = () => {
   const isMobile = Resize();
+  const { loading, callEndpoint } = useFetchAndLoad();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('');
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
 
   const isFormValid = firstName.trim() && lastName.trim() && email.trim() && password.trim() && role;
 
-  const createAgent = useCallback(
+  const handleCreateAgent = useCallback(
     async () => {
       if (isFormValid) {
+        setError(null);
+        setSuccess(false);
+        
         const formAgentData = {
           "name": `${firstName} ${lastName}`,
           "email": email,
           "role": role,
           "password": password,
           "abilities": "abilitie1",
-        }
+        };
+        
         try {
-          const createAgentResponse = await CustomFetch("users",
-            {
-              method: "POST",
-              body: JSON.stringify(formAgentData)
-            })
-            console.log("Agente creado ", createAgentResponse)
+          const response = await callEndpoint(createAgent(formAgentData));
+          console.log("Agente creado ", response);
+          setSuccess(true);
+          
+          // Opcional: resetear el formulario
+          setFirstName('');
+          setLastName('');
+          setEmail('');
+          setPassword('');
+          setRole('');
         } catch (error) {
-          console.error("Error creando agente ", error)
+          console.error("Error creando agente ", error);
+          setError("Error al crear el agente");
         }
-
       }
-    }
+    },
+    [firstName, lastName, email, password, role, isFormValid, callEndpoint]
   );
 
   return (
@@ -106,15 +119,28 @@ const NewAgent = () => {
           </select>
         </div>
 
+        {/* Success and Error Messages */}
+        {error && (
+          <div className="text-red-500 text-sm">
+            {error}
+          </div>
+        )}
+        
+        {success && (
+          <div className="text-green-500 text-sm">
+            Agente creado exitosamente
+          </div>
+        )}
+
         {/* Save Button */}
         <div>
           <button
-            disabled={!isFormValid}
-            onClick={createAgent}
+            disabled={!isFormValid || loading}
+            onClick={handleCreateAgent}
             className="w-full py-3 rounded-md disabled:bg-gray-600 disabled:cursor-not-allowed disabled:hover:bg-gray-600
             transition-colors duration-300 text-white cursor-pointer rounded-full p-2 bg-naranja-base hover:bg-naranja-medio"
           >
-            Guardar
+            {loading ? 'Guardando...' : 'Guardar'}
           </button>
         </div>
       </div>
