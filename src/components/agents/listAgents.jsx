@@ -228,11 +228,13 @@ const ListAgents = () => {
   };
 
   const handleDeleteAgent = async (id) => {
+    const confirmDelete = window.confirm("¿Estás seguro de que deseas eliminar este agente?");
+    if (!confirmDelete) return;
+
     setIsDeleting(true);
     try {
       const deleteCall = deleteAgents(id);
       await callEndpoint(deleteCall);
-      // Recargar la lista después de eliminar
       if (isSearchMode && searchTerm) {
         fetchAgentsByName(searchTerm);
       } else {
