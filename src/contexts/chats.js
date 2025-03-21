@@ -30,3 +30,6 @@ export const ProfileInfoPanel = createContext(false);
 
 export const NewMessage = createContext(false);
 
+export const UpdateContactForm = createContext(false);
+
+export const ContactHandle = createContext(false);

@@ -257,9 +257,9 @@ const ListAgents = () => {
       const agentCall = getAgent(id);
       const response = await callEndpoint(agentCall);
       setAgentFind(response.data);
-
-      // Ajustar visualización según el dispositivo
-      isMobile ? setAgentNew(true) : setAgentNew(false);
+      
+      // Always set agentNew to true when editing, regardless of device type
+      setAgentNew(true);
     } catch (error) {
       if (error.name !== 'AbortError') {
         console.error("Error buscando agente:", error);
@@ -269,7 +269,6 @@ const ListAgents = () => {
       setIsDeleting(false);
     }
   };
-
   const handleSearch = (term) => {
     setSearchTerm(term);
   };

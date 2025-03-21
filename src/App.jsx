@@ -13,7 +13,7 @@ const AgentsComplete = lazy(() => import("/src/pages/agents/agentsComplete.jsx")
 const ProfileComplete = lazy(() => import("/src/pages/profile/profileComplete.jsx"));
 
 import {
-  ContactInfoClick, ChatInterfaceClick, TagClick, ResolveClick, TagsCreateForm, UpdateAgentForm, AgentHandle,
+  ContactInfoClick, ChatInterfaceClick, TagClick, ResolveClick, TagsCreateForm, UpdateAgentForm, AgentHandle, UpdateContactForm, ContactHandle,
   AutoCreateForm, CustomCreateForm, NewContactForm, SearchInChatClick, NewAgentForm, ProfileInfoPanel, NewMessage
 } from "./contexts/chats.js";
 
@@ -34,6 +34,8 @@ function App() {
   const [newMessage, setNewMessage] = useState(false);
   const [agentFind, setAgentFind] = useState(null);
   const [agentHandle, setAgentHandle] = useState(null);
+  const [ contactFind, setContactFind] = useState(null);
+  const [ contactHandle, setContactHandle ] = useState(null);
 
 
   return (
@@ -62,9 +64,13 @@ function App() {
               </Route>
               <Route path="/" element={<Navs />}>
                 <Route path="/contacts" element={
-                  <NewContactForm.Provider value={{ contactNew, setContactNew }}>
-                    <ContactsComplete />
-                  </NewContactForm.Provider>
+                  <ContactHandle.Provider value={{ contactHandle, setContactHandle }}>
+                    <UpdateContactForm.Provider value={{ contactFind, setContactFind }}>
+                      <NewContactForm.Provider value={{ contactNew, setContactNew }}>
+                        <ContactsComplete />
+                      </NewContactForm.Provider>
+                    </UpdateContactForm.Provider>
+                  </ContactHandle.Provider>
                 } />
                 <Route path="/profile" element={
                   <ProfileInfoPanel.Provider value={{ profileInfoOpen, SetProfileInfoOpen }}>

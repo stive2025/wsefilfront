@@ -32,15 +32,16 @@ const ProfileQR = () => {
   };
 
   const handleQR = async () => {
-    if (isConnected) return; // No hacer llamada si ya hay conexión
+   // No hacer llamada si ya hay conexión
     
     try {
       // Obtener el apiCall completo
       const apiCall = getCodigoQR();
       // Usar callEndpoint para realizar la llamada
       const response = await callEndpoint(apiCall);
+      console.log("Respuesta del backend:", response);
       
-      if (response.status === 200) {
+      if (response.data.status === "CONNECTED") {
         setIsConnected(true);
         setConnectionInfo({
           name: response.data.name,

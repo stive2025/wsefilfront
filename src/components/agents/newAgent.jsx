@@ -3,13 +3,14 @@ import { User } from 'lucide-react';
 import Resize from "/src/hooks/responsiveHook.jsx";
 import { useFetchAndLoad } from "/src/hooks/fechAndLoad.jsx"; // Corregido "fech" a "fetch"
 import { createAgent, updateAgent } from "/src/services/agents.js";
-import { UpdateAgentForm, AgentHandle } from "/src/contexts/chats.js";
+import { UpdateAgentForm, AgentHandle, NewAgentForm } from "/src/contexts/chats.js";
 
 const NewAgent = () => {
   const isMobile = Resize();
   const { loading, callEndpoint } = useFetchAndLoad();
   const { agentFind, setAgentFind } = useContext(UpdateAgentForm);
   const { setAgentHandle } = useContext(AgentHandle);
+  const { setAgentNew } = useContext(NewAgentForm);
 
 
   const [firstName, setFirstName] = useState('');
@@ -23,6 +24,16 @@ const NewAgent = () => {
 
   const isFormValid = firstName.trim() && lastName.trim() && email.trim() && password.trim() && role;
   const isFormValidForUpdate = firstName.trim() && lastName.trim() && email.trim() && role;
+
+  useEffect(() => {
+    // If we're in edit mode (agentFind exists), make sure the form stays open
+    if (agentFind) {
+      // This will ensure the form stays open when switching between mobile and desktop
+      // Import or get reference to setAgentNew if it's not already in this component
+       setAgentNew(true);
+    }
+  }, [isMobile, agentFind]);
+
 
   useEffect(() => {
     if (agentFind) {
@@ -49,6 +60,7 @@ const NewAgent = () => {
       if (timer) clearTimeout(timer);
     };
   }, [success]);
+
 
   const handleCancelEdit = () => {
     setError(null);
