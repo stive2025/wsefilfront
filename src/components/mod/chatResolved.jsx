@@ -1,8 +1,10 @@
 /* eslint-disable react/prop-types */
 import { motion } from "framer-motion";
+import { useContext } from "react";
+import { ChatInterfaceClick } from "/src/contexts/chats.js";
 
-const ChatTag = ({ isOpen, onClose, chatId }) => {
-   
+const ChatTag = ({ isOpen, onClose }) => {
+    const { selectedChatId } = useContext(ChatInterfaceClick);
     const variants = {
         hidden: { opacity: 0, y: -50 },
         visible: { opacity: 1, y: 0 },
@@ -25,7 +27,7 @@ const ChatTag = ({ isOpen, onClose, chatId }) => {
                 onClick={(e) => e.stopPropagation()} //mas abajito reemplazar por el backend linea 38 (chatId)
             >
                 <h1 className="text-white text-lg mb-2">Finalizar Chat</h1>
-                <label className="text-white text-sm">El chat que va a finalizar es: {chatId}</label> 
+                <label className="text-white text-sm">El chat que va a finalizar es: {selectedChatId.name}</label> 
                 <div className="mb-2">
                     <label className="text-white text-sm">¿Desea dar el chat por resuelto?</label>
                 </div>

@@ -14,7 +14,7 @@ import { getChat } from "/src/services/chats.js";
 
 
 // eslint-disable-next-line react/prop-types
-const ChatInterface = ({ chatItem }) => {
+const ChatInterface = () => {
     const isMobile = Resize();
     const location = useLocation();
     const [menuOpen, setMenuOpen] = useState(false);
@@ -151,7 +151,6 @@ const ChatInterface = ({ chatItem }) => {
         };
     }, []);
 
-    const chatSelected = chatMessages;
 
     return (
         <div className="flex flex-col h-screen w-full bg-gray-900 text-white">
@@ -186,9 +185,9 @@ const ChatInterface = ({ chatItem }) => {
                     </div>
 
                     {/* Chat Transfer */}
-                    {transferOpen && <ChatTransfer isOpen={transferOpen} onClose={() => setTransferOpen(false)} chatId={idChatSelected} />}
-                    {tagClick && <ChatTag isOpen={tagClick} onClose={() => setTagClick(false)} chatId={idChatSelected} />}
-                    {resolveClick && <ChatResolved isOpen={resolveClick} onClose={() => setResolveClick(false)} chatId={idChatSelected} />}
+                    {transferOpen && <ChatTransfer isOpen={transferOpen} onClose={() => setTransferOpen(false)} />}
+                    {tagClick && <ChatTag isOpen={tagClick} onClose={() => setTagClick(false)} />}
+                    {resolveClick && <ChatResolved isOpen={resolveClick} onClose={() => setResolveClick(false)} />}
 
                     {/* Messages Area */}
                     {<div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">
@@ -208,8 +207,8 @@ const ChatInterface = ({ chatItem }) => {
                                         )}
                                         <div
                                             className={`max-w-xs md:max-w-md lg:max-w-lg xl:max-w-xl ${isSelf
-                                                    ? "bg-verde-base rounded-l-lg rounded-br-lg"
-                                                    : "bg-gray-700 rounded-r-lg rounded-bl-lg"
+                                                ? "bg-verde-base rounded-l-lg rounded-br-lg"
+                                                : "bg-gray-700 rounded-r-lg rounded-bl-lg"
                                                 } p-3 whitespace-pre-wrap`}
                                         >
                                             {message.body}

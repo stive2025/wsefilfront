@@ -1,10 +1,15 @@
 /* eslint-disable react/prop-types */
 import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
+import { ChatInterfaceClick } from "/src/contexts/chats.js";
+import { getAgents } from "/src/services/agents.js";
+import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
 
-const ChatTransfer = ({ isOpen, onClose, chatId }) => {
-        const [agents, setAgents] = useState([]);
-        const [selectedAgent, setSelectedAgent] = useState(null);
+const ChatTransfer = ({ isOpen, onClose }) => {
+    const [agents, setAgents] = useState([]);
+    const [selectedAgent, setSelectedAgent] = useState(null);
+    const { selectedChatId } = useContext(ChatInterfaceClick);
+    const { callEndpoint } = useFetchAndLoad();
 
     const variants = {
         hidden: { opacity: 0, y: -50 },
@@ -13,11 +18,19 @@ const ChatTransfer = ({ isOpen, onClose, chatId }) => {
     };
 
     useEffect(() => {
-        fetch("https://listarAgentes") // Reemplaza con tu API real
-            .then((response) => response.json())
-            .then((data) => setAgents(data))
-            .catch((error) => console.error("Error obteniendo agentes:", error));
-    }, []);
+        const loadAgents = async () => {
+            try {
+              const response = await callEndpoint(getAgents({ page: 1 }));
+              setAgents(response.data || []);
+            } catch (error) {
+              console.error("Error obteniendo agentes:", error);
+              setAgents([]);
+            }
+          }
+    
+        loadAgents();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, []);
 
     if (!isOpen) return null; // Si no está abierto, no se renderiza
 
@@ -35,7 +48,7 @@ const ChatTransfer = ({ isOpen, onClose, chatId }) => {
                 onClick={(e) => e.stopPropagation()} //mas abajito reemplazar por el backend linea 38 (chatId)
             >
                 <h1 className="text-white text-lg mb-2">Transferir Chat</h1>
-                <label className="text-white text-sm">{chatId}</label> 
+                <label className="text-white text-sm">{selectedChatId.name}</label>
                 <div className="mb-2">
                     <label className="text-white text-sm">Transferir a:</label>
                     <select

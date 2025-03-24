@@ -5,7 +5,7 @@ import Resize from "/src/hooks/responsiveHook.jsx";
 import ContactInfo from "/src/components/chats/contactInfo.jsx";
 import SearchInChat from "/src/components/chats/searchInChat.jsx";
 import ListContacts from "/src/components/contacts/listContacts.jsx";
-import { ContactInfoClick, ChatInterfaceClick, SearchInChatClick, NewMessage} from "/src/contexts/chats.js"
+import { ContactInfoClick, ChatInterfaceClick, SearchInChatClick, NewMessage } from "/src/contexts/chats.js"
 import { useContext } from "react";
 
 
@@ -17,11 +17,18 @@ const chatComplete = () => {
     const { newMessage } = useContext(NewMessage);
     const isMobile = Resize();
     return isMobile ? (
-        !selectedChatId ? (
-            newMessage ? <ListContacts /> : <ChatList />
+        selectedChatId == null ? (
+            newMessage ? (
+                <ListContacts />
+            ) : (
+                <ChatList />
+            )
         ) : (
             <>
-                {infoOpen ? (<ContactInfo />) : searchInChat ? (<SearchInChat/>
+                {infoOpen ? (
+                    <ContactInfo />
+                ) : searchInChat ? (
+                    <SearchInChat />
                 ) : (
                     <ChatInterface />
                 )}
@@ -35,8 +42,7 @@ const chatComplete = () => {
             {newMessage ? <ListContacts /> : <ChatList />}
             <ChatInterface />
             {infoOpen && <ContactInfo />}
-            {searchInChat && <SearchInChat/>}
-
+            {searchInChat && <SearchInChat />}
         </div>
     );
 };

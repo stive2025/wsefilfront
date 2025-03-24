@@ -1,6 +1,7 @@
+/* eslint-disable react/prop-types */
 import Resize from "/src/hooks/responsiveHook.jsx";
 import { Search, MessageSquarePlus, ChevronLeftCircle, ChevronRightCircle, Loader } from "lucide-react";
-import { useEffect, useState, useRef, useContext, useMemo, useCallback } from "react";
+import { useEffect, useState, useRef, useContext, useCallback } from "react";
 import { ChatInterfaceClick, NewMessage } from "/src/contexts/chats.js";
 import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
 import { getChatList } from "/src/services/chats.js";
@@ -246,7 +247,7 @@ const ChatList = ({ role = "admin" }) => {
   const [activeTag, setActiveTag] = useState("label_all");
   const [page, setPage] = useState(1);
   const [hasMoreChats, setHasMoreChats] = useState(true);
-  const [paginationInfo, setPaginationInfo] = useState({
+  const [, setPaginationInfo] = useState({
     current_page: 1,
     last_page: 1,
     total: 0
