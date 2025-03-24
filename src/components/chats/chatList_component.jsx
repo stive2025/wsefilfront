@@ -1,42 +1,51 @@
-
-/* eslint-disable react/prop-types */
 import Resize from "/src/hooks/responsiveHook.jsx";
-import { Search, MessageSquarePlus, ChevronLeftCircle, ChevronRightCircle } from "lucide-react";
-import { useEffect, useState, useRef, useContext } from "react";
+import { Search, MessageSquarePlus, ChevronLeftCircle, ChevronRightCircle, Loader } from "lucide-react";
+import { useEffect, useState, useRef, useContext, useMemo, useCallback } from "react";
 import { ChatInterfaceClick, NewMessage } from "/src/contexts/chats.js";
-
+import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
+import { getChatList } from "/src/services/chats.js";
+import { getContact } from "/src/services/contacts.js";
+import { getAgents } from "/src/services/agents.js";
 
 // Componentes reutilizables
-
 const ChatHeader = () => {
-  const {setNewMessage} = useContext(NewMessage);
-  return (<div className="p-1 flex items-center justify-between bg-gray-900">
-    <div className="flex items-center space-x-2">
-      <img src="/src/assets/images/logoCRM.png" alt="Logo" className="w-22 h-9" />
+  const { setNewMessage } = useContext(NewMessage);
+  return (
+    <div className="p-1 flex items-center justify-between bg-gray-900">
+      <div className="flex items-center space-x-2">
+        <img src="/src/assets/images/logoCRM.png" alt="Logo" className="w-22 h-9" />
+      </div>
+      <div className="flex space-x-2">
+        <button className="p-2 hover:bg-gray-700 active:bg-gray-700 rounded-full" onClick={() => setNewMessage(true)}>
+          <MessageSquarePlus size={15} />
+        </button>
+      </div>
     </div>
-    <div className="flex space-x-2">
-      <button className="p-2 hover:bg-gray-700 active:bg-gray-700 rounded-full" onClick={() => setNewMessage(true)}>
-        <MessageSquarePlus size={15} />
-      </button>
-    </div>
-  </div>
-  )
+  );
 };
 
-const SearchInput = () => (
-  <div className="p-2 bg-gray-900">
-    <div className="relative flex items-center">
-      <input
-        type="text"
-        placeholder="Search..."
-        className="w-full bg-gray-800 rounded-lg pl-8 pr-2 py-1 text-white placeholder-gray-400"
-      />
-      <Search className="absolute left-1 text-gray-400" size={18} />
-    </div>
-  </div>
-);
+const SearchInput = ({ searchQuery, setSearchQuery }) => {
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+  };
 
-const TagsBar = ({ tags }) => {
+  return (
+    <div className="p-2 bg-gray-900">
+      <div className="relative flex items-center">
+        <input
+          type="text"
+          placeholder="Search..."
+          value={searchQuery}
+          onChange={handleSearchChange}
+          className="w-full bg-gray-800 rounded-lg pl-8 pr-2 py-1 text-white placeholder-gray-400"
+        />
+        <Search className="absolute left-1 text-gray-400" size={18} />
+      </div>
+    </div>
+  );
+};
+
+const TagsBar = ({ tags, activeTag, setActiveTag }) => {
   const containerRef = useRef(null);
 
   const scrollRight = () => {
@@ -66,12 +75,14 @@ const TagsBar = ({ tags }) => {
         className="bg-transparent text-white h-8 w-full overflow-hidden shadow-md flex items-center p-1 overflow-x-auto scrollbar-hide mx-8"
       >
         <ul className="flex whitespace-nowrap">
-          {Object.values(tags).map((item, index) => (
+          {Object.entries(tags).map(([key, value]) => (
             <li
-              key={index}
-              className="flex items-center gap-2 cursor-pointer hover:text-gray-300 active:bg-gray-700 rounded-full p-2 text-xs"
+              key={key}
+              className={`flex items-center gap-2 cursor-pointer rounded-full p-2 text-xs ${activeTag === key ? "bg-gray-700 text-white" : "hover:text-gray-300"
+                }`}
+              onClick={() => setActiveTag(key)}
             >
-              {item}
+              {value}
             </li>
           ))}
         </ul>
@@ -80,7 +91,7 @@ const TagsBar = ({ tags }) => {
       {/* Botón derecha */}
       <button
         onClick={scrollRight}
-        className="absolute right-0  h-5 w-5 mr-2 flex items-center justify-center bg-transparent hover:bg-gray-700 active:bg-gray-700 rounded-full z-10"
+        className="absolute right-0 h-5 w-5 mr-2 flex items-center justify-center bg-transparent hover:bg-gray-700 active:bg-gray-700 rounded-full z-10"
       >
         <ChevronRightCircle size={15} />
       </button>
@@ -88,44 +99,113 @@ const TagsBar = ({ tags }) => {
   );
 };
 
-
-const ChatItems = ({ chats }) => {
+const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats }) => {
   const { selectedChatId, setSelectedChatId } = useContext(ChatInterfaceClick);
+  const observerRef = useRef(null);
+  const lastChatRef = useRef(null);
+  // Set up IntersectionObserver for infinite scrolling
+  useEffect(() => {
+    if (loading || !hasMoreChats) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMoreChats();
+        }
+      },
+      { threshold: 0.5 }
+    );
+
+    if (lastChatRef.current) {
+      observer.observe(lastChatRef.current);
+    }
+
+    observerRef.current = observer;
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+    };
+  }, [loading, hasMoreChats, loadMoreChats, chats.length]);
+
+  if (loading && chats.length === 0) {
+    return (
+      <div className="flex justify-center items-center py-10 bg-gray-900">
+        <Loader className="animate-spin" size={24} />
+      </div>
+    );
+  }
+
+  if (chats.length === 0) {
+    return (
+      <div className="flex justify-center items-center py-10 bg-gray-900 text-gray-400">
+        No hay chats disponibles
+      </div>
+    );
+  }
+
   return (
     <div className="bg-gray-900">
-      {chats.chats.map((item) => (
-        <div
-          key={item.id}
-          className="w-full flex items-center space-x-3 p-4 hover:bg-gray-800 cursor-pointer active:bg-gray-700"
-          onClick={() => { setSelectedChatId(item.id);console.log(selectedChatId); }}
-        >
-          {/* Avatar */}
-          <img
-            src={item.avatar}
-            alt="Avatar"
-            className="w-10 h-10 rounded-full"
-          />
+      {chats.map((item, index) => {
+        // Asignamos la ref al último elemento de la lista
+        const isLastItem = index === chats.length - 1;
 
-          {/* Chat Details */}
-          <div className="flex-1">
-            <div className="font-medium text-sm md:text-base">{item.name}</div>
-            <div className="text-xs md:text-sm text-gray-400 overflow-hidden text-ellipsis whitespace-nowrap max-w-[150px] sm:max-w-[200px]">
-              {item.lastMessage}
+        return (
+          <div
+            key={item.id}
+            ref={isLastItem ? lastChatRef : null}
+            className={`w-full flex items-center space-x-3 p-4 hover:bg-gray-800 cursor-pointer ${selectedChatId && selectedChatId.id == item.id ? "bg-gray-700" : ""
+              }`}
+            onClick={() => {
+               console.log(item)
+              setSelectedChatId({ id: item.id, name: item.name, photo: item.avatar })
+            }}
+          >
+            {/* Avatar */}
+            <div className="relative">
+              <img
+                src={item.avatar || "/src/assets/images/default-avatar.jpg"}
+                alt="Avatar"
+                className="w-10 h-10 rounded-full"
+              />
+              {item.online && (
+                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-gray-900 rounded-full"></div>
+              )}
+            </div>
+
+            {/* Chat Details */}
+            <div className="flex-1">
+              <div className="font-medium text-sm md:text-base">{item.name}</div>
+              <div className="text-xs md:text-sm text-gray-400 overflow-hidden text-ellipsis whitespace-nowrap max-w-[150px] sm:max-w-[200px]">
+                {item.last_message || item.lastMessage}
+              </div>
+            </div>
+
+            {/* Timestamp and Unread Count */}
+            <div className="text-xs text-gray-400 flex flex-col items-end">
+              <div>{item.timestamp || new Date(item.updated_at).toLocaleDateString()}</div>
+              {(item.unread_message > 0 || item.unreadCount > 0) && (
+                <div className="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center mt-1">
+                  {item.unread_message || item.unreadCount}
+                </div>
+              )}
             </div>
           </div>
+        );
+      })}
 
-          {/* Timestamp and State */}
-          <div className="text-xs text-gray-400">
-            <div>{item.timestamp}</div>
-            <div>{item.state}</div>
-          </div>
+      {/* Loading indicator at the bottom */}
+      {loading && chats.length > 0 && (
+        <div className="flex justify-center items-center py-4 bg-gray-900">
+          <Loader className="animate-spin" size={20} />
         </div>
-      ))}
+      )}
     </div>
   );
 };
 
-const AgentSelect = ({ role, agents, selectedAgent, setSelectedAgent }) => {
+const AgentSelect = ({ role, agents, selectedAgent, setSelectedAgent, loading }) => {
   if (role !== "admin") return null;
   return (
     <div className="cursor-pointer p-4 flex border-b border-gray-700 bg-gray-900">
@@ -136,9 +216,10 @@ const AgentSelect = ({ role, agents, selectedAgent, setSelectedAgent }) => {
           const agent = agents.find((a) => a.id === parseInt(e.target.value));
           setSelectedAgent(agent);
         }}
+        disabled={loading}
       >
         <option value="" disabled>
-          Seleccionar agente
+          {loading ? "Cargando agentes..." : "Seleccionar agente"}
         </option>
         {agents.length > 0 ? (
           agents.map((agent) => (
@@ -154,12 +235,26 @@ const AgentSelect = ({ role, agents, selectedAgent, setSelectedAgent }) => {
   );
 };
 
-// FIN Componentes reutilizables
-
-const ChatList = ({ role }) => {
+// Componente principal
+const ChatList = ({ role = "admin" }) => {
   const isMobile = Resize();
+  const { loading, fetchLoading, callEndpoint } = useFetchAndLoad();
   const [agents, setAgents] = useState([]);
   const [selectedAgent, setSelectedAgent] = useState(null);
+  const [chats, setChats] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeTag, setActiveTag] = useState("label_all");
+  const [page, setPage] = useState(1);
+  const [hasMoreChats, setHasMoreChats] = useState(true);
+  const [paginationInfo, setPaginationInfo] = useState({
+    current_page: 1,
+    last_page: 1,
+    total: 0
+  });
+  // const { selectedChatId } = useContext(ChatInterfaceClick);
+  const chatListRef = useRef(null);
+
+  // Tags para filtrar chats
   const tags = {
     label_all: "Todos",
     label_rev: "Revisión",
@@ -167,61 +262,169 @@ const ChatList = ({ role }) => {
     label_pendingPay: "Pago pendiente",
     label_callLater: "Llamar mas tarde",
   };
-  const chats = {
-    chats: [
-      {
-        id: "1",
-        avatar: "/src/assets/images/agent1.jpg",
-        name: "José Sarmiento",
-        lastMessage: "Hola, ¿en qué puedo ayudarte?Hola, ¿en qué puedo ayudarte?Hola, ¿en qué puedo ayudarte?Hola, ¿en qué puedo ayudarte?Hola, ¿en qué puedo ayudarte?Hola, ¿en qué puedo ayudarte?",
-        timestamp: "10:30",
-        state: "En línea",
-      },
-      {
-        id: "2",
-        avatar: "/src/assets/images/agent2.jpg",
-        name: "María Pérez",
-        lastMessage: "¿Cuándo puedo pasar a recoger mi pedido?",
-        timestamp: "09:45",
-        state: "Ocupado",
-      },
-      {
-        id: "3",
-        avatar: "/src/assets/images/agent3.jpg",
-        name: "Juan López",
-        lastMessage: "¿Cuál es el costo de envío?",
-        timestamp: "Ayer",
-        state: "Desconectado",
-      },
-    ],
+
+  // Función para cargar los chats desde la API
+  const loadChats = async (params = {}, append = false) => {
+    try {
+      const response = await callEndpoint(getChatList(params), 'chatList');
+
+      // Guardar información de paginación
+      setPaginationInfo({
+        current_page: response.current_page,
+        last_page: response.last_page,
+        total: response.total
+      });
+
+      // Determinar si hay más chats para cargar
+      setHasMoreChats(response.current_page < response.last_page);
+
+      // Enriquecer los datos de los chats con información de contactos
+      const chatData = response.data || [];
+
+      // Utilizar Promise.all para esperar que todas las promesas se resuelvan
+      const enrichedChats = await Promise.all(
+        chatData.map(async (chat, index) => {
+          if (chat.contact_id) {
+            try {
+              // Usar un key único para cada llamada de contacto
+              const contactKey = `contact_${chat.contact_id}_${index}`;
+              const contactResponse = await callEndpoint(getContact(chat.contact_id), contactKey);
+
+              return {
+                ...chat,
+                name: contactResponse.name,
+                avatar: contactResponse.profile_picture || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSAuH1X-_SWa-xSq3zSYFA8x9LrIN6tHVg0Yw&s",
+              };
+            } catch (error) {
+              console.error("Error fetching contact details for ID:", chat.contact_id, error);
+              return {
+                ...chat,
+                name: "Unknown Contact",
+                avatar: "/src/assets/images/default-avatar.jpg",
+                fetchError: error.message
+              };
+            }
+          }
+          return chat;
+        })
+      );
+
+      if (append) {
+        setChats(prev => [...prev, ...enrichedChats]);
+      } else {
+        setChats(enrichedChats);
+      }
+    } catch (error) {
+      console.error("Error loading chats:", error);
+      if (!append) {
+        setChats([]);
+      }
+      setHasMoreChats(false);
+    }
   };
 
-  useEffect(() => {
-    if (role === "admin") {
-      fetch("https://listarAgentes") // Reemplaza con tu API real
-        .then((response) => response.json())
-        .then((data) => setAgents(data))
-        .catch((error) => console.error("Error obteniendo agentes:", error));
+  // Función para cargar más chats (siguiente página)
+  const loadMoreChats = useCallback(() => {
+    if (!hasMoreChats || loading) return;
+
+    const nextPage = page + 1;
+    setPage(nextPage);
+
+    const params = {
+      page: nextPage,
+    };
+
+    if (searchQuery) {
+      params.name = searchQuery;
     }
+
+    if (activeTag !== 'label_all') {
+      params.tag = activeTag.replace('label_', '');
+    }
+
+    if (selectedAgent) {
+      params.agent_id = selectedAgent.id;
+    }
+
+    loadChats(params, true);
+  }, [page, hasMoreChats, loading, searchQuery, activeTag, selectedAgent]);
+
+  // Efecto para cargar agentes si el usuario es admin
+  useEffect(() => {
+    const loadAgents = async () => {
+      if (role === "admin") {
+        try {
+          const response = await callEndpoint(getAgents({ page: 1 }));
+          setAgents(response.data || []);
+        } catch (error) {
+          console.error("Error obteniendo agentes:", error);
+          setAgents([]);
+        }
+      }
+    };
+
+    loadAgents();
   }, [role]);
+
+  // Efecto para cargar chats cuando cambian los filtros
+  useEffect(() => {
+    // Reiniciar paginación
+    setPage(1);
+    setHasMoreChats(true);
+
+    const params = {
+      page: 1,
+    };
+
+    if (searchQuery) {
+      params.name = searchQuery;
+    }
+
+    if (activeTag !== 'label_all') {
+      params.tag = activeTag.replace('label_', '');
+    }
+
+    if (selectedAgent) {
+      params.agent_id = selectedAgent.id;
+    }
+
+    loadChats(params, false);
+  }, [searchQuery, activeTag, selectedAgent]);
+
+  // Implementar búsqueda debounced
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Reiniciar paginación cuando cambia la búsqueda
+      setPage(1);
+      setHasMoreChats(true);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   return isMobile ? (
     <div className="w-full sm:w-80 border-r border-gray-700 flex flex-col bg-gray-900 text-white h-screen">
       {/* Contenedor fijo para header, search, agent select y tags */}
       <div className="flex flex-col flex-shrink-0 mt-14">
         <ChatHeader />
-        <SearchInput />
+        <SearchInput searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
         <AgentSelect
           role={role}
           agents={agents}
           selectedAgent={selectedAgent}
           setSelectedAgent={setSelectedAgent}
+          loading={fetchLoading}
         />
-        <TagsBar tags={tags} />
+        <TagsBar tags={tags} activeTag={activeTag} setActiveTag={setActiveTag} />
       </div>
       {/* ChatItems ocupa el resto del espacio y tiene scroll */}
-      <div className="flex-1 overflow-y-auto">
-        <ChatItems chats={chats} />
+      <div className="flex-1 overflow-y-auto" ref={chatListRef}>
+        <ChatItems
+          chats={chats}
+          loading={loading}
+          loadMoreChats={loadMoreChats}
+          hasMoreChats={hasMoreChats}
+        />
       </div>
     </div>
   ) : (
@@ -229,13 +432,24 @@ const ChatList = ({ role }) => {
       {/* Fijamos el header, search, agent select y tags */}
       <div className="flex flex-col flex-shrink-0">
         <ChatHeader />
-        <SearchInput />
-        <AgentSelect role={role} agents={agents} selectedAgent={selectedAgent} setSelectedAgent={setSelectedAgent} />
-        <TagsBar tags={tags} />
+        <SearchInput searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+        <AgentSelect
+          role={role}
+          agents={agents}
+          selectedAgent={selectedAgent}
+          setSelectedAgent={setSelectedAgent}
+          loading={fetchLoading}
+        />
+        <TagsBar tags={tags} activeTag={activeTag} setActiveTag={setActiveTag} />
       </div>
       {/* ChatItems ocupará el espacio restante y tendrá scroll */}
-      <div className="flex-1 overflow-y-auto scrollbar-hide">
-        <ChatItems chats={chats} />
+      <div className="flex-1 overflow-y-auto scrollbar-hide" ref={chatListRef}>
+        <ChatItems
+          chats={chats}
+          loading={loading}
+          loadMoreChats={loadMoreChats}
+          hasMoreChats={hasMoreChats}
+        />
       </div>
     </div>
   );

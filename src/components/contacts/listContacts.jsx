@@ -133,7 +133,7 @@ const ListContacts = () => {
   // Cargar datos iniciales
   useEffect(() => {
     fetchContacts(1, true);
-    setContactHandle(false); // Resetear el estado de contacto al cargar la lista
+   //setContactHandle(false); // Resetear el estado de contacto al cargar la lista
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contactHandle]);
 

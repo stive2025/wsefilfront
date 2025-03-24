@@ -11,36 +11,7 @@ const NavSlideBar = ({ role }) => {
   const [showMenu, setShowMenu] = useState(false);
   const isMobile = Resize();
   const navigate = useNavigate();
-  const [agents, setAgents] = useState([]);
-  const [selectedAgent, setSelectedAgent] = useState(null);
   const { setSelectedChatId } = useContext(ChatInterfaceClick);
-  const { callEndpoint } = useFetchAndLoad();
-  const [setError] = useState(null);
-
-
-  useEffect(() => {
-    if (role === "admin") {
-      fetchAgents();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [role]);
-
-  const fetchAgents = async () => {
-    try {
-      // Llamar a getAgents() para obtener el objeto con call y abortController
-      const agentsCall = getAgents();
-      // Pasar el objeto completo a callEndpoint
-      console.log("Cargando agentes...");
-      const response = await callEndpoint(agentsCall);
-      setAgents(response);
-    } catch (error) {
-      // Solo actualizar el estado de error si no es un error de abort
-      if (error.name !== 'AbortError') {
-        console.error("Error buscando agentes:", error);
-        setError("No se pudieron cargar los agentes");
-      }
-    }
-  };
 
   const toggleMenu = () => setShowMenu(!showMenu);
   const handleLogout = () => navigate("/login");
@@ -73,31 +44,6 @@ const NavSlideBar = ({ role }) => {
         <div className="flex flex-row gap-4">
           <div className="text-xl cursor-pointer p-4 flex" onClick={toggleMenu}>
             <Menu />
-          </div>
-          <div className="cursor-pointer p-4 flex">
-            {role === "admin" && (
-              <div className="cursor-pointerflex">
-                <select
-                  className={`text-xs border p-1 rounded bg-gray-900 text-white w-full sm:w-auto sm:p-2 ${selectedAgent ? 'text-white' : 'text-gray-400'}`}
-                  value={selectedAgent ? selectedAgent.id : ""}
-                  onChange={(e) => {
-                    const agent = agents.find((a) => a.id === parseInt(e.target.value));
-                    setSelectedAgent(agent);
-                  }}
-                >
-                  <option value="" disabled>Seleccionar agente</option>
-                  {agents.length > 0 ? (
-                    agents.map((agent) => (
-                      <option key={agent.id} value={agent.id}>
-                        {agent.name}
-                      </option>
-                    ))
-                  ) : (
-                    <option disabled>No hay agentes</option>
-                  )}
-                </select>
-              </div>
-            )}
           </div>
         </div>
 

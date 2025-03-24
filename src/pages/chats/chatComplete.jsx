@@ -21,9 +21,9 @@ const chatComplete = () => {
             newMessage ? <ListContacts /> : <ChatList />
         ) : (
             <>
-                {infoOpen ? (<ContactInfo contactId={selectedChatId} />) : searchInChat ? (<SearchInChat contactId={selectedChatId} />
+                {infoOpen ? (<ContactInfo />) : searchInChat ? (<SearchInChat/>
                 ) : (
-                    <ChatInterface chatId={selectedChatId} />
+                    <ChatInterface />
                 )}
             </>
         )
@@ -33,9 +33,9 @@ const chatComplete = () => {
                 }`}
         >
             {newMessage ? <ListContacts /> : <ChatList />}
-            <ChatInterface chatId={selectedChatId} />
-            {infoOpen && <ContactInfo contactId={selectedChatId} />}
-            {searchInChat && <SearchInChat contactId={selectedChatId} />}
+            <ChatInterface />
+            {infoOpen && <ContactInfo />}
+            {searchInChat && <SearchInChat/>}
 
         </div>
     );
