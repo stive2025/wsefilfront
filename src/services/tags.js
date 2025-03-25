@@ -1,11 +1,11 @@
 import CustomFetch from "/src/services/apiService.js";
 import { loadAbort } from "../hooks/fechAndload.jsx";
 
-const getChatList = (params = {}) => {
+const getTags = (params = {}) => {
   const abortController = loadAbort();
   
   // Construir la URL con los parámetros
-  let endpoint = "chats";
+  let endpoint = "tags";
   const queryParams = new URLSearchParams();
   
   // Agregar paginación si existe
@@ -40,44 +40,44 @@ const getChatList = (params = {}) => {
   };
 };
 
-const getChat = (chatId) => {
+const getTag = (id) => {
   const abortController = loadAbort();
   return {
-    call: CustomFetch(`chats/${chatId}`, {
+    call: CustomFetch(`tags/${id}`, {
       signal: abortController.controller.signal,
     }),
     abortController,
   };
 };
 
-const createChat = (messageData) => {
+const createTag = (tagData) => {
   const abortController = loadAbort();
   return {
-    call: CustomFetch("chats", {
+    call: CustomFetch("tags", {
       method: "POST",
-      body: JSON.stringify(messageData),
+      body: JSON.stringify(tagData),
       signal: abortController.controller.signal,
     }),
     abortController,
   };
 };
 
-const updateChat = (chatId, chatData) => {
+const updateTag = (id, tagData) => {
   const abortController = loadAbort();
   return {
-    call: CustomFetch(`chats/${chatId}`, {
+    call: CustomFetch(`tags/${id}`, {
       method: "PATCH",
-      body: JSON.stringify(chatData),
+      body: JSON.stringify(tagData),
       signal: abortController.controller.signal,
     }),
     abortController,
   };
 };
 
-const deleteChat = (id) => {
+const deleteTag = (id) => {
   const abortController = loadAbort();
   return {
-    call: CustomFetch(`chats/${id}`, {
+    call: CustomFetch(`tags/${id}`, {
       method: "DELETE",
       signal: abortController.controller.signal,
     }),
@@ -85,4 +85,4 @@ const deleteChat = (id) => {
   };
 };
 
-export { getChatList, createChat, deleteChat, updateChat, getChat };
+export { getTags, createTag, deleteTag, updateTag, getTag };

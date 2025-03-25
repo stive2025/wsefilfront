@@ -1,11 +1,11 @@
-import CustomFetch from "/src/services/apiService.js";
+import AutoFetch from "/src/services/apiService.js";
 import { loadAbort } from "../hooks/fechAndload.jsx";
 
-const getChatList = (params = {}) => {
+const getAutoMessages = (params = {}) => {
   const abortController = loadAbort();
   
   // Construir la URL con los parámetros
-  let endpoint = "chats";
+  let endpoint = "AutoMessages";
   const queryParams = new URLSearchParams();
   
   // Agregar paginación si existe
@@ -18,16 +18,11 @@ const getChatList = (params = {}) => {
     queryParams.append('name', params.name);
   }
   
-  // Agregar filtro por etiqueta si existe
-  if (params.tag) {
-    queryParams.append('tag', params.tag);
+  // Agregar filtro por mensaje si existe
+  if (params.AutoMessage) {
+    queryParams.append('AutoMessage', params.AutoMessage);
   }
-  
-  // Agregar filtro por agente si existe
-  if (params.agent_id) {
-    queryParams.append('agent_id', params.agent_id);
-  }
-  
+ 
   // Añadir los parámetros a la URL si existen
   const queryString = queryParams.toString();
   if (queryString) {
@@ -35,49 +30,49 @@ const getChatList = (params = {}) => {
   }
   
   return {
-    call: CustomFetch(endpoint, { signal: abortController.controller.signal }),
+    call: AutoFetch(endpoint, { signal: abortController.controller.signal }),
     abortController,
   };
 };
 
-const getChat = (chatId) => {
+const getAutoMessage = (id) => {
   const abortController = loadAbort();
   return {
-    call: CustomFetch(`chats/${chatId}`, {
+    call: AutoFetch(`AutoMessages/${id}`, {
       signal: abortController.controller.signal,
     }),
     abortController,
   };
 };
 
-const createChat = (messageData) => {
+const createAutoMessage = (tagData) => {
   const abortController = loadAbort();
   return {
-    call: CustomFetch("chats", {
+    call: AutoFetch("AutoMessages", {
       method: "POST",
-      body: JSON.stringify(messageData),
+      body: JSON.stringify(tagData),
       signal: abortController.controller.signal,
     }),
     abortController,
   };
 };
 
-const updateChat = (chatId, chatData) => {
+const updateAutoMessage = (id, tagData) => {
   const abortController = loadAbort();
   return {
-    call: CustomFetch(`chats/${chatId}`, {
+    call: AutoFetch(`AutoMessages/${id}`, {
       method: "PATCH",
-      body: JSON.stringify(chatData),
+      body: JSON.stringify(tagData),
       signal: abortController.controller.signal,
     }),
     abortController,
   };
 };
 
-const deleteChat = (id) => {
+const deleteAutoMessage = (id) => {
   const abortController = loadAbort();
   return {
-    call: CustomFetch(`chats/${id}`, {
+    call: AutoFetch(`tags/${id}`, {
       method: "DELETE",
       signal: abortController.controller.signal,
     }),
@@ -85,4 +80,4 @@ const deleteChat = (id) => {
   };
 };
 
-export { getChatList, createChat, deleteChat, updateChat, getChat };
+export { getAutoMessages, createAutoMessage, deleteAutoMessage, updateAutoMessage, getAutoMessage };

@@ -1,11 +1,11 @@
 import CustomFetch from "/src/services/apiService.js";
 import { loadAbort } from "../hooks/fechAndload.jsx";
 
-const getChatList = (params = {}) => {
+const getCustomMessages = (params = {}) => {
   const abortController = loadAbort();
   
   // Construir la URL con los parámetros
-  let endpoint = "chats";
+  let endpoint = "customMessages";
   const queryParams = new URLSearchParams();
   
   // Agregar paginación si existe
@@ -18,16 +18,11 @@ const getChatList = (params = {}) => {
     queryParams.append('name', params.name);
   }
   
-  // Agregar filtro por etiqueta si existe
-  if (params.tag) {
-    queryParams.append('tag', params.tag);
+  // Agregar filtro por mensaje si existe
+  if (params.customMessage) {
+    queryParams.append('customMessage', params.customMessage);
   }
-  
-  // Agregar filtro por agente si existe
-  if (params.agent_id) {
-    queryParams.append('agent_id', params.agent_id);
-  }
-  
+ 
   // Añadir los parámetros a la URL si existen
   const queryString = queryParams.toString();
   if (queryString) {
@@ -40,44 +35,44 @@ const getChatList = (params = {}) => {
   };
 };
 
-const getChat = (chatId) => {
+const getCustomMessage = (id) => {
   const abortController = loadAbort();
   return {
-    call: CustomFetch(`chats/${chatId}`, {
+    call: CustomFetch(`customMessages/${id}`, {
       signal: abortController.controller.signal,
     }),
     abortController,
   };
 };
 
-const createChat = (messageData) => {
+const createCustomMessage = (tagData) => {
   const abortController = loadAbort();
   return {
-    call: CustomFetch("chats", {
+    call: CustomFetch("customMessages", {
       method: "POST",
-      body: JSON.stringify(messageData),
+      body: JSON.stringify(tagData),
       signal: abortController.controller.signal,
     }),
     abortController,
   };
 };
 
-const updateChat = (chatId, chatData) => {
+const updateCustomMessage = (id, tagData) => {
   const abortController = loadAbort();
   return {
-    call: CustomFetch(`chats/${chatId}`, {
+    call: CustomFetch(`customMessages/${id}`, {
       method: "PATCH",
-      body: JSON.stringify(chatData),
+      body: JSON.stringify(tagData),
       signal: abortController.controller.signal,
     }),
     abortController,
   };
 };
 
-const deleteChat = (id) => {
+const deleteCustomMessage = (id) => {
   const abortController = loadAbort();
   return {
-    call: CustomFetch(`chats/${id}`, {
+    call: CustomFetch(`tags/${id}`, {
       method: "DELETE",
       signal: abortController.controller.signal,
     }),
@@ -85,4 +80,4 @@ const deleteChat = (id) => {
   };
 };
 
-export { getChatList, createChat, deleteChat, updateChat, getChat };
+export { getCustomMessages, createCustomMessage, deleteCustomMessage, updateCustomMessage, getCustomMessage };

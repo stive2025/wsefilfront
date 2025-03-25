@@ -14,7 +14,8 @@ const ProfileComplete = lazy(() => import("/src/pages/profile/profileComplete.js
 
 import {
   ContactInfoClick, ChatInterfaceClick, TagClick, ResolveClick, TagsCreateForm, UpdateAgentForm, AgentHandle, UpdateContactForm, ContactHandle,
-  AutoCreateForm, CustomCreateForm, NewContactForm, SearchInChatClick, NewAgentForm, ProfileInfoPanel, NewMessage
+  AutoCreateForm, CustomCreateForm, NewContactForm, SearchInChatClick, NewAgentForm, ProfileInfoPanel, NewMessage, UpdateTagForm, TagHandle, 
+  UpdateCustomForm, CustomHandle,AutoHandle,UpdateAutoForm
 } from "./contexts/chats.js";
 
 
@@ -25,7 +26,13 @@ function App() {
   const [tagClick, setTagClick] = useState(null);
   const [resolveClick, setResolveClick] = useState(null);
   const [tagsClick, setTagsClick] = useState(null);
+  const [tagFind, setTagtFind] = useState(null);
+  const [tagHandle, setTagHandle] = useState(null);
+  const [customFind, setCustomFind] = useState(null);
+  const [customHandle, setCustomHandle] = useState(null);
   const [customClick, setCustomClick] = useState(null);
+  const [autoFind, setAutoFind] = useState(null);
+  const [autoHandle, setAutoHandle] = useState(null);
   const [autoClick, setAutoClick] = useState(null);
   const [contactNew, setContactNew] = useState(null);
   const [agentNew, setAgentNew] = useState(null);
@@ -34,8 +41,8 @@ function App() {
   const [newMessage, setNewMessage] = useState(false);
   const [agentFind, setAgentFind] = useState(null);
   const [agentHandle, setAgentHandle] = useState(null);
-  const [ contactFind, setContactFind] = useState(null);
-  const [ contactHandle, setContactHandle ] = useState(null);
+  const [contactFind, setContactFind] = useState(null);
+  const [contactHandle, setContactHandle] = useState(null);
 
 
   return (
@@ -47,19 +54,31 @@ function App() {
               <Route path="/login" element={<LoginForm />} />
               <Route path="/utilities" element={<UtilNavs />}>
                 <Route path="/utilities/tags" element={
-                  <TagsCreateForm.Provider value={{ tagsClick, setTagsClick }}>
-                    <TagsComplete />
-                  </TagsCreateForm.Provider>
+                  <TagHandle.Provider value={{ tagHandle, setTagHandle }}>
+                    <UpdateTagForm.Provider value={{ tagFind, setTagtFind }}>
+                      <TagsCreateForm.Provider value={{ tagsClick, setTagsClick }}>
+                        <TagsComplete />
+                      </TagsCreateForm.Provider>
+                    </UpdateTagForm.Provider>
+                  </TagHandle.Provider>
                 } />
                 <Route path="/utilities/customMessages" element={
-                  <CustomCreateForm.Provider value={{ customClick, setCustomClick }}>
-                    <CustomComplete />
-                  </CustomCreateForm.Provider>
+                  <CustomHandle.Provider value={{ customHandle, setCustomHandle }}>
+                    <UpdateCustomForm.Provider value={{ customFind, setCustomFind }}>
+                      <CustomCreateForm.Provider value={{ customClick, setCustomClick }}>
+                        <CustomComplete />
+                      </CustomCreateForm.Provider>
+                    </UpdateCustomForm.Provider>
+                  </CustomHandle.Provider>
                 } />
                 <Route path="/utilities/autoMessages" element={
-                  <AutoCreateForm.Provider value={{ autoClick, setAutoClick }}>
-                    <AutoComplete />
-                  </AutoCreateForm.Provider>
+                  <AutoHandle.Provider value={{ autoHandle, setAutoHandle }}>
+                  <UpdateAutoForm.Provider value={{ autoFind, setAutoFind }}>
+                    <AutoCreateForm.Provider value={{ autoClick, setAutoClick }}>
+                      <AutoComplete />
+                    </AutoCreateForm.Provider>
+                  </UpdateAutoForm.Provider>
+                </AutoHandle.Provider>
                 } />
               </Route>
               <Route path="/" element={<Navs />}>

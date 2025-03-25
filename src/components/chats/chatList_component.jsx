@@ -1,14 +1,14 @@
 /* eslint-disable react/prop-types */
-import Resize from "/src/hooks/responsiveHook.jsx";
+import { useState, useEffect, useRef, useCallback, useContext } from "react";
 import { Search, MessageSquarePlus, ChevronLeftCircle, ChevronRightCircle, Loader } from "lucide-react";
-import { useEffect, useState, useRef, useContext, useCallback } from "react";
 import { ChatInterfaceClick, NewMessage } from "/src/contexts/chats.js";
 import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
-import { getChatList } from "/src/services/chats.js";
+import { getChatList, updateChat } from "/src/services/chats.js";
 import { getContact } from "/src/services/contacts.js";
 import { getAgents } from "/src/services/agents.js";
+import Resize from "/src/hooks/responsiveHook.jsx";
+//import { toast } from "sonner"; // Asume que estás usando una librería de notificaciones
 
-// Componentes reutilizables
 const ChatHeader = () => {
   const { setNewMessage } = useContext(NewMessage);
   return (
@@ -63,7 +63,6 @@ const TagsBar = ({ tags, activeTag, setActiveTag }) => {
 
   return (
     <div className="relative flex items-center bg-gray-900">
-      {/* Botón izquierda */}
       <button
         onClick={scrollLeft}
         className="absolute left-0 h-5 w-5 ml-2 flex items-center justify-center bg-transparent hover:bg-gray-700 active:bg-gray-700 rounded-full z-10"
@@ -89,7 +88,6 @@ const TagsBar = ({ tags, activeTag, setActiveTag }) => {
         </ul>
       </div>
 
-      {/* Botón derecha */}
       <button
         onClick={scrollRight}
         className="absolute right-0 h-5 w-5 mr-2 flex items-center justify-center bg-transparent hover:bg-gray-700 active:bg-gray-700 rounded-full z-10"
@@ -100,11 +98,53 @@ const TagsBar = ({ tags, activeTag, setActiveTag }) => {
   );
 };
 
+const AgentSelect = ({ role, agents, selectedAgent, setSelectedAgent, loading }) => {
+  if (role !== "admin") return null;
+  return (
+    <div className="cursor-pointer p-4 flex border-b border-gray-700 bg-gray-900">
+      <select
+        className="text-xs border p-1 rounded bg-transparent text-white w-full sm:w-auto sm:p-2"
+        value={selectedAgent ? selectedAgent.id : ""}
+        onChange={(e) => {
+          const agent = agents.find((a) => a.id === parseInt(e.target.value));
+          setSelectedAgent(agent);
+        }}
+        disabled={loading}
+      >
+        <option value="" disabled>
+          {loading ? "Cargando agentes..." : "Seleccionar agente"}
+        </option>
+        {agents.length > 0 ? (
+          agents.map((agent) => (
+            <option key={agent.id} value={agent.id}>
+              {agent.name}
+            </option>
+          ))
+        ) : (
+          <option disabled>No hay agentes</option>
+        )}
+      </select>
+    </div>
+  );
+};
+
 const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats }) => {
   const { selectedChatId, setSelectedChatId } = useContext(ChatInterfaceClick);
   const observerRef = useRef(null);
   const lastChatRef = useRef(null);
-  // Set up IntersectionObserver for infinite scrolling
+  const { callEndpoint } = useFetchAndLoad();
+
+  const handleUpdateChat = async (idChat, dataChat) => {
+    try {
+      const response = await callEndpoint(updateChat(idChat, dataChat), `update_chat_${idChat}`);
+      console.log("Chat actualizado ", response);
+      //toast.success("Chat actualizado con éxito");
+    } catch (error) {
+      console.error("Error actualizando chat ", error);
+      //toast.error(`Error al actualizar el chat: ${error.message || "Verifica la conexión"}`);
+    }
+  };
+
   useEffect(() => {
     if (loading || !hasMoreChats) return;
 
@@ -148,55 +188,50 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats }) => {
 
   return (
     <div className="bg-gray-900">
-      {chats.map((item, index) => {
-        // Asignamos la ref al último elemento de la lista
-        const isLastItem = index === chats.length - 1;
+      {chats.map((item, index) => (
+        <div
+          key={item.id}
+          ref={index === chats.length - 1 ? lastChatRef : null}
+          className={`w-full flex items-center space-x-3 p-4 hover:bg-gray-800 cursor-pointer ${selectedChatId && selectedChatId.id == item.id ? "bg-gray-700" : ""
+            }`}
+          onClick={() => {
+            handleUpdateChat(item.id, { unread_message: 0 });
+            setSelectedChatId({
+              id: item.id,
+              name: item.name,
+              photo: item.avatar
+            });
+          }}
+        >
+          <div className="relative">
+            <img
+              src={item.avatar || "/src/assets/images/default-avatar.jpg"}
+              alt="Avatar"
+              className="w-10 h-10 rounded-full"
+            />
+            {item.online && (
+              <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-gray-900 rounded-full"></div>
+            )}
+          </div>
 
-        return (
-          <div
-            key={item.id}
-            ref={isLastItem ? lastChatRef : null}
-            className={`w-full flex items-center space-x-3 p-4 hover:bg-gray-800 cursor-pointer ${selectedChatId && selectedChatId.id == item.id ? "bg-gray-700" : ""
-              }`}
-            onClick={() => {
-               console.log(item)
-              setSelectedChatId({ id: item.id, name: item.name, photo: item.avatar })
-            }}
-          >
-            {/* Avatar */}
-            <div className="relative">
-              <img
-                src={item.avatar || "/src/assets/images/default-avatar.jpg"}
-                alt="Avatar"
-                className="w-10 h-10 rounded-full"
-              />
-              {item.online && (
-                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-gray-900 rounded-full"></div>
-              )}
-            </div>
-
-            {/* Chat Details */}
-            <div className="flex-1">
-              <div className="font-medium text-sm md:text-base">{item.name}</div>
-              <div className="text-xs md:text-sm text-gray-400 overflow-hidden text-ellipsis whitespace-nowrap max-w-[150px] sm:max-w-[200px]">
-                {item.last_message || item.lastMessage}
-              </div>
-            </div>
-
-            {/* Timestamp and Unread Count */}
-            <div className="text-xs text-gray-400 flex flex-col items-end">
-              <div>{item.timestamp || new Date(item.updated_at).toLocaleDateString()}</div>
-              {(item.unread_message > 0 || item.unreadCount > 0) && (
-                <div className="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center mt-1">
-                  {item.unread_message || item.unreadCount}
-                </div>
-              )}
+          <div className="flex-1">
+            <div className="font-medium text-sm md:text-base">{item.name}</div>
+            <div className="text-xs md:text-sm text-gray-400 overflow-hidden text-ellipsis whitespace-nowrap max-w-[150px] sm:max-w-[200px]">
+              {item.last_message || item.lastMessage}
             </div>
           </div>
-        );
-      })}
 
-      {/* Loading indicator at the bottom */}
+          <div className="text-xs text-gray-400 flex flex-col items-end">
+            <div>{item.timestamp || new Date(item.updated_at).toLocaleDateString()}</div>
+            {(item.unread_message > 0 || item.unreadCount > 0) && (
+              <div className="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center mt-1">
+                {item.unread_message || item.unreadCount}
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+
       {loading && chats.length > 0 && (
         <div className="flex justify-center items-center py-4 bg-gray-900">
           <Loader className="animate-spin" size={20} />
@@ -206,37 +241,6 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats }) => {
   );
 };
 
-const AgentSelect = ({ role, agents, selectedAgent, setSelectedAgent, loading }) => {
-  if (role !== "admin") return null;
-  return (
-    <div className="cursor-pointer p-4 flex border-b border-gray-700 bg-gray-900">
-      <select
-        className="text-xs border p-1 rounded bg-transparent text-white w-full sm:w-auto sm:p-2"
-        value={selectedAgent ? selectedAgent.id : ""}
-        onChange={(e) => {
-          const agent = agents.find((a) => a.id === parseInt(e.target.value));
-          setSelectedAgent(agent);
-        }}
-        disabled={loading}
-      >
-        <option value="" disabled>
-          {loading ? "Cargando agentes..." : "Seleccionar agente"}
-        </option>
-        {agents.length > 0 ? (
-          agents.map((agent) => (
-            <option key={agent.id} value={agent.id}>
-              {agent.name}
-            </option>
-          ))
-        ) : (
-          <option disabled>No hay agentes</option>
-        )}
-      </select>
-    </div>
-  );
-};
-
-// Componente principal
 const ChatList = ({ role = "admin" }) => {
   const isMobile = Resize();
   const { loading, fetchLoading, callEndpoint } = useFetchAndLoad();
@@ -252,10 +256,8 @@ const ChatList = ({ role = "admin" }) => {
     last_page: 1,
     total: 0
   });
-  // const { selectedChatId } = useContext(ChatInterfaceClick);
   const chatListRef = useRef(null);
 
-  // Tags para filtrar chats
   const tags = {
     label_all: "Todos",
     label_rev: "Revisión",
@@ -264,37 +266,31 @@ const ChatList = ({ role = "admin" }) => {
     label_callLater: "Llamar mas tarde",
   };
 
-  // Función para cargar los chats desde la API
   const loadChats = async (params = {}, append = false) => {
     try {
       const response = await callEndpoint(getChatList(params), 'chatList');
 
-      // Guardar información de paginación
       setPaginationInfo({
         current_page: response.current_page,
         last_page: response.last_page,
         total: response.total
       });
 
-      // Determinar si hay más chats para cargar
       setHasMoreChats(response.current_page < response.last_page);
 
-      // Enriquecer los datos de los chats con información de contactos
       const chatData = response.data || [];
 
-      // Utilizar Promise.all para esperar que todas las promesas se resuelvan
       const enrichedChats = await Promise.all(
         chatData.map(async (chat, index) => {
           if (chat.contact_id) {
             try {
-              // Usar un key único para cada llamada de contacto
               const contactKey = `contact_${chat.contact_id}_${index}`;
               const contactResponse = await callEndpoint(getContact(chat.contact_id), contactKey);
 
               return {
                 ...chat,
                 name: contactResponse.name,
-                avatar: contactResponse.profile_picture || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSAuH1X-_SWa-xSq3zSYFA8x9LrIN6tHVg0Yw&s",
+                avatar: contactResponse.profile_picture || "/src/assets/images/default-avatar.jpg",
               };
             } catch (error) {
               console.error("Error fetching contact details for ID:", chat.contact_id, error);
@@ -324,7 +320,6 @@ const ChatList = ({ role = "admin" }) => {
     }
   };
 
-  // Función para cargar más chats (siguiente página)
   const loadMoreChats = useCallback(() => {
     if (!hasMoreChats || loading) return;
 
@@ -350,7 +345,6 @@ const ChatList = ({ role = "admin" }) => {
     loadChats(params, true);
   }, [page, hasMoreChats, loading, searchQuery, activeTag, selectedAgent]);
 
-  // Efecto para cargar agentes si el usuario es admin
   useEffect(() => {
     const loadAgents = async () => {
       if (role === "admin") {
@@ -367,9 +361,7 @@ const ChatList = ({ role = "admin" }) => {
     loadAgents();
   }, [role]);
 
-  // Efecto para cargar chats cuando cambian los filtros
   useEffect(() => {
-    // Reiniciar paginación
     setPage(1);
     setHasMoreChats(true);
 
@@ -392,10 +384,8 @@ const ChatList = ({ role = "admin" }) => {
     loadChats(params, false);
   }, [searchQuery, activeTag, selectedAgent]);
 
-  // Implementar búsqueda debounced
   useEffect(() => {
     const timer = setTimeout(() => {
-      // Reiniciar paginación cuando cambia la búsqueda
       setPage(1);
       setHasMoreChats(true);
     }, 500);
@@ -405,7 +395,6 @@ const ChatList = ({ role = "admin" }) => {
 
   return isMobile ? (
     <div className="w-full sm:w-80 border-r border-gray-700 flex flex-col bg-gray-900 text-white h-screen">
-      {/* Contenedor fijo para header, search, agent select y tags */}
       <div className="flex flex-col flex-shrink-0 mt-14">
         <ChatHeader />
         <SearchInput searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
@@ -418,7 +407,6 @@ const ChatList = ({ role = "admin" }) => {
         />
         <TagsBar tags={tags} activeTag={activeTag} setActiveTag={setActiveTag} />
       </div>
-      {/* ChatItems ocupa el resto del espacio y tiene scroll */}
       <div className="flex-1 overflow-y-auto" ref={chatListRef}>
         <ChatItems
           chats={chats}
@@ -430,7 +418,6 @@ const ChatList = ({ role = "admin" }) => {
     </div>
   ) : (
     <div className="flex-1 border-r border-gray-700 flex flex-col bg-gray-900 text-white pt-10 ml-10 overflow-y-auto">
-      {/* Fijamos el header, search, agent select y tags */}
       <div className="flex flex-col flex-shrink-0">
         <ChatHeader />
         <SearchInput searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
@@ -443,7 +430,6 @@ const ChatList = ({ role = "admin" }) => {
         />
         <TagsBar tags={tags} activeTag={activeTag} setActiveTag={setActiveTag} />
       </div>
-      {/* ChatItems ocupará el espacio restante y tendrá scroll */}
       <div className="flex-1 overflow-y-auto scrollbar-hide" ref={chatListRef}>
         <ChatItems
           chats={chats}
