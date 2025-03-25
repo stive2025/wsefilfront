@@ -41,7 +41,7 @@ const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, lo
           // Solo aplicar la referencia al último elemento
           ref={index === contacts.length - 1 ? lastContactRef : null}
         >
-          <div 
+          <div
             className="w-full flex items-center space-x-3 hover:bg-gray-800 cursor-pointer active:bg-gray-700"
             onClick={() => {
               if (location.pathname === "/contacts") {
@@ -66,13 +66,13 @@ const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, lo
           </div>
           {location.pathname === "/contacts" && (
             <div className="flex">
-              <button 
+              <button
                 className="mr-2 text-gray-400 hover:text-white"
                 onClick={() => onFindContact(item.id)}
               >
                 <Pencil size={16} />
               </button>
-              <button 
+              <button
                 className="text-gray-400 hover:text-white"
                 onClick={() => onDeleteContact(item.id)}
                 disabled={isDeleting}
@@ -94,13 +94,13 @@ const ListContacts = () => {
   const { setNewMessage } = useContext(NewMessage);
   const { setContactNew } = useContext(NewContactForm);
   const { setContactFind } = useContext(UpdateContactForm);
-  const { contactHandle, setContactHandle } = useContext(ContactHandle);
+  const { contactHandle } = useContext(ContactHandle);
   const { setSelectedChatId } = useContext(ChatInterfaceClick);
-  
+
   const isMobile = Resize();
   const location = useLocation();
   const { loading, callEndpoint } = useFetchAndLoad();
-  
+
   const [contacts, setContacts] = useState([]);
   const [error, setError] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -111,7 +111,7 @@ const ListContacts = () => {
   const [searchTimeout, setSearchTimeout] = useState(null);
   const [, setTotalItems] = useState(0);
   const [isSearchMode, setIsSearchMode] = useState(false);
-  
+
   // Referencia al último elemento para implementar intersección
   const observer = useRef();
   const lastContactRef = useCallback(node => {
@@ -133,7 +133,7 @@ const ListContacts = () => {
   // Cargar datos iniciales
   useEffect(() => {
     fetchContacts(1, true);
-   //setContactHandle(false); // Resetear el estado de contacto al cargar la lista
+    //setContactHandle(false); // Resetear el estado de contacto al cargar la lista
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contactHandle]);
 
@@ -301,16 +301,16 @@ const ListContacts = () => {
   };
 
   return isMobile ? (
-    <div className="w-full sm:w-80 flex flex-col bg-gray-900 text-white h-screen">
-      {location.pathname === "/chatList" && (
-        <div className="flex flex-row flex-shrink-0 mt-12">
+    <div className="w-full sm:w-80 mt-10 flex flex-col bg-transparent text-white">
+      <div className="flex flex-row flex-shrink-0">
+        {location.pathname === "/chatList" && (
           <button className="text-white rounded-full cursor-pointer hover:bg-gray-700 active:bg-gray-700 active:text-black p-1"
             onClick={() => setNewMessage(null)}>
             <ArrowLeft size={15} />
           </button>
-          <label className="p-1">CONTACTOS</label>
-        </div>
-      )}
+        )}
+        <label className="p-1">CONTACTOS</label>
+      </div>
       {/* Contenedor fijo para header, search */}
       <div className="flex flex-col flex-shrink-0">
         <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
@@ -346,7 +346,7 @@ const ListContacts = () => {
       )}
     </div>
   ) : (
-    <div className="flex-1 border-r border-gray-700 flex flex-col bg-gray-900 text-white pt-10 ml-10 overflow-y-auto">
+    <div className="flex-1 border-r border-gray-700 flex flex-col bg-transparent text-white pt-10 ml-10 overflow-y-auto">
       {location.pathname === "/chatList" && (
         <div className="flex flex-row items-center flex-shrink-0 p-2">
           <button className="text-white rounded-full cursor-pointer hover:bg-gray-700 active:bg-gray-700 active:text-black p-1"
@@ -358,6 +358,7 @@ const ListContacts = () => {
       )}
       {/* Fijamos el header y search */}
       <div className="flex flex-col flex-shrink-0">
+        <label className="p-1">CONTACTOS</label>
         <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
       </div>
 

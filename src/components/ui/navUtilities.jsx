@@ -1,5 +1,5 @@
 import Resize from "/src/hooks/responsiveHook.jsx"
-import { Tag, MessageCirclePlus, MessageSquareCode } from "lucide-react";
+import { Tag, MailPlus, BotMessageSquare } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 
@@ -8,8 +8,8 @@ const NavUtilities = () => {
     const navigate = useNavigate();
     const menuOptions = [
         { icon: <Tag  size={18}/>, label: "Etiquetas", path: "/utilities/tags" },
-        { icon: <MessageCirclePlus  size={18}/>, label: "Mensajes Personalizados", path: "/utilities/customMessages" },
-        { icon: <MessageSquareCode  size={18}/>, label: "Mensajes Automáticos", path: "/utilities/autoMessages" },
+        { icon: <MailPlus  size={18}/>, label: "Mensajes Personalizados", path: "/utilities/customMessages" },
+        { icon: <BotMessageSquare  size={18}/>, label: "Mensajes Automáticos", path: "/utilities/autoMessages" },
     ];
 
     return isMobile ? (

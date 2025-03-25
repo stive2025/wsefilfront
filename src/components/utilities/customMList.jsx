@@ -8,12 +8,12 @@ import { getCustomMessages, deleteCustomMessage, getCustomMessage } from "/src/s
 
 // Reusable Search Input Component
 const SearchInput = ({ searchTerm, onSearchChange }) => (
-  <div className="p-2 bg-gray-800">
+  <div className="p-2 bg-gray-900">
     <div className="relative flex items-center">
       <input
         type="text"
-        placeholder="Buscar mensajes..."
-        className="w-full bg-gray-700 rounded-lg pl-8 pr-2 py-1 text-white placeholder-gray-400"
+        placeholder="Search..."
+        className="w-full bg-gray-800 rounded-lg pl-8 pr-2 py-1 text-white placeholder-gray-400"
         value={searchTerm}
         onChange={(e) => onSearchChange(e.target.value)}
       />
@@ -30,7 +30,7 @@ const CustomItems = ({ customMessages, onDeleteCustom, isDeleting, onFindCustom,
   }
 
   return (
-    <div className="bg-gray-800">
+    <div>
       {customMessages.map((custom, index) => (
         <div
           key={custom.id}
@@ -274,12 +274,13 @@ const TagsList = () => {
   };
 
   return isMobile ? (
-    <div className="w-full sm:w-80 flex flex-col bg-gray-800 text-white h-screen">
-      {/* Fixed container for header, search */}
-      <div className="flex flex-col flex-shrink-0 mt-14">
+    <div className="w-full sm:w-80 mt-10 flex flex-col text-white">
+      <div className="flex flex-row flex-shrink-0">
+        <label className="p-1">Mensajes Personalizados</label>
+      </div>
+      <div className="flex flex-col flex-shrink-0">
         <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
       </div>
-
       {/* Tags list with scroll */}
       <div className="flex-1 overflow-y-auto">
         {loading && messages.length === 0 ? (
@@ -307,11 +308,15 @@ const TagsList = () => {
       </button>
     </div>
   ) : (
-    <div className="flex-1 border-r border-gray-700 flex flex-col bg-gray-800 text-white pt-10 ml-10 overflow-y-auto">
+    <div className="flex-1 border-r border-gray-700 flex flex-col  text-white pt-10 ml-10 overflow-y-auto">
       {/* Fixed header and search */}
+      <div className="flex flex-row flex-shrink-0">
+        <label className="p-1">Mensajes Personalizados</label>
+      </div>
       <div className="flex flex-col flex-shrink-0">
         <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
       </div>
+
 
       {/* Tags list with scroll */}
       <div className="flex-1 overflow-y-auto scrollbar-hide">

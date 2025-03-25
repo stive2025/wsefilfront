@@ -38,7 +38,6 @@ const AgentsItems = ({ agents, onDeleteAgent, isDeleting, onFindAgent, loadingMo
           ref={index === agents.length - 1 ? lastAgentRef : null}
         >
           <div className="w-full flex items-center space-x-3 hover:bg-gray-800 cursor-pointer active:bg-gray-700">
-            {/* Chat Details */}
             <div className="flex-1">
               <div className="font-medium text-sm md:text-base">{item.name}</div>
               <div className="text-xs md:text-sm text-gray-400 overflow-hidden text-ellipsis whitespace-nowrap max-w-[150px] sm:max-w-[200px]">
@@ -274,7 +273,7 @@ const ListAgents = () => {
   };
 
   return isMobile ? (
-    <div className="w-full sm:w-80 flex flex-col bg-gray-900 text-white h-screen">
+    <div className="w-full sm:w-80 flex flex-col bg-gray-900 text-white">
       {/* Contenedor fijo para header, search */}
       <div className="flex flex-col flex-shrink-0 mt-14">
         <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />

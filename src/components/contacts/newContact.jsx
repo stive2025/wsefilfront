@@ -1,5 +1,5 @@
 import { useState, useCallback, useContext, useEffect } from 'react';
-import { User, } from 'lucide-react';
+import { User } from 'lucide-react';
 import Resize from "/src/hooks/responsiveHook.jsx";
 import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
 import { 
@@ -11,7 +11,6 @@ import {
 } from "/src/services/contacts.js";
 import { UpdateContactForm, ContactHandle } from "/src/contexts/chats.js";
 import Select from 'react-select';
-
 
 const NewContact = () => {
   const isMobile = Resize();
@@ -32,6 +31,10 @@ const NewContact = () => {
 
   const isFormValid = firstName.trim() && lastName.trim() && phoneNumber.trim() && selectedCountry?.value;
 
+  // Depuración de renderizados
+  console.log('Render - contactFind:', contactFind);
+  console.log('Render - countries length:', countries.length);
+
   useEffect(() => {
     const fetchCountries = async () => {
       try {
@@ -51,16 +54,18 @@ const NewContact = () => {
               callingCode: callingCode,
             };
           })
-          .filter(country => country.value) // Filtrar solo los que tienen código de llamada
-          .sort((a, b) => a.label.localeCompare(b.label)); // Ordenar alfabéticamente
+          .filter(country => country.value)
+          .sort((a, b) => a.label.localeCompare(b.label));
 
         setCountries(filteredData);
         
-        // Buscar Ecuador en la lista y establecerlo como valor por defecto
-        const ecuador = filteredData.find(country => country.label === 'Ecuador');
-        if (ecuador && !selectedCountry && !contactFind) {
-          setSelectedCountry(ecuador);
-          setCountryCode(ecuador.value);
+        // Establecer Ecuador por defecto si no hay un contacto seleccionado
+        if (!selectedCountry && !contactFind) {
+          const ecuador = filteredData.find(country => country.label === 'Ecuador');
+          if (ecuador) {
+            setSelectedCountry(ecuador);
+            setCountryCode(ecuador.value);
+          }
         }
       } catch (error) {
         console.error('Error al cargar países: ', error);
@@ -68,34 +73,57 @@ const NewContact = () => {
     };
 
     fetchCountries();
-  }, [selectedCountry, contactFind]);
+  }, []);
+
+  // Efecto optimizado para cargar datos de contacto
+  useEffect(() => {
+    if (contactFind && countries.length > 0) {
+      console.log("Contacto a editar ", contactFind);
+
+      const nameParts = contactFind.name ? contactFind.name.split(' ') : ['', ''];
+      const fName = nameParts[0] || '';
+      const lName = nameParts.slice(1).join(' ') || '';
+
+      const { countryCode: extractedCode, phoneNumber: extractedNumber } = 
+        splitPhoneNumber(contactFind.phone_number || '');
+      
+      setIdContact(contactFind.id);
+      setFirstName(fName);
+      setLastName(lName);
+      setPhoneNumber(extractedNumber);
+      setPhoneError('');
+      
+      if (extractedCode) {
+        const matchedCountry = countries.find(country => country.value === extractedCode);
+        if (matchedCountry) {
+          setSelectedCountry(matchedCountry);
+          setCountryCode(matchedCountry.value);
+        }
+      }
+    }
+  }, [contactFind, countries.length]);
 
   const handleCountryChange = (selectedOption) => {
     setSelectedCountry(selectedOption);
     setCountryCode(selectedOption.value);
-    // Validar el número de teléfono nuevamente cuando cambia el país
     if (phoneNumber) {
       validatePhoneNumber(phoneNumber);
     }
   };
 
   const validatePhoneNumber = (phone) => {
-    // Aquí puedes añadir validaciones específicas
     if (phone.length < 3) {
       setPhoneError('Número de teléfono demasiado corto');
       return false;
     }
     
-    // Validar según país seleccionado si está disponible
     if (selectedCountry?.value && countryPrefixes[selectedCountry.value]) {
       const prefixInfo = countryPrefixes[selectedCountry.value];
       const cleanPhone = phone.replace(/\D/g, "");
       
-      // Si el número es más largo que el estándar del país, mostrar una advertencia
       if (cleanPhone.length > prefixInfo.standardLength) {
         setPhoneError(`Se eliminarán dígitos adicionales para cumplir con el formato de ${prefixInfo.name} (${prefixInfo.standardLength} dígitos)`);
         
-        // Configurar un temporizador para borrar el mensaje después de 5 segundos
         setTimeout(() => {
           setPhoneError('');
         }, 5000);
@@ -111,38 +139,6 @@ const NewContact = () => {
     return true;
   };
 
-  // Cargar datos del contacto cuando se va a editar
-  useEffect(() => {
-    if (contactFind && countries.length > 0) {
-      console.log("Contacto a editar ", contactFind);
-
-      // Separar el nombre completo en nombre y apellido si es posible
-      const nameParts = contactFind.name ? contactFind.name.split(' ') : ['', ''];
-      const fName = nameParts[0] || '';
-      const lName = nameParts.slice(1).join(' ') || '';
-
-      // Separar el código de país y el número de teléfono
-      const { countryCode: extractedCode, phoneNumber: extractedNumber } = 
-        splitPhoneNumber(contactFind.phone_number || '');
-      
-      setIdContact(contactFind.id);
-      setFirstName(fName);
-      setLastName(lName);
-      setPhoneNumber(extractedNumber);
-      setPhoneError(''); // Limpiar errores anteriores
-      
-      // Establecer el país seleccionado basado en el código extraído
-      if (extractedCode) {
-        const matchedCountry = countries.find(country => country.value === extractedCode);
-        if (matchedCountry) {
-          setSelectedCountry(matchedCountry);
-          setCountryCode(matchedCountry.value);
-        }
-      }
-    }
-  }, [contactFind, countries]);
-
-  // Efecto para limpiar el mensaje de éxito después de un tiempo
   useEffect(() => {
     let timer;
     if (success) {
@@ -163,8 +159,15 @@ const NewContact = () => {
     setLastName('');
     setPhoneNumber('');
     setPhoneError('');
-    setSelectedCountry(null);
-    setCountryCode('');
+
+    const ecuador = countries.find(country => country.label === 'Ecuador');
+    if (ecuador) {
+      setSelectedCountry(ecuador);
+      setCountryCode(ecuador.value);
+    } else {
+      setSelectedCountry(null);
+      setCountryCode('');
+    }
   };
 
   const handlePhoneChange = (e) => {
@@ -177,9 +180,8 @@ const NewContact = () => {
     async () => {
       if (isFormValid) {
         setError(null);
-        setPhoneError(''); // Limpiar mensajes de error al guardar
+        setPhoneError('');
 
-        // Formatear el número de teléfono según los requisitos
         const formattedPhone = formatPhoneNumber(phoneNumber, selectedCountry.value);
 
         const formContactData = {
@@ -193,11 +195,10 @@ const NewContact = () => {
           setSuccess("Contacto creado con éxito");
           setContactHandle(true);
 
-          // Resetear el formulario
           setFirstName('');
           setLastName('');
           setPhoneNumber('');
-          // Restaurar Ecuador como país por defecto
+          
           const ecuador = countries.find(country => country.label === 'Ecuador');
           if (ecuador) {
             setSelectedCountry(ecuador);
@@ -219,9 +220,8 @@ const NewContact = () => {
     async () => {
       if (isFormValid) {
         setError(null);
-        setPhoneError(''); // Limpiar mensajes de error al actualizar
+        setPhoneError('');
 
-        // Formatear el número de teléfono según los requisitos
         const formattedPhone = formatPhoneNumber(phoneNumber, selectedCountry.value);
 
         const formContactData = {
@@ -236,18 +236,14 @@ const NewContact = () => {
           setContactHandle(true);
           setContactFind(null);
 
-          // Resetear el formulario
           setFirstName('');
           setLastName('');
           setPhoneNumber('');
 
-          // Restaurar Ecuador como país por defecto
           const ecuador = countries.find(country => country.label === 'Ecuador');
           if (ecuador) {
             setSelectedCountry(ecuador);
             setCountryCode(ecuador.value);
-            
-            console.log(`País seleccionado: ${ecuador.label} - Código: ${ecuador.value} - Bandera: ${ecuador.flag}`);
           } else {
             setSelectedCountry(null);
             setCountryCode('');
@@ -316,7 +312,6 @@ const NewContact = () => {
                 openMenuOnClick={false}
                 openMenuOnFocus={true}
                 onKeyDown={(e) => {
-                  // Abrir el menú al presionar cualquier tecla
                   if (!e.target.className.includes("is-open")) {
                     e.preventDefault();
                     e.target.click();

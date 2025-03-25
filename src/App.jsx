@@ -13,37 +13,60 @@ const AgentsComplete = lazy(() => import("/src/pages/agents/agentsComplete.jsx")
 const ProfileComplete = lazy(() => import("/src/pages/profile/profileComplete.jsx"));
 
 import {
-  ContactInfoClick, ChatInterfaceClick, TagClick, ResolveClick, TagsCreateForm, UpdateAgentForm, AgentHandle, UpdateContactForm, ContactHandle,
-  AutoCreateForm, CustomCreateForm, NewContactForm, SearchInChatClick, NewAgentForm, ProfileInfoPanel, NewMessage, UpdateTagForm, TagHandle, 
-  UpdateCustomForm, CustomHandle,AutoHandle,UpdateAutoForm
+  // 📌 Contextos de interfaz del chat
+  ChatInterfaceClick, SearchInChatClick, NewMessage,
+
+  // 📌 Contextos relacionados con información de contacto y agentes
+  ContactInfoClick, ContactHandle, NewContactForm, UpdateContactForm,
+  NewAgentForm, UpdateAgentForm, AgentHandle,
+
+  // 📌 Contextos relacionados con etiquetas (Tags)
+  TagClick, ResolveClick, TagsCreateForm, UpdateTagForm, TagHandle,
+
+  // 📌 Contextos relacionados con mensajes personalizados (Custom)
+  CustomCreateForm, UpdateCustomForm, CustomHandle,
+
+  // 📌 Contextos relacionados con mensajes automatizados (Auto)
+  AutoCreateForm, UpdateAutoForm, AutoHandle,
+
+  // 📌 Contexto de perfil
+  ProfileInfoPanel
 } from "./contexts/chats.js";
 
-
 function App() {
-
-  const [infoOpen, setInfoOpen] = useState(false);
+  // 📌 Estados de interfaz del chat
   const [selectedChatId, setSelectedChatId] = useState(null);
+  const [searchInChat, setSearchInChat] = useState(null);
+  const [newMessage, setNewMessage] = useState(false);
+
+  // 📌 Estados relacionados con información de contacto y agentes
+  const [infoOpen, setInfoOpen] = useState(false);
+  const [contactNew, setContactNew] = useState(null);
+  const [contactFind, setContactFind] = useState(null);
+  const [contactHandle, setContactHandle] = useState(null);
+  const [agentNew, setAgentNew] = useState(null);
+  const [agentFind, setAgentFind] = useState(null);
+  const [agentHandle, setAgentHandle] = useState(null);
+
+  // 📌 Estados relacionados con etiquetas (Tags)
   const [tagClick, setTagClick] = useState(null);
   const [resolveClick, setResolveClick] = useState(null);
   const [tagsClick, setTagsClick] = useState(null);
   const [tagFind, setTagtFind] = useState(null);
   const [tagHandle, setTagHandle] = useState(null);
+
+  // 📌 Estados relacionados con mensajes personalizados (Custom)
   const [customFind, setCustomFind] = useState(null);
   const [customHandle, setCustomHandle] = useState(null);
   const [customClick, setCustomClick] = useState(null);
+
+  // 📌 Estados relacionados con mensajes automatizados (Auto)
   const [autoFind, setAutoFind] = useState(null);
   const [autoHandle, setAutoHandle] = useState(null);
   const [autoClick, setAutoClick] = useState(null);
-  const [contactNew, setContactNew] = useState(null);
-  const [agentNew, setAgentNew] = useState(null);
-  const [searchInChat, setSearchInChat] = useState(null);
-  const [profileInfoOpen, SetProfileInfoOpen] = useState(null);
-  const [newMessage, setNewMessage] = useState(false);
-  const [agentFind, setAgentFind] = useState(null);
-  const [agentHandle, setAgentHandle] = useState(null);
-  const [contactFind, setContactFind] = useState(null);
-  const [contactHandle, setContactHandle] = useState(null);
 
+  // 📌 Estado de información de perfil
+  const [profileInfoOpen, SetProfileInfoOpen] = useState(null);
 
   return (
     <Router>

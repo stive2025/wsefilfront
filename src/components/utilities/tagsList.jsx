@@ -8,12 +8,12 @@ import { getTags, deleteTag, getTag } from "/src/services/tags.js";
 
 // Reusable Search Input Component
 const SearchInput = ({ searchTerm, onSearchChange }) => (
-  <div className="p-2 bg-gray-800">
+  <div className="p-2 bg-gray-900">
     <div className="relative flex items-center">
       <input
         type="text"
-        placeholder="Buscar etiquetas..."
-        className="w-full bg-gray-700 rounded-lg pl-8 pr-2 py-1 text-white placeholder-gray-400"
+        placeholder="Search..."
+        className="w-full bg-gray-800 rounded-lg pl-8 pr-2 py-1 text-white placeholder-gray-400"
         value={searchTerm}
         onChange={(e) => onSearchChange(e.target.value)}
       />
@@ -30,7 +30,7 @@ const TagsItems = ({ tags, onDeleteTag, isDeleting, onFindTag, loadingMore, last
   }
 
   return (
-    <div className="bg-gray-800">
+    <div>
       {tags.map((tag, index) => (
         <div
           key={tag.id}
@@ -47,7 +47,7 @@ const TagsItems = ({ tags, onDeleteTag, isDeleting, onFindTag, loadingMore, last
             </div>
           </div>
           <div className="flex">
-            <button 
+            <button
               className="mr-2 text-gray-400 hover:text-white"
               onClick={() => onFindTag(tag.id)}
             >
@@ -257,7 +257,7 @@ const TagsList = () => {
       const tagCall = getTag(id);
       const response = await callEndpoint(tagCall);
       setTagFind(response.data);
-      
+
       // Always set tagsClick to true when editing
       setTagsClick(true);
     } catch (error) {
@@ -275,9 +275,11 @@ const TagsList = () => {
   };
 
   return isMobile ? (
-    <div className="w-full sm:w-80 flex flex-col bg-gray-800 text-white h-screen">
-      {/* Fixed container for header, search */}
-      <div className="flex flex-col flex-shrink-0 mt-14">
+    <div className="w-full sm:w-80 mt-10 flex flex-col text-white">
+      <div className="flex flex-row flex-shrink-0">
+        <label className="p-1">Etiquetas</label>
+      </div>
+      <div className="flex flex-col flex-shrink-0">
         <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
       </div>
 
@@ -308,8 +310,11 @@ const TagsList = () => {
       </button>
     </div>
   ) : (
-    <div className="flex-1 border-r border-gray-700 flex flex-col bg-gray-800 text-white pt-10 ml-10 overflow-y-auto">
+    <div className="flex-1 border-r border-gray-700 flex flex-col  text-white pt-10 ml-10 overflow-y-auto">
       {/* Fixed header and search */}
+      <div className="flex flex-row flex-shrink-0">
+        <label className="p-1">Mensajes Automaticos</label>
+      </div>
       <div className="flex flex-col flex-shrink-0">
         <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
       </div>

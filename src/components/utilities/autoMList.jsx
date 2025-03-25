@@ -8,12 +8,12 @@ import { getAutoMessages, deleteAutoMessage, getAutoMessage } from "/src/service
 
 // Reusable Search Input Component
 const SearchInput = ({ searchTerm, onSearchChange }) => (
-  <div className="p-2 bg-gray-800">
+  <div className="p-2 bg-gray-900">
     <div className="relative flex items-center">
       <input
         type="text"
-        placeholder="Buscar mensajes..."
-        className="w-full bg-gray-700 rounded-lg pl-8 pr-2 py-1 text-white placeholder-gray-400"
+        placeholder="Search..."
+        className="w-full bg-gray-800 rounded-lg pl-8 pr-2 py-1 text-white placeholder-gray-400"
         value={searchTerm}
         onChange={(e) => onSearchChange(e.target.value)}
       />
@@ -30,7 +30,7 @@ const AutoItems = ({ AutoMessages, onDeleteAuto, isDeleting, onFindAuto, loading
   }
 
   return (
-    <div className="bg-gray-800">
+    <div>
       {AutoMessages.map((Auto, index) => (
         <div
           key={Auto.id}
@@ -274,9 +274,11 @@ const TagsList = () => {
   };
 
   return isMobile ? (
-    <div className="w-full sm:w-80 flex flex-col bg-gray-800 text-white h-screen">
-      {/* Fixed container for header, search */}
-      <div className="flex flex-col flex-shrink-0 mt-14">
+    <div className="w-full sm:w-80 mt-10 flex flex-col text-white">
+      <div className="flex flex-row flex-shrink-0">
+        <label className="p-1">Mensajes Automaticos</label>
+      </div>
+      <div className="flex flex-col flex-shrink-0">
         <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
       </div>
 
@@ -307,8 +309,11 @@ const TagsList = () => {
       </button>
     </div>
   ) : (
-    <div className="flex-1 border-r border-gray-700 flex flex-col bg-gray-800 text-white pt-10 ml-10 overflow-y-auto">
+    <div className="flex-1 border-r border-gray-700 flex flex-col  text-white pt-10 ml-10 overflow-y-auto">
       {/* Fixed header and search */}
+      <div className="flex flex-row flex-shrink-0">
+        <label className="p-1">Mensajes Automaticos</label>
+      </div>
       <div className="flex flex-col flex-shrink-0">
         <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
       </div>

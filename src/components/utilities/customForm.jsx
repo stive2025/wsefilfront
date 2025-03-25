@@ -3,6 +3,7 @@ import Resize from "/src/hooks/responsiveHook.jsx";
 import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
 import { createCustomMessage, updateCustomMessage } from "/src/services/customMessages.js";
 import { UpdateCustomForm, CustomHandle, CustomCreateForm } from "/src/contexts/chats.js";
+import { MailPlus } from 'lucide-react';
 
 const TagCreationModal = () => {
   const isMobile = Resize();
@@ -111,12 +112,15 @@ const TagCreationModal = () => {
   );
 
   return (
-    <div className={`bg-gray-800 rounded-lg w-full p-6 space-y-4 ${isMobile?"":"mt-16"} h-max`}>
-      <h1 className="block text-sm font-medium text-gray-300 mb-2">
+    <div className={`rounded-lg w-full p-6 space-y-4 ${isMobile?"":"mt-16"} h-max`}>
+      <div className="flex items-center p-4 bg-gray-800 rounded-lg">
+        <MailPlus size={20} className="text-[#FF9619] mr-4" />
+        <h1 className="text-xl font-normal">
         {customFind ? 'EDITAR MENSAJE PERSONALIZADO' : 'NUEVO MENSAJE PERSONALIZADO'}
-      </h1>
+        </h1>
+      </div>
       
-      <div>
+      <div className="mb-6 border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
         <label
           htmlFor="label-name"
           className="block text-sm font-medium text-gray-300 mb-2"
@@ -129,11 +133,11 @@ const TagCreationModal = () => {
           placeholder="Introduzca el nombre"
           value={labelName}
           onChange={(e) => setLabelName(e.target.value)}
-          className="w-full bg-gray-700 border-none text-white rounded-md p-3 focus:ring-2 focus:ring-blue-500"
+          className="w-full bg-transparent text-white outline-none"
         />
       </div>
 
-      <div>
+      <div className="mb-6 border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
         <label
           htmlFor="label-description"
           className="block text-sm font-medium text-gray-300 mb-2"
@@ -145,7 +149,7 @@ const TagCreationModal = () => {
           placeholder="¿Para que sirve este Mensaje personalizado?"
           value={labelDescription}
           onChange={(e) => setLabelDescription(e.target.value)}
-          className="w-full bg-gray-700 border-none text-white rounded-md p-3 focus:ring-2 focus:ring-blue-500 min-h-[10px]"
+          className="w-full bg-transparent text-white outline-none"
         />
       </div>
 
