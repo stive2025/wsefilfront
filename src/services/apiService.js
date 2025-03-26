@@ -1,7 +1,8 @@
 import { ENV_VARIABLES } from '/config/config';
 import { GetCookieItem, RemoveCookieItem } from '../utilities/cookies.js';
 
-const baseURL = ENV_VARIABLES.API_URL;
+let baseURL = ENV_VARIABLES.API_URL;
+const baseURL_SM = ENV_VARIABLES.API_URL_SM;
 
 const CustomFetch = async (endpoint, options = {}) => {
   const token = GetCookieItem('token');
@@ -17,6 +18,11 @@ const CustomFetch = async (endpoint, options = {}) => {
   };
 
   try {
+    // Check if the endpoint is for the Smart Messaging API
+    const isSmartMessagingEndpoint = endpoint.startsWith('sendmessage');
+    if (isSmartMessagingEndpoint) {
+      baseURL = baseURL_SM
+    }
     const response = await fetch(`${baseURL}${endpoint}`, config);
     
     if (!response.ok) {

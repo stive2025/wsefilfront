@@ -1,61 +1,34 @@
 /* eslint-disable react/prop-types */
 import { X, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
-import { ContactInfoClick } from "/src/contexts/chats.js"
-import { useContext } from "react";
+import { ContactInfoClick, ChatInterfaceClick } from "/src/contexts/chats.js"
+import { useContext, useEffect, useState } from "react";
 import Resize from "/src/hooks/responsiveHook.jsx";
+import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
+import { getContact } from "/src/services/contacts.js";
 
-const ContactInfo = ({ contactId }) => {
+const ContactInfo = () => {
+    const { selectedChatId } = useContext(ChatInterfaceClick);
+    const [contactFind, setContactFind] = useState({});
+    const { callEndpoint } = useFetchAndLoad();
 
-    const contacts = [
-        {
-            id: 1,
-            name: "José Sarmiento",
-            phone: "+593 99 004 6508",
-            state: "En linea",
-            contactState: ":)",
-            multimedia: [
-                {id: "1", url:"https://static.inaturalist.org/photos/265916780/large.jpg"},
-                {id: "2", url:"https://static.inaturalist.org/photos/265916780/large.jpg"},
-                {id: "3", url:"https://static.inaturalist.org/photos/265916780/large.jpg"}
-            ],
-            creditoInfo: [
-                { idcredit: "112244", garante: "Ximena Gonzaga", mont: "1200", payDate: "04/01/2025" }
-            ]
-        },
-        {
-            id: 2,
-            name: "María López",
-            phone: "+593 99 004 6510",
-            state: "En linea",
-            contactState: ":)",
-            multimedia: [
-                {id: "1", url:"https://static.inaturalist.org/photos/265916780/large.jpg"},
-                {id: "2", url:"https://static.inaturalist.org/photos/265916780/large.jpg"},
-                {id: "3", url:"https://static.inaturalist.org/photos/265916780/large.jpg"}
-            ],
-            creditoInfo: [
-                { idcredit: "112243", garante: "Ximena Gonzaga", mont: "1200", payDate: "04/01/2025" }
-            ]
-        }, {
-            id: 3,
-            name: "Carlos Pérez",
-            phone: "+593 99 004 6509",
-            state: "En linea",
-            contactState: ":)",
-            multimedia: [
-                {id: "1", url:"https://static.inaturalist.org/photos/265916780/large.jpg"},
-                {id: "2", url:"https://static.inaturalist.org/photos/265916780/large.jpg"},
-                {id: "3", url:"https://static.inaturalist.org/photos/265916780/large.jpg"}
-            ],
-            creditoInfo: [
-                { idcredit: "1123244", garante: "Ximena Gonzaga", mont: "1200", payDate: "04/01/2025" }
-            ]
-        }
-    ];
-    const idContact = parseInt(contactId);
-    const contactFind = (contacts.find(contact => contact.id === idContact));
-
+    useEffect(() => {
+        const fetchContact = async () => {
+          try {
+            const contactCall = getContact(selectedChatId.idContact);
+            const response = await callEndpoint(contactCall);
+            setContactFind(response);
+            console.log("Contacto encontrado:", response);
+          } catch (error) {
+            if (error.name !== "AbortError") {
+              console.error("Error buscando contacto:", error);
+            }
+          }
+        };
+      
+        fetchContact();
+      }, [ContactInfoClick]); // Se ejecutará cada vez que `ContactInfoClick` cambie
+      
     const { setInfoOpen } = useContext(ContactInfoClick);
     const isMobile = Resize();
     const variants = {
@@ -86,19 +59,18 @@ const ContactInfo = ({ contactId }) => {
                 <div className="p-5 flex flex-col items-center">
                     <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-700 mb-3">
                         <img
-                            src="/placeholder-profile.jpg"
+                            src={contactFind.profile_picture || "https://via.placeholder.com/150"}
                             alt="Profile"
                             className="w-full h-full object-cover"
                         />
                     </div>
                     <h2 className="text-lg mb-1">{contactFind.name}</h2>
-                    <p className="text-gray-400 text-sm mb-1">{contactFind.phone}</p>
-                    <p className="text-green-500 text-sm">{contactFind.state}</p>
+                    <p className="text-gray-400 text-sm mb-1">{contactFind.phone_number}</p>
                 </div>
 
                 {/* Client Status */}
                 <div className="py-3 bg-gray-800 text-gray-500 text-center text-sm">
-                    {contactFind.contactState}
+                   {/*{contactFind.contactState}  */} 
                 </div>
 
                 {/* Files Section */}
@@ -113,7 +85,7 @@ const ContactInfo = ({ contactId }) => {
                 </div>
 
                 {/* Thumbnails */}
-                <div className="p-4 flex gap-2 ">
+{/*                 <div className="p-4 flex gap-2 ">
                     {contactFind.multimedia.map((imgItem) => (
                         <img key={imgItem.id}
                             src={imgItem.url}
@@ -121,12 +93,12 @@ const ContactInfo = ({ contactId }) => {
                             className="w-20 h-16 rounded object-cover"
                         />
                     ))}
-                </div>
+                </div> */}
 
                 {/* Credit Info */}
                 <div className="p-4">
                     <h3 className="mb-2 text-base">Info.Credito</h3>
-                    <div className="text-gray-500 text-sm">
+                   {/*  <div className="text-gray-500 text-sm">
                         <p className="mb-1">Nro.</p>
                         <p className="mb-1">{contactFind.creditoInfo[0].idcredit}.</p>
                         <p className="mb-1">Garante:</p>
@@ -135,7 +107,7 @@ const ContactInfo = ({ contactId }) => {
                         <p className="mb-1">{contactFind.creditoInfo[0].mont}.</p>
                         <p className="mb-1">Fecha:</p>
                         <p className="mb-1">{contactFind.creditoInfo[0].payDate}.</p>
-                    </div>
+                    </div> */}
                 </div>
             </div>
         </motion.div>

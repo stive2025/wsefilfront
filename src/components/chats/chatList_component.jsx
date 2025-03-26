@@ -195,11 +195,15 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats }) => {
           className={`w-full flex items-center space-x-3 p-4 hover:bg-gray-800 cursor-pointer ${selectedChatId && selectedChatId.id == item.id ? "bg-gray-700" : ""
             }`}
           onClick={() => {
-            handleUpdateChat(item.id, { unread_message: 0 });
+            if (item.unread_message > 0) {
+              handleUpdateChat(item.id, { unread_message: 0 });
+            }
             setSelectedChatId({
               id: item.id,
+              idContact: item.idContact,
               name: item.name,
-              photo: item.avatar
+              photo: item.avatar,
+              number: item.number,
             });
           }}
         >
@@ -286,20 +290,23 @@ const ChatList = ({ role = "admin" }) => {
             try {
               const contactKey = `contact_${chat.contact_id}_${index}`;
               const contactResponse = await callEndpoint(getContact(chat.contact_id), contactKey);
-
-              return {
-                ...chat,
-                name: contactResponse.name,
-                avatar: contactResponse.profile_picture || "/src/assets/images/default-avatar.jpg",
-              };
+              if (!contactResponse) {
+                return {
+                  ...chat,
+                  name: "Unknown Contact",
+                  avatar: "/src/assets/images/default-avatar.jpg",
+                };
+              } else {
+                return {
+                  ...chat,
+                  idContact: contactResponse.id,
+                  name: contactResponse.name,
+                  number: contactResponse.phone_number,
+                  avatar: contactResponse.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
+                };
+              }
             } catch (error) {
               console.error("Error fetching contact details for ID:", chat.contact_id, error);
-              return {
-                ...chat,
-                name: "Unknown Contact",
-                avatar: "/src/assets/images/default-avatar.jpg",
-                fetchError: error.message
-              };
             }
           }
           return chat;

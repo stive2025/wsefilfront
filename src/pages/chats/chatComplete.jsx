@@ -41,7 +41,7 @@ const chatComplete = () => {
         >
             {newMessage ? <ListContacts /> : <ChatList />}
             <ChatInterface />
-            {infoOpen && <ContactInfo />}
+            {infoOpen && <ContactInfo  />}
             {searchInChat && <SearchInChat />}
         </div>
     );
