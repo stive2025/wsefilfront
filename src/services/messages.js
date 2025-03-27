@@ -4,7 +4,7 @@ import { loadAbort } from "../hooks/fechAndload.jsx";
 const sendMessage = (messageData) => {
   const abortController = loadAbort();
   return {
-    call: CustomFetch("sendmessage", {
+    call: CustomFetch("messages/connect", {
       method: "POST",
       body: JSON.stringify(messageData),
       signal: abortController.controller.signal,
