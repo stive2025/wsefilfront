@@ -2,14 +2,14 @@ import { useState, useEffect, useContext, useRef } from 'react';
 import Resize from "/src/hooks/responsiveHook.jsx";
 import { QRCodeCanvas } from 'qrcode.react';
 import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
-import { ProfileInfoPanel } from "/src/contexts/chats.js";
+import { ProfileInfoPanel,ConnectionInfo, ConnectionQR } from "/src/contexts/chats.js";
 import { getCodigoQR } from "/src/services/conections.js";
 
 const ProfileQR = () => {
   const isMobile = Resize();
-  const [codigoBackend, setCodigoBackend] = useState(null);
+  const { codigoQR } = useContext(ConnectionQR);
+  const { isConnected, setIsConnected } = useContext(ConnectionInfo);
   const [error, setError] = useState(null);
-  const [isConnected, setIsConnected] = useState(false);
   const [connectionInfo, setConnectionInfo] = useState({ name: '', number: '' });
   const { loading, callEndpoint } = useFetchAndLoad();
   const { profileInfoOpen } = useContext(ProfileInfoPanel);
@@ -18,44 +18,36 @@ const ProfileQR = () => {
   // Función para formatear el número de teléfono exactamente como se requiere
   const formatPhoneNumber = (phoneNumber) => {
     if (!phoneNumber) return '';
-    
+
     // Eliminar cualquier carácter no numérico
     let cleaned = phoneNumber.replace(/\D/g, '');
-    
+
     // Si comienza con 593, formatear como +593 XX XXX XXXX
     if (cleaned.startsWith('593')) {
       return `+593 ${cleaned.slice(3, 5)} ${cleaned.slice(5, 8)} ${cleaned.slice(8)}`;
     }
-    
+
     // Si no comienza con 593, devolver en formato genérico
     return `+${cleaned}`;
   };
 
   const handleQR = async () => {
-   // No hacer llamada si ya hay conexión
-    
     try {
       // Obtener el apiCall completo
-      const apiCall = getCodigoQR();
-      // Usar callEndpoint para realizar la llamada
-      const response = await callEndpoint(apiCall);
-      console.log("Respuesta del backend:", response);
-      
-      if (response.data.status === "CONNECTED") {
-        setIsConnected(true);
-        setConnectionInfo({
-          name: response.data.name,
-          number: response.data.number
-        });
-        
-        // Detener el intervalo si ya hay una conexión
+      if(isConnected){
+        const apiCall = getCodigoQR();
+        const response = await callEndpoint(apiCall);
+        console.log("Respuesta del backend:", response);
+          setConnectionInfo({
+            name: response.data.name,
+            number: response.data.number
+          });
         if (intervalRef.current) {
           clearInterval(intervalRef.current);
           intervalRef.current = null;
         }
       } else {
         setIsConnected(false);
-        setCodigoBackend(response.data.qr_code);
       }
     } catch (error) {
       if (error.name !== 'AbortError') {
@@ -71,12 +63,12 @@ const ProfileQR = () => {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-    
+
     // Solo iniciar el proceso si profileInfoOpen está activo y no hay conexión
     if (profileInfoOpen && !isConnected) {
       // Llamar inmediatamente cuando se abre
       handleQR();
-      
+
       // Configurar intervalo solo si no hay conexión
       intervalRef.current = setInterval(() => {
         if (!isConnected) {
@@ -88,7 +80,7 @@ const ProfileQR = () => {
         }
       }, 17000);
     }
-    
+
     // Limpieza del intervalo cuando el componente se desmonta
     return () => {
       if (intervalRef.current) {
@@ -96,7 +88,7 @@ const ProfileQR = () => {
         intervalRef.current = null;
       }
     };
-  }, [profileInfoOpen, isConnected]);
+  }, [profileInfoOpen, isConnected, codigoQR]);
 
   return (
     <div className={`bg-gray-900 rounded-lg w-full space-y-4 h-max`}>
@@ -124,8 +116,10 @@ const ProfileQR = () => {
               <p className="text-md font-mono">{formatPhoneNumber(connectionInfo.number)}</p>
             </div>
           </div>
-        ) : codigoBackend ? (
-          <QRCodeCanvas value={codigoBackend} size={isMobile ? 200 : 256} />
+        ) : codigoQR ? (
+          <div className='border-6 border-white flex flex-col items-center'>
+            <QRCodeCanvas value={codigoQR} size={isMobile ? 200 : 256} />
+          </div>
         ) : (
           <p className="text-gray-400">No se pudo cargar el código QR</p>
         )}

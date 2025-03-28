@@ -24,7 +24,7 @@ const ProfileInfo = ({ role }) => {
         }
     ];
 
-    
+
 
     const contactFind = contacts.find(contact => contact.id == 1);
 
@@ -54,10 +54,14 @@ const ProfileInfo = ({ role }) => {
                         {role == "admin" && (
                             <button className="text-white rounded-full cursor-pointer hover:bg-gray-700 active:bg-gray-700 active:text-black p-2 mb-3"
                                 onClick={() => SetProfileInfoOpen(prev => !prev)}>
-                                <QrCode size={20} />
+                                <label className="flex items-center gap-2">
+                                    <QrCode size={20} />
+                                    Scanea el código QR
+                                </label>
                             </button>
                         )}
-                        <button className="text-white bg-blue-600 rounded-full cursor-pointer p-2 hover:bg-blue-500"
+                        <button
+                            className="bg-naranja-base hover:bg-naranja-medio text-white font-bold py-2 px-4 rounded transition duration-300"
                             onClick={() => setShowChangePassword(true)}>
                             Cambiar Contraseña
                         </button>

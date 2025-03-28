@@ -37,3 +37,7 @@ export const AutoHandle = createContext();
 
 // 📌 Contexto de Informacion dentro del chat
 export const ProfileInfoPanel = createContext(false);
+
+// 📌 Contexto de Informacion de Conexión
+export const ConnectionInfo = createContext(false);
+export const ConnectionQR = createContext(false);
