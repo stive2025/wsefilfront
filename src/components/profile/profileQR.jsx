@@ -10,10 +10,11 @@ const ProfileQR = () => {
   const { codigoQR } = useContext(ConnectionQR);
   const { isConnected, setIsConnected } = useContext(ConnectionInfo);
   const [error, setError] = useState(null);
-  const [connectionInfo, setConnectionInfo] = useState({ name: '', number: '' });
+  const [connectedUserInfo, setConnectedUserInfo] = useState({ name: '', number: '' });
   const { loading, callEndpoint } = useFetchAndLoad();
   const { profileInfoOpen } = useContext(ProfileInfoPanel);
   const intervalRef = useRef(null);
+  
 
   // Función para formatear el número de teléfono exactamente como se requiere
   const formatPhoneNumber = (phoneNumber) => {
@@ -34,21 +35,20 @@ const ProfileQR = () => {
   const handleQR = async () => {
     try {
       // Obtener el apiCall completo
-      if(isConnected){
         const apiCall = getCodigoQR();
         const response = await callEndpoint(apiCall);
         console.log("Respuesta del backend:", response);
-          setConnectionInfo({
+        if(response.data.status == "CONNECTED"){
+          setIsConnected(true)
+          setConnectedUserInfo({
             name: response.data.name,
             number: response.data.number
           });
+        }
         if (intervalRef.current) {
           clearInterval(intervalRef.current);
           intervalRef.current = null;
         }
-      } else {
-        setIsConnected(false);
-      }
     } catch (error) {
       if (error.name !== 'AbortError') {
         console.error("Error buscando código QR:", error);
@@ -58,6 +58,8 @@ const ProfileQR = () => {
   };
 
   useEffect(() => {
+    console.log(isConnected)
+
     // Limpiar cualquier intervalo existente al iniciar o cambiar profileInfoOpen
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -109,11 +111,11 @@ const ProfileQR = () => {
           <div className="flex flex-col items-center text-center p-4 bg-gray-800 rounded-lg w-full max-w-xs">
             <div className="mb-3">
               <span className="text-gray-400 block mb-1">Nombre:</span>
-              <p className="text-lg font-medium">{connectionInfo.name}</p>
+              <p className="text-lg font-medium">{connectedUserInfo.name}</p>
             </div>
             <div>
               <span className="text-gray-400 block mb-1">Teléfono:</span>
-              <p className="text-md font-mono">{formatPhoneNumber(connectionInfo.number)}</p>
+              <p className="text-md font-mono">{formatPhoneNumber(connectedUserInfo.number)}</p>
             </div>
           </div>
         ) : codigoQR ? (
