@@ -1,4 +1,4 @@
-import { useEffect, useContext, useRef } from "react";
+import { useEffect, useContext } from "react";
 import ChatInterface from "/src/components/chats/chatPanel_components.jsx";
 import ChatList from "/src/components/chats/chatList_component.jsx";
 import Resize from "/src/hooks/responsiveHook.jsx";
@@ -33,7 +33,6 @@ const ChatComplete = () => {
             } catch (error) {
                 if (error.name !== 'AbortError') {
                     console.error("No se pudo obtener los datos de la conexion:", error);
-                    setError("No se pudo obtener los datos de la conexion");
                 }
             }
         };
