@@ -285,10 +285,11 @@ const ChatInterface = () => {
             // Prepare message data
             const messageData = {
                 number: selectedChatId.number || "", // Fallback to empty string
-                message: messageText,
+                body: messageText,
                 media: mediaArray.length > 0 ? mediaArray : "",
                 user: 12, // Replace with actual user ID from your context
-                chat: selectedChatId.id
+                chat_id: selectedChatId.id,
+                from_me:true
             };
 
             // Remove undefined properties
@@ -297,6 +298,7 @@ const ChatInterface = () => {
             );
 
             // Send message using the service
+            console.log(messageData)
             const { call } = sendMessage(messageData);
             const response = await call;
 

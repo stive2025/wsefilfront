@@ -30,8 +30,8 @@ const LoginForm = () => {
       // Verificar si recibimos un token
       if (response && response.token) {
         // Guardar el token en las cookies (7 días de expiración por defecto)
-        setCookieItem('authToken', response.token);
-        console.log(response)
+        setCookieItem('authToken', response.token.plainTextToken);
+        console.log("AQUI ESTA EL TOKEN",response)
         // Si hay información adicional del usuario, también la puedes guardar
         if (response.user) {
           setCookieItem('userData', JSON.stringify(response.user));
