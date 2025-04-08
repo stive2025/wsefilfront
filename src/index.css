@@ -1,70 +1,48 @@
 @import "tailwindcss";
+/* src/index.css */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
 
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --color-verde-base: rgb(0, 151, 147);
+  --color-naranja-base: rgb(255, 150, 25);
+  --color-naranja-medio: rgb(255, 170, 64);
+  --color-verde-medio: rgb(83, 191, 188);
+  --color-blanco: rgb(255, 255, 255);
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+@layer utilities {
+  .bg-verde-base {
+    background-color: var(--color-verde-base);
   }
-  a:hover {
-    color: #747bff;
+  .bg-naranja-base {
+    background-color: var(--color-naranja-base);
   }
-  button {
-    background-color: #f9f9f9;
+  .bg-naranja-medio {
+    background-color: var(--color-naranja-medio);
   }
+  .bg-verde-medio {
+    background-color: var(--color-verde-medio);
+  }
+  .bg-blanco {
+    background-color: var(--color-blanco);
+  }
+  .hover\:bg-naranja-base:hover { background-color: var(--color-naranja-base); }
+  .hover\:bg-verde-base:hover { background-color: var(--color-verde-base); }
+  .hover\:bg-verde-medio:hover { background-color: var(--color-verde-medio); }
+  .hover\:bg-naranja-medio:hover { background-color: var(--color-naranja-medio); }
+  .active\:bg-naranja-base:active { background-color: var(--color-naranja-base); }
+  .active\:bg-verde-base:active { background-color: var(--color-verde-base); }
+  .active\:bg-verde-medio:active { background-color: var(--color-verde-medio); }
+  .active\:bg-naranja-medio:active { background-color: var(--color-naranja-medio); }
 }
+
+
+
+
