@@ -43,7 +43,7 @@ const ChatTag = ({ isOpen, onClose }) => {
                 <div className="mb-2">
                     <label className="text-white text-sm">Selecciona una Etiqueta</label>
                     <select
-                        className="text-xs border p-1 rounded bg-transparent text-white w-full sm:p-2"
+                        className={`w-full bg-gray-900 outline-none ${selectedTag ? 'text-white' : 'text-gray-400'}`}
                         value={selectedTag ? selectedTag.id : ""}
                         onChange={(e) => {
                             const tag = Tags.find((t) => t.id === parseInt(e.target.value));

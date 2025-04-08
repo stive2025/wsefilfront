@@ -357,11 +357,12 @@ const ListContacts = () => {
         </div>
       )}
       {/* Fijamos el header y search */}
-      <div className="flex flex-col flex-shrink-0">
-        <label className="p-1">CONTACTOS</label>
-        <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
-      </div>
-
+      {location.pathname === "/contacts" && (
+        <div className="flex flex-col flex-shrink-0">
+          <label className="p-1">CONTACTOS</label>
+          <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
+        </div>
+      )}
       {/* Lista de contactos con scroll */}
       <div className="flex-1 overflow-y-auto scrollbar-hide">
         {loading && contacts.length === 0 ? (

@@ -62,7 +62,7 @@ const TagsBar = ({ tags, activeTag, setActiveTag }) => {
   };
 
   return (
-    <div className="relative flex items-center bg-gray-900">
+    <div className="relative flex items-center bg-gray-900 p-2">
       <button
         onClick={scrollLeft}
         className="absolute left-0 h-5 w-5 ml-2 flex items-center justify-center bg-transparent hover:bg-gray-700 active:bg-gray-700 rounded-full z-10"
@@ -103,7 +103,7 @@ const AgentSelect = ({ role, agents, selectedAgent, setSelectedAgent, loading })
   return (
     <div className="cursor-pointer p-4 flex border-b border-gray-700 bg-gray-900">
       <select
-        className="text-xs border p-1 rounded bg-transparent text-white w-full sm:w-auto sm:p-2"
+        className={`w-full bg-gray-900 outline-none ${selectedAgent ? 'text-white' : 'text-gray-400'}`}
         value={selectedAgent ? selectedAgent.id : ""}
         onChange={(e) => {
           const agent = agents.find((a) => a.id === parseInt(e.target.value));
@@ -133,6 +133,7 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats }) => {
   const observerRef = useRef(null);
   const lastChatRef = useRef(null);
   const { callEndpoint } = useFetchAndLoad();
+  const [readChats, setReadChats] = useState(new Set());
 
   const handleUpdateChat = async (idChat, dataChat) => {
     try {
@@ -197,7 +198,11 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats }) => {
           onClick={() => {
             if (item.unread_message > 0) {
               handleUpdateChat(item.id, { unread_message: 0 });
+
+              // Marca este chat como leído
+              setReadChats(prev => new Set(prev).add(item.id));
             }
+
             setSelectedChatId({
               id: item.id,
               idContact: item.idContact,
@@ -227,7 +232,7 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats }) => {
 
           <div className="text-xs text-gray-400 flex flex-col items-end">
             <div>{item.timestamp || new Date(item.updated_at).toLocaleDateString()}</div>
-            {(item.unread_message > 0 || item.unreadCount > 0) && (
+            {(item.unread_message > 0 || item.unreadCount > 0) && !readChats.has(item.id) && (
               <div className="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center mt-1">
                 {item.unread_message || item.unreadCount}
               </div>

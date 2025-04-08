@@ -27,6 +27,10 @@ const ChatInterface = () => {
     const { setSearchInChat } = useContext(SearchInChatClick);
     const { selectedChatId, setSelectedChatId } = useContext(ChatInterfaceClick);
     const { callEndpoint } = useFetchAndLoad();
+    
+    // File size limit in bytes (5MB = 5 * 1024 * 1024)
+    const FILE_SIZE_LIMIT = 5 * 1024 * 1024;
+    const [fileSizeError, setFileSizeError] = useState("");
 
     // Estados para gestionar mensajes y archivos
     const [messageText, setMessageText] = useState("");
@@ -40,6 +44,14 @@ const ChatInterface = () => {
     const fileInputRef = useRef(null);
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
+    const messagesContainerRef = useRef(null); // Ref for messages container
+
+    // Function to scroll to the bottom of the messages
+    const scrollToBottom = () => {
+        if (messagesContainerRef.current) {
+            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        }
+    };
 
     const handleMediaPreview = (mediaPath, mediaType) => {
         setMediaPreview({ path: mediaPath, type: mediaType });
@@ -192,7 +204,7 @@ const ChatInterface = () => {
         const loadMessages = async () => {
             try {
                 const response = await callEndpoint(getChat(selectedChatId.id));
-                setChatMessages(response.messages)
+                setChatMessages(response.messages);
             } catch (error) {
                 console.error("Error cargando mensajes:", error);
             }
@@ -203,11 +215,33 @@ const ChatInterface = () => {
         }
     }, [selectedChatId]);
 
-    // Función para manejar la selección de archivos
+    // Scroll to bottom when messages load or change
+    useEffect(() => {
+        if (chatMessages && chatMessages.length > 0) {
+            scrollToBottom();
+        }
+    }, [chatMessages]);
+
+    // Función para manejar la selección de archivos con restricción de tamaño
     const handleFileSelect = (event) => {
         const files = Array.from(event.target.files);
-        setSelectedFiles(prev => [...prev, ...files]);
-        event.target.value = null; // Resetear el input para permitir seleccionar el mismo archivo
+        const validFiles = [];
+        // Check each file size
+        files.forEach(file => {
+            if (file.size > FILE_SIZE_LIMIT) {
+                setFileSizeError(`El archivo "${file.name}" excede el límite de 5MB.`);
+                // Clear error message after 5 seconds
+                setTimeout(() => setFileSizeError(""), 5000);
+            } else {
+                validFiles.push(file);
+            }
+        });
+        
+        if (validFiles.length > 0) {
+            setSelectedFiles(prev => [...prev, ...validFiles]);
+        }
+        
+        event.target.value = null; // Reset input to allow selecting the same file again
     };
 
     // Función para abrir el selector de archivos
@@ -238,6 +272,18 @@ const ChatInterface = () => {
 
                 mediaRecorder.onstop = () => {
                     const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+                    
+                    // Check if audio file size exceeds limit
+                    if (audioBlob.size > FILE_SIZE_LIMIT) {
+                        setFileSizeError("La grabación de audio excede el límite de 5MB.");
+                        // Clear error message after 5 seconds
+                        setTimeout(() => setFileSizeError(""), 5000);
+                        
+                        // Detener todas las pistas del stream
+                        stream.getTracks().forEach(track => track.stop());
+                        return;
+                    }
+                    
                     const audioUrl = URL.createObjectURL(audioBlob);
                     setRecordedAudio({
                         blob: audioBlob,
@@ -289,7 +335,7 @@ const ChatInterface = () => {
                 media: mediaArray.length > 0 ? mediaArray : "",
                 user: 12, // Replace with actual user ID from your context
                 chat_id: selectedChatId.id,
-                from_me:true
+                from_me: true
             };
 
             // Remove undefined properties
@@ -298,13 +344,14 @@ const ChatInterface = () => {
             );
 
             // Send message using the service
-            console.log(messageData)
+            console.log(messageData);
             const { call } = sendMessage(messageData);
             const response = await call;
+            console.log(response);
 
             // Handle successful message send
-            if (response.ok) {
-                // Optionally, you can update the chat messages state here
+            if (response) {
+                // Update the chat messages state
                 setChatMessages(prev => [...(prev || []), {
                     id: Date.now(), // Temporary ID
                     body: messageText,
@@ -316,6 +363,9 @@ const ChatInterface = () => {
                 setMessageText("");
                 setSelectedFiles([]);
                 setRecordedAudio(null);
+                
+                // Scroll to bottom after sending a message
+                setTimeout(scrollToBottom, 100); // Small delay to ensure DOM update
             } else {
                 // Handle error scenario
                 console.error("Failed to send message", response);
@@ -401,8 +451,18 @@ const ChatInterface = () => {
                     {tagClick && <ChatTag isOpen={tagClick} onClose={() => setTagClick(false)} />}
                     {resolveClick && <ChatResolved isOpen={resolveClick} onClose={() => setResolveClick(false)} />}
 
-                    {/* Messages Area */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">
+                    {/* File Size Error Message */}
+                    {fileSizeError && (
+                        <div className="bg-red-500 text-white p-2 text-center">
+                            {fileSizeError}
+                        </div>
+                    )}
+
+                    {/* Messages Area - Add ref here */}
+                    <div 
+                        ref={messagesContainerRef} 
+                        className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide"
+                    >
                         {chatMessages && chatMessages.map((message) => 
                             renderMessageContent(message, selectedChatId)
                         )}
@@ -415,7 +475,9 @@ const ChatInterface = () => {
                             <div className="flex flex-wrap gap-2">
                                 {selectedFiles.map((file, index) => (
                                     <div key={index} className="bg-gray-700 rounded p-2 flex items-center">
-                                        <span className="text-sm truncate max-w-xs">{file.name}</span>
+                                        <span className="text-sm truncate max-w-xs">
+                                            {file.name} ({(file.size / (1024 * 1024)).toFixed(2)} MB)
+                                        </span>
                                         <button
                                             className="ml-2 text-gray-400 hover:text-white"
                                             onClick={() => removeFile(index)}
@@ -428,6 +490,9 @@ const ChatInterface = () => {
                                 {recordedAudio && (
                                     <div className="bg-gray-700 rounded p-2 flex items-center">
                                         <audio controls src={recordedAudio.url} className="h-8 w-32" />
+                                        <span className="text-sm ml-2">
+                                            ({(recordedAudio.blob.size / (1024 * 1024)).toFixed(2)} MB)
+                                        </span>
                                         <button
                                             className="ml-2 text-gray-400 hover:text-white"
                                             onClick={removeAudio}
@@ -445,7 +510,7 @@ const ChatInterface = () => {
                         <div className="flex items-center space-x-2">
                             <input
                                 type="text"
-                                placeholder="Type a message..."
+                                placeholder="Escribe un mensaje..."
                                 className="flex-1 bg-gray-900 rounded-lg px-4 py-2 w-full"
                                 value={messageText}
                                 onChange={(e) => setMessageText(e.target.value)}

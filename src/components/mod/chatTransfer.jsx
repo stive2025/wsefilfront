@@ -20,17 +20,17 @@ const ChatTransfer = ({ isOpen, onClose }) => {
     useEffect(() => {
         const loadAgents = async () => {
             try {
-              const response = await callEndpoint(getAgents({ page: 1 }));
-              setAgents(response.data || []);
+                const response = await callEndpoint(getAgents({ page: 1 }));
+                setAgents(response.data || []);
             } catch (error) {
-              console.error("Error obteniendo agentes:", error);
-              setAgents([]);
+                console.error("Error obteniendo agentes:", error);
+                setAgents([]);
             }
-          }
-    
+        }
+
         loadAgents();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      }, []);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     if (!isOpen) return null; // Si no está abierto, no se renderiza
 
@@ -52,7 +52,7 @@ const ChatTransfer = ({ isOpen, onClose }) => {
                 <div className="mb-2">
                     <label className="text-white text-sm">Transferir a:</label>
                     <select
-                        className="text-xs border p-1 rounded bg-transparent text-white w-full sm:p-2"
+                        className={`w-full bg-gray-900 outline-none ${selectedAgent ? 'text-white' : 'text-gray-400'}`}
                         value={selectedAgent ? selectedAgent.id : ""}
                         onChange={(e) => {
                             const agent = agents.find((a) => a.id === parseInt(e.target.value));

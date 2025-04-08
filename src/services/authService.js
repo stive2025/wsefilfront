@@ -1,4 +1,4 @@
-import { GetCookieItem, setCookieItem, RemoveCookieItem }  from "/src/utilities/cookies.js"; // Ajusta la ruta
+import { GetCookieItem, setCookieItem, RemoveCookieItem }  from "/src/utilities/cookies.js"; 
 import CustomFetch from "/src/services/apiService.js";
 import { loadAbort } from "../hooks/fechAndload.jsx";
 
@@ -19,7 +19,8 @@ export const loginUser = (loginData) => {
   
 
 // Guardar token de autenticación
-export const setAuthToken = (token, days = 7) => {
+export const setAuthToken = (token, days = 1) => {
+  console.log("Token:", token);
   setCookieItem(AUTH_TOKEN_KEY, token, days);
 };
 
@@ -29,7 +30,7 @@ export const getAuthToken = () => {
 };
 
 // Guardar datos del usuario
-export const setUserData = (userData, days = 7) => {
+export const setUserData = (userData, days = 1) => {
   setCookieItem(USER_DATA_KEY, JSON.stringify(userData), days);
 };
 
@@ -61,7 +62,7 @@ export const logout = () => {
 // Función para añadir el token a las peticiones fetch
 export const fetchWithAuth = async (url, options = {}) => {
   const token = getAuthToken();
-  
+  console.log(token)
   const authOptions = {
     ...options,
     headers: {

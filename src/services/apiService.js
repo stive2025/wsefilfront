@@ -4,8 +4,8 @@ import { GetCookieItem, RemoveCookieItem } from "../utilities/cookies.js";
 let baseURL = ENV_VARIABLES.API_URL;
 
 const CustomFetch = async (endpoint, options = {}) => {
-  const token = GetCookieItem("token");
-
+  const token = GetCookieItem("authToken");
+  console.log(GetCookieItem("userData"));
   const headers = {
     "Content-Type": "application/json",
     ...(token && { Authorization: `Bearer ${token}` }),
@@ -21,7 +21,7 @@ const CustomFetch = async (endpoint, options = {}) => {
 
     if (!response.ok) {
       if (response.status === 401) {
-        RemoveCookieItem("token");
+        RemoveCookieItem("authToken");
       }
       throw new Error(`Error ${response.status}: ${response.statusText}`);
     }

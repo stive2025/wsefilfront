@@ -313,7 +313,7 @@ const TagsList = () => {
     <div className="flex-1 border-r border-gray-700 flex flex-col  text-white pt-10 ml-10 overflow-y-auto">
       {/* Fixed header and search */}
       <div className="flex flex-row flex-shrink-0">
-        <label className="p-1">Mensajes Automaticos</label>
+        <label className="p-1">Etiquetas</label>
       </div>
       <div className="flex flex-col flex-shrink-0">
         <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
