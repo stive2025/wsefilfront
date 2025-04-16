@@ -15,6 +15,7 @@
   --color-naranja-medio: rgb(255, 170, 64);
   --color-verde-medio: rgb(83, 191, 188);
   --color-blanco: rgb(255, 255, 255);
+  --color-message-private:rgb(84, 153, 199)
 }
 
 @layer utilities {
@@ -23,6 +24,9 @@
   }
   .bg-naranja-base {
     background-color: var(--color-naranja-base);
+  }
+  .bg-message-private {
+    background-color: var(--color-message-private);
   }
   .bg-naranja-medio {
     background-color: var(--color-naranja-medio);

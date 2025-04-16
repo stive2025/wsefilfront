@@ -5,11 +5,15 @@ let baseURL = ENV_VARIABLES.API_URL;
 
 const CustomFetch = async (endpoint, options = {}) => {
   const token = GetCookieItem("authToken");
-  console.log(GetCookieItem("userData"));
   const headers = {
     "Content-Type": "application/json",
     ...(token && { Authorization: `Bearer ${token}` }),
   };
+
+  // Ajustar headers para respuestas binarias
+  if (options.responseType === 'blob') {
+    headers['Accept'] = 'application/pdf, application/octet-stream';
+  }
 
   const config = {
     ...options,
@@ -25,24 +29,27 @@ const CustomFetch = async (endpoint, options = {}) => {
       }
       throw new Error(`Error ${response.status}: ${response.statusText}`);
     }
-    console.error(response);
 
+    // Si esperamos una respuesta binaria, devolver el blob
+    if (options.responseType === 'blob') {
+      return response.blob();
+    }
+
+    // Para respuestas JSON, seguir con el proceso normal
     const responseClone = response.clone();
 
     try {
-      const text = await responseClone.text(); // Lee el cuerpo como texto primero
-      console.log("Raw Response:", text); // Verifica si realmente hay contenido
-
+      const text = await responseClone.text();
+      
       if (text.trim()) {
-        // Evita errores con respuestas vacías
         return JSON.parse(text);
       } else {
         console.warn("La respuesta está vacía");
-        return {}; // Retorna un objeto vacío en caso de error
+        return {};
       }
     } catch (error) {
       console.error("Error al parsear JSON:", error);
-      return {}; // Evita que el código se rompa
+      return {};
     }
   } catch (error) {
     return Promise.reject(error);

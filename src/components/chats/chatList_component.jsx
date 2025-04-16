@@ -1,13 +1,16 @@
 /* eslint-disable react/prop-types */
 import { useState, useEffect, useRef, useCallback, useContext } from "react";
 import { Search, MessageSquarePlus, ChevronLeftCircle, ChevronRightCircle, Loader } from "lucide-react";
-import { ChatInterfaceClick, NewMessage } from "/src/contexts/chats.js";
+import { ChatInterfaceClick, NewMessage, StateFilter, TagFilter, AgentFilter } from "/src/contexts/chats.js";
 import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
 import { getChatList, updateChat } from "/src/services/chats.js";
-import { getContact } from "/src/services/contacts.js";
+import { getContact, getContactChatsByName, getContactChatsByPhone } from "/src/services/contacts.js";
 import { getAgents } from "/src/services/agents.js";
 import Resize from "/src/hooks/responsiveHook.jsx";
+//import { GetCookieItem } from "/src/utilities/cookies.js"; // Asumiendo que existe esta función
 //import { toast } from "sonner"; // Asume que estás usando una librería de notificaciones
+
+
 
 const ChatHeader = () => {
   const { setNewMessage } = useContext(NewMessage);
@@ -35,7 +38,7 @@ const SearchInput = ({ searchQuery, setSearchQuery }) => {
       <div className="relative flex items-center">
         <input
           type="text"
-          placeholder="Search..."
+          placeholder="Buscar por nombre o teléfono..."
           value={searchQuery}
           onChange={handleSearchChange}
           className="w-full bg-gray-800 rounded-lg pl-8 pr-2 py-1 text-white placeholder-gray-400"
@@ -46,8 +49,10 @@ const SearchInput = ({ searchQuery, setSearchQuery }) => {
   );
 };
 
-const TagsBar = ({ tags, activeTag, setActiveTag }) => {
+
+const TagsBar = ({ tags }) => {
   const containerRef = useRef(null);
+  const { tagSelected, setTagSelected } = useContext(TagFilter);
 
   const scrollRight = () => {
     if (containerRef.current) {
@@ -75,12 +80,19 @@ const TagsBar = ({ tags, activeTag, setActiveTag }) => {
         className="bg-transparent text-white h-8 w-full overflow-hidden shadow-md flex items-center p-1 overflow-x-auto scrollbar-hide mx-8"
       >
         <ul className="flex whitespace-nowrap">
+          <li
+            className={`flex items-center gap-2 cursor-pointer rounded-full p-2 text-xs ${tagSelected === 0 ? "bg-gray-700 text-white" : "hover:text-gray-300"
+              }`}
+            onClick={() => setTagSelected(0)}
+          >
+            Todos
+          </li>
           {Object.entries(tags).map(([key, value]) => (
             <li
               key={key}
-              className={`flex items-center gap-2 cursor-pointer rounded-full p-2 text-xs ${activeTag === key ? "bg-gray-700 text-white" : "hover:text-gray-300"
+              className={`flex items-center gap-2 cursor-pointer rounded-full p-2 text-xs ${tagSelected === parseInt(key) ? "bg-gray-700 text-white" : "hover:text-gray-300"
                 }`}
-              onClick={() => setActiveTag(key)}
+              onClick={() => setTagSelected(parseInt(key))}
             >
               {value}
             </li>
@@ -98,21 +110,43 @@ const TagsBar = ({ tags, activeTag, setActiveTag }) => {
   );
 };
 
-const AgentSelect = ({ role, agents, selectedAgent, setSelectedAgent, loading }) => {
+const AgentSelect = ({ role }) => {
+  const { loading, callEndpoint } = useFetchAndLoad();
+  const [agents, setAgents] = useState([]);
+  const { agentSelected, setAgentSelected } = useContext(AgentFilter);
+
+  useEffect(() => {
+    const loadAgents = async () => {
+      if (role == "admin") {
+        try {
+          const response = await callEndpoint(getAgents({ page: 1 }));
+          setAgents(response.data || []);
+        } catch (error) {
+          console.error("Error obteniendo agentes:", error);
+          setAgents([]);
+        }
+      }
+    };
+
+    loadAgents();
+  }, [role]);
+
   if (role !== "admin") return null;
+
   return (
     <div className="cursor-pointer p-4 flex border-b border-gray-700 bg-gray-900">
       <select
-        className={`w-full bg-gray-900 outline-none ${selectedAgent ? 'text-white' : 'text-gray-400'}`}
-        value={selectedAgent ? selectedAgent.id : ""}
+        className={`w-full bg-gray-900 outline-none ${agentSelected ? 'text-white' : 'text-gray-400'}`}
+        value={agentSelected || ""}
         onChange={(e) => {
-          const agent = agents.find((a) => a.id === parseInt(e.target.value));
-          setSelectedAgent(agent);
+          const agentId = e.target.value ? parseInt(e.target.value) : null;
+          setAgentSelected(agentId);
+          console.log(agentSelected);
         }}
         disabled={loading}
       >
-        <option value="" disabled>
-          {loading ? "Cargando agentes..." : "Seleccionar agente"}
+        <option value="">
+          {loading ? "Cargando agentes..." : "Todos los agentes"}
         </option>
         {agents.length > 0 ? (
           agents.map((agent) => (
@@ -196,7 +230,12 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats }) => {
           className={`w-full flex items-center space-x-3 p-4 hover:bg-gray-800 cursor-pointer ${selectedChatId && selectedChatId.id == item.id ? "bg-gray-700" : ""
             }`}
           onClick={() => {
-            if (item.unread_message > 0) {
+            if (item.state === "PENDING") {
+              handleUpdateChat(item.id, { unread_message: 0, state: "OPEN" });
+
+              // Marca este chat como leído
+              setReadChats(prev => new Set(prev).add(item.id));
+            } else if (item.unread_message > 0) {
               handleUpdateChat(item.id, { unread_message: 0 });
 
               // Marca este chat como leído
@@ -252,12 +291,9 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats }) => {
 
 const ChatList = ({ role = "admin" }) => {
   const isMobile = Resize();
-  const { loading, fetchLoading, callEndpoint } = useFetchAndLoad();
-  const [agents, setAgents] = useState([]);
-  const [selectedAgent, setSelectedAgent] = useState(null);
+  const { loading, callEndpoint } = useFetchAndLoad();
   const [chats, setChats] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTag, setActiveTag] = useState("label_all");
   const [page, setPage] = useState(1);
   const [hasMoreChats, setHasMoreChats] = useState(true);
   const [, setPaginationInfo] = useState({
@@ -267,17 +303,80 @@ const ChatList = ({ role = "admin" }) => {
   });
   const chatListRef = useRef(null);
 
+  // Contextos para filtros (UI solamente por ahora)
+  const { stateSelected } = useContext(StateFilter);
+  const { tagSelected } = useContext(TagFilter);
+  const { agentSelected } = useContext(AgentFilter);
+
+  // Estado para indicar si se está realizando una búsqueda
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Ejemplo de tags (ahora manejados como objetos con id)
   const tags = {
-    label_all: "Todos",
-    label_rev: "Revisión",
-    label_pay: "Confirmar Pago",
-    label_pendingPay: "Pago pendiente",
-    label_callLater: "Llamar mas tarde",
+    1: "Revisión",
+    2: "Confirmar Pago",
+    3: "Pago pendiente",
+    4: "Llamar mas tarde",
   };
+
+  // Obtener el id del usuario logueado desde las cookies
+  // const userId = GetCookieItem("userData") ? JSON.parse(GetCookieItem("userData")).id : null;
 
   const loadChats = async (params = {}, append = false) => {
     try {
-      const response = await callEndpoint(getChatList(params), 'chatList');
+      let endpoint;
+      let endpointKey = 'chatList';
+
+      // Verifica si hay una consulta de búsqueda
+      if (searchQuery) {
+        setIsSearching(true);
+
+        // Determina si es búsqueda por teléfono o por nombre
+        if (/^\d+$/.test(searchQuery)) {
+          endpoint = getContactChatsByPhone(searchQuery);
+          endpointKey = 'contactChatsByPhone';
+        } else {
+          endpoint = getContactChatsByName(searchQuery);
+          endpointKey = 'contactChatsByName';
+        }
+      } else {
+        setIsSearching(false);
+
+        // Sin búsqueda, usa el endpoint normal de chats
+        // NOTA: Actualmente getChatList no admite filtros, pero la UI está preparada
+
+        endpoint = getChatList(params);
+
+        const filterParams = { ...params };
+        console.log(filterParams)
+
+        if (stateSelected !== "ALL") {
+          filterParams.state = stateSelected;
+          console.log(filterParams)
+        }
+
+        if (agentSelected) {
+          filterParams.agent_id = agentSelected;
+        }
+
+        endpoint = getChatList(filterParams);
+        /* 
+        // CÓDIGO COMENTADO: Para cuando el backend implemente los filtros        
+        // Aplica filtro por etiqueta
+        if (tagSelected !== 0) {
+          filterParams.id_tag = tagSelected;
+        }
+        
+        // Aplica filtro por agente
+      
+        
+       
+        */
+      }
+
+      const response = await callEndpoint(endpoint, endpointKey);
+      console.log("AQUI:", endpoint, "-", endpointKey);
+      console.log(response);
 
       setPaginationInfo({
         current_page: response.current_page,
@@ -338,64 +437,38 @@ const ChatList = ({ role = "admin" }) => {
     const nextPage = page + 1;
     setPage(nextPage);
 
-    const params = {
-      page: nextPage,
-    };
-
-    if (searchQuery) {
-      params.name = searchQuery;
-    }
-
-    if (activeTag !== 'label_all') {
-      params.tag = activeTag.replace('label_', '');
-    }
-
-    if (selectedAgent) {
-      params.agent_id = selectedAgent.id;
-    }
+    // Si estamos buscando, no incluimos parámetro de página ya que 
+    // los endpoints de búsqueda podrían no soportarlo
+    const params = isSearching ? {} : { page: nextPage };
 
     loadChats(params, true);
-  }, [page, hasMoreChats, loading, searchQuery, activeTag, selectedAgent]);
+  }, [page, hasMoreChats, loading, searchQuery, isSearching]);
 
-  useEffect(() => {
-    const loadAgents = async () => {
-      if (role === "admin") {
-        try {
-          const response = await callEndpoint(getAgents({ page: 1 }));
-          setAgents(response.data || []);
-        } catch (error) {
-          console.error("Error obteniendo agentes:", error);
-          setAgents([]);
-        }
-      }
-    };
-
-    loadAgents();
-  }, [role]);
-
+  // Efecto para cargar chats cuando cambian los criterios
   useEffect(() => {
     setPage(1);
     setHasMoreChats(true);
 
-    const params = {
-      page: 1,
-    };
-
-    if (searchQuery) {
-      params.name = searchQuery;
-    }
-
-    if (activeTag !== 'label_all') {
-      params.tag = activeTag.replace('label_', '');
-    }
-
-    if (selectedAgent) {
-      params.agent_id = selectedAgent.id;
-    }
+    // Solo incluimos parámetro de página para getChatList, no para búsquedas
+    const params = searchQuery ? {} : { page: 1 };
 
     loadChats(params, false);
-  }, [searchQuery, activeTag, selectedAgent]);
+  }, [searchQuery]);
 
+  // NOTA: Este efecto está comentado porque los filtros no afectan la búsqueda actualmente
+
+  useEffect(() => {
+    // Solo recargamos si no estamos en modo búsqueda
+    // porque los endpoints de búsqueda no soportan estos filtros
+    if (!isSearching) {
+      setPage(1);
+      setHasMoreChats(true);
+      loadChats({ page: 1 }, false);
+    }
+  }, [stateSelected, tagSelected, agentSelected]);
+
+
+  // Efecto para manejar el debounce de la búsqueda
   useEffect(() => {
     const timer = setTimeout(() => {
       setPage(1);
@@ -410,14 +483,14 @@ const ChatList = ({ role = "admin" }) => {
       <div className="flex flex-col flex-shrink-0 mt-14">
         <ChatHeader />
         <SearchInput searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
-        <AgentSelect
-          role={role}
-          agents={agents}
-          selectedAgent={selectedAgent}
-          setSelectedAgent={setSelectedAgent}
-          loading={fetchLoading}
-        />
-        <TagsBar tags={tags} activeTag={activeTag} setActiveTag={setActiveTag} />
+        {/* Los filtros se muestran pero no están activos durante la búsqueda */}
+        <AgentSelect role={role} />
+        <TagsBar tags={tags} />
+        {isSearching && (
+          <div className="p-2 bg-gray-800 text-xs text-amber-400 text-center">
+            Modo búsqueda activo. Los filtros se aplicarán cuando esté disponible en el backend.
+          </div>
+        )}
       </div>
       <div className="flex-1 overflow-y-auto" ref={chatListRef}>
         <ChatItems
@@ -433,14 +506,13 @@ const ChatList = ({ role = "admin" }) => {
       <div className="flex flex-col flex-shrink-0">
         <ChatHeader />
         <SearchInput searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
-        <AgentSelect
-          role={role}
-          agents={agents}
-          selectedAgent={selectedAgent}
-          setSelectedAgent={setSelectedAgent}
-          loading={fetchLoading}
-        />
-        <TagsBar tags={tags} activeTag={activeTag} setActiveTag={setActiveTag} />
+        <AgentSelect role={role} />
+        <TagsBar tags={tags} />
+        {isSearching && (
+          <div className="p-2 bg-gray-800 text-xs text-amber-400 text-center">
+            Modo búsqueda activo. Los filtros se aplicarán cuando esté disponible en el backend.
+          </div>
+        )}
       </div>
       <div className="flex-1 overflow-y-auto scrollbar-hide" ref={chatListRef}>
         <ChatItems

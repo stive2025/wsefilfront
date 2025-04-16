@@ -26,7 +26,6 @@ const SearchInput = ({ searchTerm, onSearchChange }) => (
 const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, loadingMore, lastContactRef, setSelectedChatId, setNewMessage }) => {
   const navigate = useNavigate();
   const location = useLocation();
-
   // Verificar si contacts existe y contiene un array antes de mapear
   if (!contacts || !contacts.length) {
     return <div className="p-4 text-gray-400">No hay contactos disponibles</div>;
@@ -47,7 +46,12 @@ const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, lo
               if (location.pathname === "/contacts") {
                 navigate("/chatList");
               }
-              setSelectedChatId(item.id);
+              setSelectedChatId({
+                idContact: item.id,
+                name: item.name,
+                photo: item.profile_picture,
+                number: item.phone_number
+              });
               setNewMessage(false);
             }}
           >
@@ -183,6 +187,7 @@ const ListContacts = () => {
       // Llamar a getContacts() con los parámetros
       const contactsCall = getContacts(params);
       const response = await callEndpoint(contactsCall);
+      console.log("Respuesta de contactos:", response);
 
       // Procesar la respuesta paginada
       handleContactsResponse(response, reset, page);

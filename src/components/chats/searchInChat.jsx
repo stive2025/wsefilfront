@@ -7,7 +7,8 @@ import Resize from "/src/hooks/responsiveHook.jsx";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import Cookies from "js-cookie";
-import CustomFetch from "/src/services/apiService.js";
+import { searchChat, downloadChat } from "/src/services/chats.js";
+import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
 
 const SearchInChat = () => {
     const { setSearchInChat } = useContext(SearchInChatClick);
@@ -20,6 +21,7 @@ const SearchInChat = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
+    const { callEndpoint } = useFetchAndLoad();
 
     const variants = {
         hidden: { opacity: 0, x: 100 },
@@ -33,13 +35,39 @@ const SearchInChat = () => {
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     };
 
-    const executeSearch = async (download = false) => {
+    // Build query parameters for API calls
+    const buildQueryParams = () => {
+        const params = new URLSearchParams();
+
+        if (startDate) params.append("start_date", formatDateForAPI(startDate));
+        if (endDate) params.append("end_date", formatDateForAPI(endDate));
+        if (searchText) params.append("body", searchText);
+
+        return params.toString();
+    };
+
+    // Build request body for search API
+    const buildRequestBody = () => {
+        return {
+            start_date: formatDateForAPI(startDate) || "",
+            end_date: formatDateForAPI(endDate) || "",
+            body: searchText || "",
+            download: false,
+        };
+    };
+
+    // Function to handle search
+    const handleSearch = async () => {
+        if (!selectedChatId || !selectedChatId.id) {
+            console.error("No chat selected");
+            return;
+        }
+
         setIsLoading(true);
         setHasSearched(true);
 
         try {
             const userData = JSON.parse(Cookies.get("userData") || "{}");
-
             const userId = userData.id;
 
             if (!userId) {
@@ -47,44 +75,88 @@ const SearchInChat = () => {
                 return;
             }
 
-            // Build the request body with the correct structure
-            const requestBody = {
-                start_date: formatDateForAPI(startDate) || "",
-                end_date: formatDateForAPI(endDate) || "",
-                body: searchText || "",
-                download: download
-            };
-            const endpoint = `chats/search/${selectedChatId.id}`;
+            const requestBody = buildRequestBody();
+            // Call search API and update search results
+            const response = await callEndpoint(searchChat(selectedChatId.id, requestBody));
 
-            const response = await CustomFetch(endpoint, {
-                method: 'POST',
-                body: JSON.stringify(requestBody)
-            });
-            // Handle download if requested
-            if (download && response.download) {
-                window.open(response.download, '_blank');
-                return;
+            // Assuming the response has a data property with the search results
+            if (response) {
+                setSearchResults(response);
+            } else {
+                setSearchResults([]);
             }
-            setSearchResults(response || []);
         } catch (error) {
             console.error("Error searching messages:", error);
+            setSearchResults([]);
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleSearch = () => executeSearch(false);
-    const formatTimestamp = (timestamp) => {
-        const date = new Date(timestamp);
-        return date.toLocaleString();
+    // Separate function to handle download
+    const handleDownload = async () => {
+        if (!selectedChatId || !selectedChatId.id) {
+            console.error("No chat selected");
+            return;
+        }
+
+        setIsLoading(true);
+
+        try {
+            // Construir la URL con todos los parámetros de búsqueda
+            const baseUrl = `${selectedChatId.id}`;
+            const params = buildQueryParams();
+            const fullUrl = `${baseUrl}?${params}`;
+
+            // Llamar al endpoint de descarga
+            const response = await callEndpoint(downloadChat(fullUrl));
+
+            // Verificar que tenemos una respuesta
+            if (!response) {
+                throw new Error('No se recibió respuesta del servidor');
+            }
+
+            // Crear una URL del blob
+            const url = window.URL.createObjectURL(response);
+
+            // Generar un nombre descriptivo para el archivo
+            const today = new Date().toISOString().split('T')[0];
+            const fileName = `chat_history_${selectedChatId.id}_${today}.pdf`;
+
+            // Crear un elemento <a> para la descarga
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', fileName);
+
+            // Hacer click en el enlace para iniciar la descarga
+            document.body.appendChild(link);
+            link.click();
+
+            // Limpiar después de la descarga
+            setTimeout(() => {
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+            }, 100);
+
+        } catch (error) {
+            console.error("Error downloading chat history:", error);
+            // Notificar al usuario del error
+            alert("Error al descargar el historial de chat. Por favor intente nuevamente.");
+        } finally {
+            setIsLoading(false);
+        }
     };
-    const downloadChatHistory = () => executeSearch(true);
 
     // Handle Enter key press in search input
     const handleKeyPress = (e) => {
         if (e.key === "Enter") {
             handleSearch();
         }
+    };
+
+    const formatTimestamp = (timestamp) => {
+        const date = new Date(timestamp);
+        return date.toLocaleString();
     };
 
     return (
@@ -182,7 +254,7 @@ const SearchInChat = () => {
                                         <p className="text-sm text-gray-400">{searchResults.length} mensajes encontrados</p>
                                         <button
                                             className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm"
-                                            onClick={downloadChatHistory}
+                                            onClick={handleDownload}
                                         >
                                             <Download size={14} /> Descargar
                                         </button>
@@ -195,7 +267,7 @@ const SearchInChat = () => {
                                             >
                                                 <div className="flex justify-between items-center mb-1">
                                                     <span className="text-xs font-medium text-gray-400">
-                                                        {message.from_me === "true" ? 'Tú' : 'Contacto'}
+                                                        {message.from_me === "true" ? 'Tú' : selectedChatId.name}
                                                     </span>
                                                     <span className="text-xs text-gray-500">
                                                         {formatTimestamp(message.created_at)}
