@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import {
     Send, Search, MessageSquareShare, SquarePlus,
     Mic, Paperclip, X, ArrowLeft, File, Image,
-    Volume2, PlayCircle, Link, Download, EyeOff
+    Volume2, PlayCircle, Link, Download, EyeOff, Loader,
+    RefreshCcw
 } from "lucide-react";
 import Resize from "/src/hooks/responsiveHook.jsx";
 import MenuInchat from "/src/components/mod/menuInchat.jsx";
@@ -13,8 +14,9 @@ import ChatResolved from "/src/components/mod/chatResolved.jsx";
 import { TagClick, ResolveClick, SearchInChatClick, ChatInterfaceClick } from "/src/contexts/chats.js";
 import { useContext } from "react";
 import { useLocation } from "react-router-dom";
-import { getChat } from "/src/services/chats.js";
+import { getChat, updateChat } from "/src/services/chats.js";
 import { sendMessage } from "/src/services/messages.js";
+import toast from "react-hot-toast";
 
 const ChatInterface = () => {
     const isMobile = Resize();
@@ -40,14 +42,44 @@ const ChatInterface = () => {
     const [chatMessages, setChatMessages] = useState(null);
     const [sendingMessage, setSendingMessage] = useState(false);
     const [isNewChat, setIsNewChat] = useState(false);
-    // Nuevo estado para el estado del chat
-    const [chatStatus, setChatStatus] = useState("Open");
+    const [reopeningChat, setReopeningChat] = useState(false);
+    // Estado para controlar la carga del chat
+    const [isLoading, setIsLoading] = useState(true);
 
     // Referencias
     const fileInputRef = useRef(null);
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
     const messagesContainerRef = useRef(null); // Ref for messages container
+
+    // Determinar si el chat está cerrado de manera consistente
+    const isChatClosed = selectedChatId?.status === "CLOSED";
+
+    // Function to reopen a closed chat
+    const handleReopenChat = async () => {
+        if (!selectedChatId || !selectedChatId.id) {
+            console.error("No chat selected");
+            return;
+        }
+
+        try {
+            setReopeningChat(true);
+            const { call, abortController } = updateChat(selectedChatId.id, { state: "OPEN" });
+            await callEndpoint({ call, abortController });
+            // Update the selectedChatId with the new state
+            setSelectedChatId(prev => ({
+                ...prev,
+                status: "OPEN"
+            }));
+            
+            toast.success("Chat reabierto con éxito");
+        } catch (error) {
+            toast.error("Ocurrió un error al reabrir el chat");
+            console.error("Error al reabrir el chat:", error);
+        } finally {
+            setReopeningChat(false);
+        }
+    };
 
     // Function to scroll to the bottom of the messages
     const scrollToBottom = () => {
@@ -254,37 +286,48 @@ const ChatInterface = () => {
 
     useEffect(() => {
         const loadMessages = async () => {
+            // Siempre comenzar con estado de carga al cambiar de chat
+            setIsLoading(true);
+            
             // Solo intentar cargar mensajes si hay un chat_id existente
             if (selectedChatId && selectedChatId.id) {
                 try {
                     const response = await callEndpoint(getChat(selectedChatId.id));
                     setChatMessages(response.messages);
-                    // Actualizar el estado del chat si está disponible en la respuesta
-                    if (response.status) {
-                        setChatStatus(response.status);
-                    } else {
-                        setChatStatus("Open"); // Por defecto
-                    }
+                    
+                    // Update the selectedChatId with the current state from the response
+                    setSelectedChatId(prev => ({
+                        ...prev,
+                        status: response.state || prev.state
+                    }));
+                    
                     setIsNewChat(false);
                 } catch (error) {
                     console.error("Error cargando mensajes:", error);
                     setChatMessages([]);
-                    setChatStatus("Open"); // Valor por defecto en caso de error
+                    toast.error("Error al cargar los mensajes del chat");
                 }
             } else if (selectedChatId && selectedChatId.idContact) {
                 // Es un chat nuevo
                 setChatMessages([]);
                 setIsNewChat(true);
-                setChatStatus("Open"); // Los chats nuevos siempre están abiertos
+                
+                // Ensure state is set to "OPEN" for new chats
+                setSelectedChatId(prev => ({
+                    ...prev,
+                    status: "OPEN"
+                }));
             } else {
                 setChatMessages(null);
                 setIsNewChat(false);
-                setChatStatus("Open"); // Valor por defecto
             }
+            
+            // Finalizar estado de carga después de procesar
+            setIsLoading(false);
         };
 
         loadMessages();
-    }, [selectedChatId]);
+    }, [selectedChatId?.id]); // Solo recargar mensajes cuando cambia el ID de chat
 
     // Scroll to bottom when messages load or change
     useEffect(() => {
@@ -421,7 +464,8 @@ const ChatInterface = () => {
             return; // No hay nada que enviar
         }
 
-        if (sendingMessage || chatStatus === "CLOSED") return; // Prevent sends when closed or already sending
+        // Check if chat is closed before attempting to send
+        if (sendingMessage || isChatClosed) return;
 
         try {
             setSendingMessage(true);
@@ -507,11 +551,11 @@ const ChatInterface = () => {
             } else {
                 // Handle error scenario
                 console.error("Failed to send message", response);
-                alert("Failed to send message. Please try again.");
+                toast.error("No se pudo enviar el mensaje. Inténtalo de nuevo.");
             }
         } catch (error) {
             console.error("Error sending message:", error);
-            alert("An error occurred while sending the message.");
+            toast.error("Ocurrió un error al enviar el mensaje.");
         } finally {
             setSendingMessage(false);
         }
@@ -559,6 +603,16 @@ const ChatInterface = () => {
     // Verificar si hay mensajes para mostrar
     const hasMessages = chatMessages && chatMessages.length > 0;
 
+    // Renderizar un loader mientras se carga el chat
+    if (shouldShowChat && isLoading) {
+        return (
+            <div className="flex flex-col h-screen w-full bg-gray-900 text-white justify-center items-center">
+                <Loader size={40} className="animate-spin text-teal-500" />
+                <p className="mt-4 text-gray-400">Cargando chat...</p>
+            </div>
+        );
+    }
+
     return (
         <div className="flex flex-col h-screen w-full bg-gray-900 text-white">
             {shouldShowChat ? (
@@ -581,7 +635,7 @@ const ChatInterface = () => {
                             />
                             <div className="flex flex-col">
                                 <span className="font-medium">{selectedChatId.name}</span>
-                                {chatStatus === "CLOSED" && (
+                                {isChatClosed && (
                                     <span className="text-xs text-red-400">Chat cerrado</span>
                                 )}
                             </div>
@@ -590,29 +644,58 @@ const ChatInterface = () => {
                             <button
                                 className="p-2 hover:bg-gray-700 active:bg-gray-700 rounded-full"
                                 onClick={() => setSearchInChat(prev => !prev)}
+                                disabled={isChatClosed}
+                                style={isChatClosed ? { opacity: 0.5 } : {}}
                             >
                                 <Search size={20} />
                             </button>
                             <button
                                 className="p-2 hover:bg-gray-700 active:bg-gray-700 rounded-full"
-                                onClick={() => setTransferOpen(prev => !prev)}
+                                onClick={() => isChatClosed ? null : setTransferOpen(prev => !prev)}
+                                disabled={isChatClosed}
+                                style={isChatClosed ? { opacity: 0.5 } : {}}
                             >
                                 <MessageSquareShare size={20} />
                             </button>
                             <button
                                 className="p-2 hover:bg-gray-700 active:bg-gray-700 rounded-full relative"
-                                onClick={() => setMenuOpen(prev => !prev)}
+                                onClick={() => isChatClosed ? null : setMenuOpen(prev => !prev)}
+                                disabled={isChatClosed}
+                                style={isChatClosed ? { opacity: 0.5 } : {}}
                             >
                                 <SquarePlus size={20} />
                             </button>
-                            {menuOpen && <MenuInchat isOpen={menuOpen} onClose={() => setMenuOpen(false)} />}
+                            {menuOpen && !isChatClosed && <MenuInchat isOpen={menuOpen} onClose={() => setMenuOpen(false)} />}
                         </div>
                     </div>
 
-                    {/* Chat Transfer */}
-                    {transferOpen && <ChatTransfer isOpen={transferOpen} onClose={() => setTransferOpen(false)} />}
-                    {tagClick && <ChatTag isOpen={tagClick} onClose={() => setTagClick(false)} />}
-                    {resolveClick && <ChatResolved isOpen={resolveClick} onClose={() => setResolveClick(false)} />}
+                    {/* Chat Transfer - Only show when chat is open */}
+                    {transferOpen && !isChatClosed && <ChatTransfer isOpen={transferOpen} onClose={() => setTransferOpen(false)} />}
+                    {tagClick && !isChatClosed && <ChatTag isOpen={tagClick} onClose={() => setTagClick(false)} />}
+                    {resolveClick && !isChatClosed && <ChatResolved isOpen={resolveClick} onClose={() => setResolveClick(false)} />}
+
+                    {/* Reopen chat button - Show only when chat is closed */}
+                    {isChatClosed && (
+                        <div className="bg-gray-800 p-2 text-center">
+                            <button 
+                                className="bg-teal-600 hover:bg-teal-700 px-4 py-2 rounded-lg flex items-center justify-center mx-auto"
+                                onClick={handleReopenChat}
+                                disabled={reopeningChat}
+                            >
+                                {reopeningChat ? (
+                                    <>
+                                        <Loader size={16} className="animate-spin mr-2" />
+                                        <span>Reabriendo chat...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <RefreshCcw size={16} className="mr-2" />
+                                        <span>Reabrir chat</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    )}
 
                     {/* File Size Error Message */}
                     {fileSizeError && (
@@ -640,34 +723,26 @@ const ChatInterface = () => {
                     </div>
 
                     {/* Preview de archivos y audio seleccionados */}
-                    {(selectedFiles.length > 0 || recordedAudio) && chatStatus !== "CLOSED" && (
+                    {(selectedFiles.length > 0 || recordedAudio) && (
                         <div className="px-4 py-2 bg-gray-800 border-t border-gray-700">
                             <div className="text-sm text-gray-400 mb-2">Archivos adjuntos:</div>
                             <div className="flex flex-wrap gap-2">
                                 {selectedFiles.map((file, index) => (
-                                    <div key={index} className="bg-gray-700 rounded p-2 flex items-center">
-                                        <span className="text-sm truncate max-w-xs">
-                                            {file.name} ({(file.size / (1024 * 1024)).toFixed(2)} MB)
-                                        </span>
-                                        <button
-                                            className="ml-2 text-gray-400 hover:text-white"
-                                            onClick={() => removeFile(index)}
-                                        >
+                                    <div key={index} className="bg-gray-700 rounded-md p-2 flex items-center space-x-2">
+                                        <File size={16} />
+                                        <span className="text-sm truncate max-w-[100px]">{file.name}</span>
+                                        <button onClick={() => removeFile(index)} className="text-red-400 hover:text-red-500">
                                             <X size={16} />
                                         </button>
                                     </div>
                                 ))}
 
                                 {recordedAudio && (
-                                    <div className="bg-gray-700 rounded p-2 flex items-center">
-                                        <audio controls src={recordedAudio.url} className="h-8 w-32" />
-                                        <span className="text-sm ml-2">
-                                            ({(recordedAudio.blob.size / (1024 * 1024)).toFixed(2)} MB)
-                                        </span>
-                                        <button
-                                            className="ml-2 text-gray-400 hover:text-white"
-                                            onClick={removeAudio}
-                                        >
+                                    <div className="bg-gray-700 rounded-md p-2 flex items-center space-x-2">
+                                        <Volume2 size={16} />
+                                        <span className="text-sm">Audio grabado</span>
+                                        <audio controls src={recordedAudio.url} className="h-6 w-24" />
+                                        <button onClick={removeAudio} className="text-red-400 hover:text-red-500">
                                             <X size={16} />
                                         </button>
                                     </div>
@@ -676,60 +751,77 @@ const ChatInterface = () => {
                         </div>
                     )}
 
-                    {/* Input Area - Oculta cuando el chat está cerrado */}
-                    {chatStatus !== "CLOSED" ? (
-                        <div className={`p-2 border-t border-gray-700 bg-gray-800 sticky bottom-0 ${isMobile ? "mb-10" : ""}`}>
-                            <div className="flex items-center space-x-2">
-                                <input
-                                    type="text"
-                                    placeholder="Escribe un mensaje..."
-                                    className="flex-1 bg-gray-900 rounded-lg px-4 py-2 w-full"
-                                    value={messageText}
-                                    onChange={(e) => setMessageText(e.target.value)}
-                                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                                />
-                                <button
-                                    className="p-2 bg-transparent rounded-lg hover:bg-gray-700 active:bg-gray-900"
-                                    onClick={handleSendMessage}
-                                    disabled={sendingMessage}
-                                >
-                                    <Send size={20} color="#4FD1C5" />
-                                </button>
-                                <button
-                                    className={`p-2 bg-transparent rounded-lg hover:bg-gray-700 active:bg-gray-900 ${isRecording ? "bg-red-600 bg-opacity-50" : ""}`}
-                                    onClick={handleMicClick}
-                                >
-                                    <Mic size={20} color={isRecording ? "red" : "#4FD1C5"} />
-                                </button>
-                                <button
-                                    className="p-2 bg-transparent rounded-lg hover:bg-gray-700 active:bg-gray-900"
-                                    onClick={handlePaperclipClick}
-                                >
-                                    <Paperclip size={20} color="#4FD1C5" />
-                                </button>
-                                <input
-                                    type="file"
-                                    ref={fileInputRef}
-                                    className="hidden"
-                                    onChange={handleFileSelect}
-                                    multiple
-                                />
-                            </div>
-                        </div>
-                    ) : (
-                        <div className={`p-4 border-t border-gray-700 bg-gray-800 text-center ${isMobile ? "mb-10" : ""}`}>
-                            <p className="text-gray-400">Este chat ha sido cerrado</p>
-                        </div>
-                    )}
+                    {/* Input Area - Disable when chat is closed */}
+                    <div className={`p-4 bg-gray-800 border-t border-gray-700 ${isChatClosed ? "opacity-60" : ""}`}>
+                        <div className="flex items-center space-x-2">
+                            <textarea
+                                value={messageText}
+                                onChange={(e) => setMessageText(e.target.value)}
+                                placeholder={isChatClosed ? "Chat cerrado" : "Escribe un mensaje..."}
+                                className="flex-1 bg-gray-700 text-white rounded-lg p-3 resize-none outline-none"
+                                rows={1}
+                                style={{ minHeight: '40px' }}
+                                disabled={isChatClosed}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                        e.preventDefault();
+                                        handleSendMessage();
+                                    }
+                                }}
+                            />
 
-                    {/* Media Preview Modal */}
-                    {renderMediaPreview()}
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleFileSelect}
+                                multiple
+                                className="hidden"
+                                disabled={isChatClosed}
+                            />
+
+                            <button
+                                className={`p-2 rounded-full ${isRecording ? 'bg-red-500' : 'bg-gray-700'}`}
+                                onClick={handleMicClick}
+                                disabled={isChatClosed}
+                            >
+                                <Mic size={20} />
+                            </button>
+
+                            <button
+                                className="p-2 bg-gray-700 rounded-full"
+                                onClick={handlePaperclipClick}
+                                disabled={isChatClosed}
+                            >
+                                <Paperclip size={20} />
+                            </button>
+
+                            <button
+                                className="p-2 bg-teal-600 rounded-full"
+                                onClick={handleSendMessage}
+                                disabled={
+                                    isChatClosed || 
+                                    (messageText.trim() === "" && selectedFiles.length === 0 && !recordedAudio) ||
+                                    sendingMessage
+                                }
+                            >
+                                {sendingMessage ? <Loader size={20} className="animate-spin" /> : <Send size={20} />}
+                            </button>
+                        </div>
+                    </div>
                 </>
             ) : (
+                // Empty state when no chat is selected
                 <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                    <p>Selecciona un chat para comenzar</p>
+                    <div className="p-6 bg-gray-800 rounded-xl flex flex-col items-center">
+                        <MessageSquareShare size={64} className="mb-4 text-teal-500" />
+                        <h3 className="text-xl font-medium text-white mb-2">Ningún chat seleccionado</h3>
+                        <p className="text-center mb-2">Selecciona un chat de la lista o inicia una nueva conversación</p>
+                    </div>
                 </div>
             )}
+
+            {/* Media Preview Modal */}
+            {renderMediaPreview()}
         </div>
     );
 };

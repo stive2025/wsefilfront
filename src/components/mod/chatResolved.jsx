@@ -7,7 +7,7 @@ import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
 import toast from "react-hot-toast";
 
 const ChatTag = ({ isOpen, onClose }) => {
-  const { selectedChatId } = useContext(ChatInterfaceClick);
+  const { selectedChatId, setSelectedChatId } = useContext(ChatInterfaceClick);
   const { callEndpoint } = useFetchAndLoad();
 
   const variants = {
@@ -27,7 +27,7 @@ const ChatTag = ({ isOpen, onClose }) => {
     try {
         const { call, abortController } = updateChat(selectedChatId.id, { state: "CLOSED" });
         await callEndpoint({ call, abortController });
-
+        setSelectedChatId(null); // Clear the selected chat ID after closing
       toast.success("Chat finalizado con éxito");
     } catch (error) {
       toast.error("Ocurrió un error al finalizar el chat");

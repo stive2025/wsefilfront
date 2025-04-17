@@ -8,7 +8,7 @@ import { getContact, getContactChatsByName, getContactChatsByPhone } from "/src/
 import { getAgents } from "/src/services/agents.js";
 import Resize from "/src/hooks/responsiveHook.jsx";
 //import { GetCookieItem } from "/src/utilities/cookies.js" // Asumiendo que existe esta función
-//import { toast } from "sonner"; // Asume que estás usando una librería de notificaciones
+//import toast from "react-hot-toast";
 
 
 
@@ -228,14 +228,12 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats }) => {
           className={`w-full flex items-center space-x-3 p-4 hover:bg-gray-800 cursor-pointer ${selectedChatId && selectedChatId.id == item.id ? "bg-gray-700" : ""
             }`}
           onClick={() => {
-            if (item.state === "PENDING") {
+            if (item.state === "PENDING" && item.state !=="CLOSED") {
               handleUpdateChat(item.id, { unread_message: 0, state: "OPEN" });
-
               // Marca este chat como leído
               setReadChats(prev => new Set(prev).add(item.id));
             } else if (item.unread_message > 0) {
               handleUpdateChat(item.id, { unread_message: 0 });
-
               // Marca este chat como leído
               setReadChats(prev => new Set(prev).add(item.id));
             }
