@@ -7,7 +7,7 @@ import { getChatList, updateChat } from "/src/services/chats.js";
 import { getContact, getContactChatsByName, getContactChatsByPhone } from "/src/services/contacts.js";
 import { getAgents } from "/src/services/agents.js";
 import Resize from "/src/hooks/responsiveHook.jsx";
-//import { GetCookieItem } from "/src/utilities/cookies.js"; // Asumiendo que existe esta función
+//import { GetCookieItem } from "/src/utilities/cookies.js" // Asumiendo que existe esta función
 //import { toast } from "sonner"; // Asume que estás usando una librería de notificaciones
 
 
@@ -173,10 +173,8 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats }) => {
     try {
       const response = await callEndpoint(updateChat(idChat, dataChat), `update_chat_${idChat}`);
       console.log("Chat actualizado ", response);
-      //toast.success("Chat actualizado con éxito");
     } catch (error) {
       console.error("Error actualizando chat ", error);
-      //toast.error(`Error al actualizar el chat: ${error.message || "Verifica la conexión"}`);
     }
   };
 
@@ -244,6 +242,7 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats }) => {
 
             setSelectedChatId({
               id: item.id,
+              status: item.state,
               idContact: item.idContact,
               name: item.name,
               photo: item.avatar,

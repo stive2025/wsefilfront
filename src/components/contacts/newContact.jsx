@@ -11,6 +11,8 @@ import {
 } from "/src/services/contacts.js";
 import { UpdateContactForm, ContactHandle } from "/src/contexts/chats.js";
 import Select from 'react-select';
+import toast from "react-hot-toast";
+
 
 const NewContact = () => {
   const isMobile = Resize();
@@ -139,18 +141,6 @@ const NewContact = () => {
     return true;
   };
 
-  useEffect(() => {
-    let timer;
-    if (success) {
-      timer = setTimeout(() => {
-        setSuccess(false);
-      }, 3000);
-    }
-    return () => {
-      if (timer) clearTimeout(timer);
-    };
-  }, [success]);
-
   const handleCancelEdit = () => {
     setError(null);
     setSuccess(false);
@@ -192,7 +182,7 @@ const NewContact = () => {
         try {
           const response = await callEndpoint(createContact(formContactData));
           console.log("Contacto creado ", response);
-          setSuccess("Contacto creado con éxito");
+          toast.success("Contacto creado con éxito")
           setContactHandle(true);
 
           setFirstName('');
@@ -208,8 +198,8 @@ const NewContact = () => {
             setCountryCode('');
           }
         } catch (error) {
+          toast.error("Error creando contacto")
           console.error("Error creando contacto ", error);
-          setError("Error al crear el contacto: " + (error.message || "Verifica la conexión"));
         }
       }
     },
@@ -231,6 +221,7 @@ const NewContact = () => {
 
         try {
           const response = await callEndpoint(updateContact(idContact, formContactData));
+          toast.success("Contacto actualizado con éxito")
           console.log("Contacto actualizado ", response);
           setSuccess("Contacto actualizado con éxito");
           setContactHandle(true);
@@ -249,8 +240,8 @@ const NewContact = () => {
             setCountryCode('');
           }
         } catch (error) {
+          toast.error("Error actualizando contacto")
           console.error("Error actualizando contacto ", error);
-          setError("Error al actualizar el contacto: " + (error.message || "Verifica la conexión"));
         }
       }
     },

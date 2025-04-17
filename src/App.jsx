@@ -43,8 +43,13 @@ function App() {
   const [selectedChatId, setSelectedChatId] = useState(null);
   const [searchInChat, setSearchInChat] = useState(null);
   const [newMessage, setNewMessage] = useState(false);
-  const [codigoQR, setCodigoQR] = useState();
-  const [isConnected, setIsConnected] = useState();
+  const [codigoQR, setCodigoQR] = useState(null);
+  const defaultConnectionState = {
+    sesion: true,
+    name: '',
+    number: ''
+  };
+  const [isConnected, setIsConnected] = useState(defaultConnectionState);
   const [stateSelected, setStateSelected] = useState(0);
 
 
@@ -62,7 +67,7 @@ function App() {
   const [tagClick, setTagClick] = useState(null);
   const [resolveClick, setResolveClick] = useState(null);
   const [tagsClick, setTagsClick] = useState(null);
-  const [tagFind, setTagtFind] = useState(null);
+  const [tagFind, setTagFind] = useState(null);
   const [tagHandle, setTagHandle] = useState(null);
 
   // 📌 Estados relacionados con mensajes personalizados (Custom)
@@ -86,7 +91,7 @@ function App() {
       <ConnectionQR.Provider value={{ codigoQR, setCodigoQR }}>
         <StateFilter.Provider value={{ stateSelected, setStateSelected }}>
           <AgentFilter.Provider value={{ agentSelected, setAgentSelected }}>
-            <ConnectionInfo.Provider value={{ isConnected, setIsConnected, codigoQR, setCodigoQR }}>
+            <ConnectionInfo.Provider value={{ isConnected, setIsConnected }}>
               <NewMessage.Provider value={{ newMessage, setNewMessage }}>
                 <ChatInterfaceClick.Provider value={{ selectedChatId, setSelectedChatId }}>
                   <Suspense fallback={<div>Loading...</div>}>
@@ -97,7 +102,7 @@ function App() {
                         }>
                           <Route path="/utilities/tags" element={
                             <TagHandle.Provider value={{ tagHandle, setTagHandle }}>
-                              <UpdateTagForm.Provider value={{ tagFind, setTagtFind }}>
+                              <UpdateTagForm.Provider value={{ tagFind, setTagFind }}>
                                 <TagsCreateForm.Provider value={{ tagsClick, setTagsClick }}>
                                   <TagsComplete />
                                 </TagsCreateForm.Provider>

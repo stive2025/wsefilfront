@@ -20,57 +20,85 @@ const ChatComplete = () => {
     const { isConnected, setIsConnected } = useContext(ConnectionInfo);
     const isMobile = Resize();
 
+    // Default value to prevent null errors
+    const connectionStatus = isConnected || { sesion: false, name: '', number: '' };
+
     useEffect(() => {
-        const fetchQR = async () => {
-            setIsConnected(true)
+        const checkConnection = async () => {
             try {
+                console.log("Verificando estado de conexión...");
                 const apiCall = getCodigoQR();
                 const response = await callEndpoint(apiCall);
-                console.log("Respuesta del backend:", response);
-                if(response.data.status != "CONNECTED"){
-                    setIsConnected(false);
+                console.log("Respuesta de conexión:", response.data);
+                
+                if (response.data.status === "DISCONNECTED") {
+                    setIsConnected({
+                        sesion: false,
+                        name: '',
+                        number: ''
+                    });
+                    console.log("No hay sesión activa");
+                } else if (response.data.status === "CONNECTED") {
+                    setIsConnected({
+                        sesion: true,
+                        name: response.data.name || '',
+                        number: response.data.number || ''
+                    });
+                    console.log("Sesión activa detectada");
                 }
             } catch (error) {
                 if (error.name !== 'AbortError') {
-                    console.error("No se pudo obtener los datos de la conexion:", error);
+                    console.error("Error al verificar estado de conexión:", error);
+                    setIsConnected({
+                        sesion: false,
+                        name: '',
+                        number: ''
+                    });
                 }
             }
         };
 
-        fetchQR();
-    }, [isConnected]); // 
+        checkConnection();
+    }, []);
 
     return (
-        <div className={`flex flex-col bg-transparent text-white `}>
+        <div className="flex flex-col bg-transparent text-white h-screen">
+            {/* WebSocketHook siempre debe estar presente para manejar la conexión */}
             <WebSocketHook />
-            {!isConnected && <ConectionMod isOpen={true} />}
-            {isMobile ? (
-                selectedChatId == null ? (
-                    newMessage ? (
-                        <ListContacts />
+            
+            {/* Si no hay sesión activa, solo mostrar el modal de conexión */}
+            {!connectionStatus.sesion ? (
+                <ConectionMod isOpen={true} />
+            ) : (
+                /* Renderizado condicional basado en si hay sesión activa */
+                isMobile ? (
+                    selectedChatId == null ? (
+                        newMessage ? (
+                            <ListContacts />
+                        ) : (
+                            <ChatList />
+                        )
                     ) : (
-                        <ChatList />
+                        <>
+                            {infoOpen ? (
+                                <ContactInfo />
+                            ) : searchInChat ? (
+                                <SearchInChat />
+                            ) : (
+                                <ChatInterface />
+                            )}
+                        </>
                     )
                 ) : (
-                    <>
-                        {infoOpen ? (
-                            <ContactInfo />
-                        ) : searchInChat ? (
-                            <SearchInChat />
-                        ) : (
-                            <ChatInterface />
-                        )}
-                    </>
+                    <div
+                        className={`h-screen bg-gray-900 text-white ${searchInChat || infoOpen ? "grid grid-cols-3" : "grid grid-cols-[35%_65%]"}`}
+                    >
+                        {newMessage ? <ListContacts /> : <ChatList />}
+                        <ChatInterface />
+                        {infoOpen && <ContactInfo />}
+                        {searchInChat && <SearchInChat />}
+                    </div>
                 )
-            ) : (
-                <div
-                    className={`h-screen bg-gray-900 text-white ${searchInChat || infoOpen ? "grid grid-cols-3" : "grid grid-cols-[35%_65%]"}`}
-                >
-                    {newMessage ? <ListContacts /> : <ChatList />}
-                    <ChatInterface />
-                    {infoOpen && <ContactInfo />}
-                    {searchInChat && <SearchInChat />}
-                </div>
             )}
         </div>
     );

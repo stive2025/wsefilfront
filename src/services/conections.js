@@ -11,4 +11,5 @@ const getCodigoQR = () => {
 };
 
 
+
 export { getCodigoQR };

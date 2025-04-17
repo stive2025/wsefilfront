@@ -6,6 +6,7 @@ import { useContext, useEffect, useState, useRef, useCallback } from "react";
 import { NewContactForm, ChatInterfaceClick, NewMessage, UpdateContactForm, ContactHandle } from "/src/contexts/chats.js";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getContacts, deleteContact, getContact } from "/src/services/contacts.js";
+//import toast from "react-hot-toast";
 
 // Componentes reutilizables
 const SearchInput = ({ searchTerm, onSearchChange }) => (

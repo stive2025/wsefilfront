@@ -5,6 +5,8 @@ import { Search, Plus, Pencil, Trash2 } from "lucide-react";
 import { useContext, useEffect, useState, useRef, useCallback } from "react";
 import { NewAgentForm, UpdateAgentForm, AgentHandle } from "/src/contexts/chats.js";
 import { getAgents, deleteAgents, getAgent } from "/src/services/agents.js";
+//import toast from "react-hot-toast";
+
 
 // Componentes reutilizables
 const SearchInput = ({ searchTerm, onSearchChange }) => (

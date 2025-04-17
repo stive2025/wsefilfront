@@ -421,7 +421,7 @@ const ChatInterface = () => {
             return; // No hay nada que enviar
         }
 
-        if (sendingMessage || chatStatus === "Closed") return; // Prevent sends when closed or already sending
+        if (sendingMessage || chatStatus === "CLOSED") return; // Prevent sends when closed or already sending
 
         try {
             setSendingMessage(true);
@@ -581,7 +581,7 @@ const ChatInterface = () => {
                             />
                             <div className="flex flex-col">
                                 <span className="font-medium">{selectedChatId.name}</span>
-                                {chatStatus === "Closed" && (
+                                {chatStatus === "CLOSED" && (
                                     <span className="text-xs text-red-400">Chat cerrado</span>
                                 )}
                             </div>
@@ -640,7 +640,7 @@ const ChatInterface = () => {
                     </div>
 
                     {/* Preview de archivos y audio seleccionados */}
-                    {(selectedFiles.length > 0 || recordedAudio) && chatStatus !== "Closed" && (
+                    {(selectedFiles.length > 0 || recordedAudio) && chatStatus !== "CLOSED" && (
                         <div className="px-4 py-2 bg-gray-800 border-t border-gray-700">
                             <div className="text-sm text-gray-400 mb-2">Archivos adjuntos:</div>
                             <div className="flex flex-wrap gap-2">
@@ -677,7 +677,7 @@ const ChatInterface = () => {
                     )}
 
                     {/* Input Area - Oculta cuando el chat está cerrado */}
-                    {chatStatus !== "Closed" ? (
+                    {chatStatus !== "CLOSED" ? (
                         <div className={`p-2 border-t border-gray-700 bg-gray-800 sticky bottom-0 ${isMobile ? "mb-10" : ""}`}>
                             <div className="flex items-center space-x-2">
                                 <input

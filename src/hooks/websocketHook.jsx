@@ -1,10 +1,10 @@
-import { useEffect, useRef, useContext } from 'react';
+// Update your WebSocketHook.jsx
+import { useEffect, useContext } from 'react';
 import { ConnectionInfo, ConnectionQR } from "/src/contexts/chats.js";
 
 const WebSocketHook = () => {
-    const connRef = useRef(null);
-    const { codigoQR, setCodigoQR } = useContext(ConnectionQR);
-    const { isConnected, setIsConnected } = useContext(ConnectionInfo);
+    const { setCodigoQR } = useContext(ConnectionQR);
+    const {  setIsConnected } = useContext(ConnectionInfo);
 
     useEffect(() => {
         let conn;
@@ -13,7 +13,7 @@ const WebSocketHook = () => {
             conn = new WebSocket('ws://193.46.198.228:8081');
     
             conn.onopen = () => {
-                console.log("Connection established!");
+                console.log("WebSocket connection established!");
             };
     
             conn.onerror = (error) => {
@@ -23,25 +23,46 @@ const WebSocketHook = () => {
     
             conn.onclose = () => {
                 console.log("Connection closed. Reconnecting in 3s...");
-                setTimeout(connectWebSocket, 3000); // Reconectar tras 3 segundos
+                setTimeout(connectWebSocket, 3000);
             };
     
             conn.onmessage = (e) => {
-                const data = JSON.parse(e.data);
-                console.log("Data received: ", data);
-                if(data.estatus == "DISCONNECTED"){
-                    setIsConnected(false);
-                    setCodigoQR(data.qr_code)
+                try {
+                    const data = JSON.parse(e.data);
+                    console.log("WebSocket data received: ", data);
+                    
+                    if (data.estatus === "DISCONNECTED") {
+                        console.log("No hay sesion activa (WebSocket)");
+                        setIsConnected({
+                            sesion: false,
+                            name: '',
+                            number: ''
+                        });
+                        if (data.qr_code) {
+                            setCodigoQR(data.qr_code);
+                        }
+                    } else if (data.estatus === "CONNECTED") {
+                        setIsConnected({
+                            sesion: true,
+                            name: data.name || '',
+                            number: data.number || ''
+                        });
+                    }
+                } catch (err) {
+                    console.error("Error parsing WebSocket message:", err);
                 }
             };
         };
     
         connectWebSocket();
     
-        return () => conn && conn.close();
+        return () => {
+            if (conn) {
+                conn.close();
+            }
+        };
     }, []);
     
-
     return null;
 };
 

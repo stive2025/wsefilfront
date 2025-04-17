@@ -1,17 +1,18 @@
-/* eslint-disable react/prop-types */
+/* eslint-disable react/prop-types */ 
 import { motion } from "framer-motion";
 import { useState, useEffect, useContext } from "react";
 import { ChatInterfaceClick } from "/src/contexts/chats.js";
 import { getAgents } from "/src/services/agents.js";
 import { transferChat } from "/src/services/chats.js";
 import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
+import toast from "react-hot-toast";
 
 const ChatTransfer = ({ isOpen, onClose }) => {
     const [agents, setAgents] = useState([]);
     const [selectedAgent, setSelectedAgent] = useState(null);
     const [observations, setObservations] = useState("");
     const [isPrivate, setIsPrivate] = useState(false);
-    const { selectedChatId } = useContext(ChatInterfaceClick);
+    const { selectedChatId,setSelectedChatId } = useContext(ChatInterfaceClick);
     const { callEndpoint } = useFetchAndLoad();
 
     const variants = {
@@ -27,9 +28,10 @@ const ChatTransfer = ({ isOpen, onClose }) => {
                 setAgents(response.data || []);
             } catch (error) {
                 console.error("Error obteniendo agentes:", error);
+                toast.error("Error al cargar los agentes.");
                 setAgents([]);
             }
-        }
+        };
 
         loadAgents();
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -37,38 +39,36 @@ const ChatTransfer = ({ isOpen, onClose }) => {
 
     const handleTransfer = async (e) => {
         e.preventDefault();
-        
+
         if (!selectedAgent) {
-            alert("Por favor seleccione un agente para transferir el chat.");
+            toast.error("Por favor seleccione un agente para transferir el chat.");
             return;
         }
 
         try {
-            // Construir el objeto con la estructura requerida
             const transferData = {
-                to: selectedAgent.id, // ID del agente destinatario
+                to: selectedAgent.id,
                 is_private: isPrivate
             };
-            
-            // Solo incluir body si es privado y hay observaciones
+
             if (isPrivate && observations.trim()) {
                 transferData.body = observations;
             }
-            
+
             await callEndpoint(transferChat(selectedChatId.id, transferData));
-            alert("Chat transferido exitosamente!");
+            toast.success("Chat transferido exitosamente.");
+            setSelectedChatId(null);
             onClose();
         } catch (error) {
             console.error("Error al transferir el chat:", error);
-            alert("Error al transferir el chat. Por favor intente nuevamente.");
+            toast.error("Error al transferir el chat. Inténtelo nuevamente.");
         }
     };
 
-    if (!isOpen) return null; // Si no está abierto, no se renderiza
+    if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 flex items-center justify-center z-20" style={{ backgroundColor: "rgba(55, 65, 81, 0.5)" }}>
-            {/* Cierra el modal si se hace clic fuera */}
             <div className="absolute inset-0" onClick={onClose}></div>
 
             <motion.div
@@ -81,11 +81,12 @@ const ChatTransfer = ({ isOpen, onClose }) => {
             >
                 <h1 className="text-white text-lg mb-2">Transferir Chat</h1>
                 <label className="text-white text-sm">{selectedChatId.name}</label>
+
                 <div className="mb-2">
                     <label className="text-white text-sm">Transferir a:</label>
                     <select
                         className={`w-full bg-gray-900 outline-none ${selectedAgent ? 'text-white' : 'text-gray-400'}`}
-                        value={selectedAgent ? selectedAgent.id : ""}
+                        value={selectedAgent?.id || ""}
                         onChange={(e) => {
                             const agent = agents.find((a) => a.id === parseInt(e.target.value));
                             setSelectedAgent(agent);
@@ -115,7 +116,7 @@ const ChatTransfer = ({ isOpen, onClose }) => {
                         />
                         <label htmlFor="isPrivate" className="text-white text-sm">Incluir mensaje privado</label>
                     </div>
-                    
+
                     {isPrivate && (
                         <div>
                             <label className="text-white text-sm">Mensaje:</label>
@@ -130,7 +131,6 @@ const ChatTransfer = ({ isOpen, onClose }) => {
                     )}
                 </div>
 
-                {/* Botones */}
                 <div className="flex justify-end gap-2">
                     <button
                         type="button"
