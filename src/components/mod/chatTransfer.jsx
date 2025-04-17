@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useState, useEffect, useContext } from "react";
 import { ChatInterfaceClick } from "/src/contexts/chats.js";
 import { getAgents } from "/src/services/agents.js";
-import { transferChat } from "/src/services/chats.js";
+import { transferChat, updateChat } from "/src/services/chats.js";
 import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
 import toast from "react-hot-toast";
 
@@ -20,6 +20,15 @@ const ChatTransfer = ({ isOpen, onClose }) => {
         visible: { opacity: 1, y: 0 },
         exit: { opacity: 0, y: 50 }
     };
+
+    const handleUpdateChat = async (idChat, dataChat) => {
+        try {
+          const response = await callEndpoint(updateChat(idChat, dataChat), `update_chat_${idChat}`);
+          console.log("Chat actualizado ", response);
+        } catch (error) {
+          console.error("Error actualizando chat ", error);
+        }
+      };
 
     useEffect(() => {
         const loadAgents = async () => {
@@ -50,6 +59,9 @@ const ChatTransfer = ({ isOpen, onClose }) => {
                 to: selectedAgent.id,
                 is_private: isPrivate
             };
+
+            const newStateChat = {state: "PENDING"};
+            await handleUpdateChat(selectedChatId.id, newStateChat);
 
             if (isPrivate && observations.trim()) {
                 transferData.body = observations;

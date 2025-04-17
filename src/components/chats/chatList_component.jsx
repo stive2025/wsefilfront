@@ -209,9 +209,7 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats }) => {
         <Loader className="animate-spin" size={24} />
       </div>
     );
-  }
-
-  if (chats.length === 0) {
+  } else if (chats.length === 0) {
     return (
       <div className="flex justify-center items-center py-10 bg-gray-900 text-gray-400">
         No hay chats disponibles
@@ -228,7 +226,8 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats }) => {
           className={`w-full flex items-center space-x-3 p-4 hover:bg-gray-800 cursor-pointer ${selectedChatId && selectedChatId.id == item.id ? "bg-gray-700" : ""
             }`}
           onClick={() => {
-            if (item.state === "PENDING" && item.state !=="CLOSED") {
+            console.log("Chat seleccionado es contacto? ", item);
+            if (item.state === "PENDING" && item.state !== "CLOSED") {
               handleUpdateChat(item.id, { unread_message: 0, state: "OPEN" });
               // Marca este chat como leído
               setReadChats(prev => new Set(prev).add(item.id));
@@ -236,16 +235,27 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats }) => {
               handleUpdateChat(item.id, { unread_message: 0 });
               // Marca este chat como leído
               setReadChats(prev => new Set(prev).add(item.id));
+            } if (item.isContact) {
+              setSelectedChatId({
+                id: item.chat_id,
+                status: item.state,
+                idContact: item.idContact,
+                name: item.name,
+                photo: item.avatar,
+                number: item.number,
+              });
+            } else {
+              setSelectedChatId({
+                id: item.id,
+                tag_id: item.tag_id,
+                status: item.state,
+                idContact: item.idContact,
+                name: item.name,
+                photo: item.avatar,
+                number: item.number,
+              });
             }
 
-            setSelectedChatId({
-              id: item.id,
-              status: item.state,
-              idContact: item.idContact,
-              name: item.name,
-              photo: item.avatar,
-              number: item.number,
-            });
           }}
         >
           <div className="relative">
@@ -323,6 +333,7 @@ const ChatList = ({ role = "admin" }) => {
     try {
       let endpoint;
       let endpointKey = 'chatList';
+      let isContact = false;
 
       // Verifica si hay una consulta de búsqueda
       if (searchQuery) {
@@ -332,9 +343,11 @@ const ChatList = ({ role = "admin" }) => {
         if (/^\d+$/.test(searchQuery)) {
           endpoint = getContactChatsByPhone(searchQuery);
           endpointKey = 'contactChatsByPhone';
+          isContact = true;
         } else {
           endpoint = getContactChatsByName(searchQuery);
           endpointKey = 'contactChatsByName';
+          isContact = true;
         }
       } else {
         setIsSearching(false);
@@ -372,8 +385,6 @@ const ChatList = ({ role = "admin" }) => {
       }
 
       const response = await callEndpoint(endpoint, endpointKey);
-      console.log("AQUI:", endpoint, "-", endpointKey);
-      console.log(response);
 
       setPaginationInfo({
         current_page: response.current_page,
@@ -384,9 +395,10 @@ const ChatList = ({ role = "admin" }) => {
       setHasMoreChats(response.current_page < response.last_page);
 
       const chatData = response.data || [];
-
       const enrichedChats = await Promise.all(
         chatData.map(async (chat, index) => {
+          let chatIsContact = isContact;
+
           if (chat.contact_id) {
             try {
               const contactKey = `contact_${chat.contact_id}_${index}`;
@@ -396,6 +408,7 @@ const ChatList = ({ role = "admin" }) => {
                   ...chat,
                   name: "Unknown Contact",
                   avatar: "/src/assets/images/default-avatar.jpg",
+                  isContact: chatIsContact  // Añadir la bandera aquí
                 };
               } else {
                 return {
@@ -404,20 +417,35 @@ const ChatList = ({ role = "admin" }) => {
                   name: contactResponse.name,
                   number: contactResponse.phone_number,
                   avatar: contactResponse.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
+                  isContact: chatIsContact  // Añadir la bandera aquí
                 };
               }
             } catch (error) {
               console.error("Error fetching contact details for ID:", chat.contact_id, error);
+              // También manejamos el caso de error
+              return {
+                ...chat,
+                isContact: chatIsContact,
+                profile_picture: chat.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
+              };
             }
           }
-          return chat;
+
+          return {
+            ...chat,
+            isContact: chatIsContact,
+            profile_picture: chat.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
+          };
         })
       );
 
       if (append) {
         setChats(prev => [...prev, ...enrichedChats]);
+        console.log("Chat enriquecido:", chats);
       } else {
         setChats(enrichedChats);
+        console.log("Chat enriquecido:", chats);
+
       }
     } catch (error) {
       console.error("Error loading chats:", error);
