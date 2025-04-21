@@ -42,6 +42,7 @@ const ChatTag = ({ isOpen, onClose }) => {
     
         const SearchTag = async () => {
             try {
+                console.log("Buscando tag con ID:", selectedChatId.tag_id);
                 const response = await callEndpoint(getTag(selectedChatId.tag_id));
                 console.log("Tag encontrado:", response);
                 setSelectedTag(response.data || null);
@@ -169,7 +170,8 @@ const ChatTag = ({ isOpen, onClose }) => {
                         onClick={(e) => {
                             e.preventDefault(); // Evita el comportamiento por defecto del formulario
                             if (selectedTag) {
-                                handleUpdateChat(selectedChatId.id, { tag_id: [selectedTag.id] });
+                                console.log("Guardando etiqueta:", selectedTag.id, "del chat:", selectedChatId.id);
+                                handleUpdateChat(selectedChatId.id, { tag_id: selectedTag.id });
                                 onClose(); // Cierra el modal después de guardar
                             }
                         }}

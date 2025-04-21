@@ -11,7 +11,7 @@ import ChatTransfer from "/src/components/mod/chatTransfer.jsx";
 import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
 import ChatTag from "/src/components/mod/chatTag.jsx";
 import ChatResolved from "/src/components/mod/chatResolved.jsx";
-import { TagClick, ResolveClick, SearchInChatClick, ChatInterfaceClick } from "/src/contexts/chats.js";
+import { TagClick, ResolveClick, SearchInChatClick, ChatInterfaceClick, WebSocketMessage } from "/src/contexts/chats.js";
 import { useContext } from "react";
 import { useLocation } from "react-router-dom";
 import { getChat, updateChat } from "/src/services/chats.js";
@@ -29,6 +29,7 @@ const ChatInterface = () => {
     const { setSearchInChat } = useContext(SearchInChatClick);
     const { selectedChatId, setSelectedChatId } = useContext(ChatInterfaceClick);
     const { callEndpoint } = useFetchAndLoad();
+    const { messageData } = useContext(WebSocketMessage);
 
     // File size limit in bytes (2MB = 2 * 1024 * 1024)
     const FILE_SIZE_LIMIT = 2 * 1024 * 1024;
@@ -55,6 +56,36 @@ const ChatInterface = () => {
     // Determinar si el chat está cerrado de manera consistente
     const isChatClosed = selectedChatId?.status === "CLOSED";
 
+    useEffect(() => {
+        if (messageData && messageData.body) {
+            console.log("Nuevo mensaje recibido en ChatInterface:", messageData);
+
+            // Verificar si el mensaje pertenece al chat actual
+            if (selectedChatId &&
+                (selectedChatId.id === messageData.chat_id ||
+                    selectedChatId.number === messageData.number)) {
+
+                // Añadir el nuevo mensaje al estado
+                setChatMessages(prevMessages => {
+                    const newMessage = {
+                        id: messageData.id,
+                        body: messageData.body,
+                        from_me: messageData.from_me ? "true" : "false",
+                        media_type: messageData.media_type || 'chat',
+                        media_path: messageData.media_url || '',
+                        is_private: messageData.is_private || 0,
+                        created_at: messageData.created_at || new Date().toISOString()
+                    };
+
+                    return prevMessages ? [...prevMessages, newMessage] : [newMessage];
+                });
+
+                // Scroll al final después de agregar el mensaje
+                setTimeout(scrollToBottom, 100);
+            }
+        }
+    }, [messageData, selectedChatId]);
+
     // Function to reopen a closed chat
     const handleReopenChat = async () => {
         if (!selectedChatId || !selectedChatId.id) {
@@ -71,7 +102,7 @@ const ChatInterface = () => {
                 ...prev,
                 status: "OPEN"
             }));
-            
+
             toast.success("Chat reabierto con éxito");
         } catch (error) {
             toast.error("Ocurrió un error al reabrir el chat");
@@ -288,19 +319,19 @@ const ChatInterface = () => {
         const loadMessages = async () => {
             // Siempre comenzar con estado de carga al cambiar de chat
             setIsLoading(true);
-            
+
             // Solo intentar cargar mensajes si hay un chat_id existente
             if (selectedChatId && selectedChatId.id) {
                 try {
                     const response = await callEndpoint(getChat(selectedChatId.id));
                     setChatMessages(response.messages);
-                    
+
                     // Update the selectedChatId with the current state from the response
                     setSelectedChatId(prev => ({
                         ...prev,
                         status: response.state || prev.state
                     }));
-                    
+
                     setIsNewChat(false);
                 } catch (error) {
                     console.error("Error cargando mensajes:", error);
@@ -311,7 +342,7 @@ const ChatInterface = () => {
                 // Es un chat nuevo
                 setChatMessages([]);
                 setIsNewChat(true);
-                
+
                 // Ensure state is set to "OPEN" for new chats
                 setSelectedChatId(prev => ({
                     ...prev,
@@ -321,7 +352,7 @@ const ChatInterface = () => {
                 setChatMessages(null);
                 setIsNewChat(false);
             }
-            
+
             // Finalizar estado de carga después de procesar
             setIsLoading(false);
         };
@@ -522,25 +553,6 @@ const ChatInterface = () => {
                     setIsNewChat(false);
                 }
 
-                // Crear un nuevo objeto de mensaje para la UI
-                const newMessage = {
-                    id: Date.now(), // ID temporal
-                    body: messageText,
-                    from_me: "true",
-                    media_type: "chat",
-                    created_at: new Date().toISOString() // Añadir timestamp
-                };
-
-                // Actualizar mensajes (incluido para chats nuevos)
-                setChatMessages(prev => {
-                    // Si es un array existente, añadir el nuevo mensaje
-                    if (Array.isArray(prev)) {
-                        return [...prev, newMessage];
-                    }
-                    // Si es null o undefined (chat nuevo), crear un nuevo array con este mensaje
-                    return [newMessage];
-                });
-
                 // Reset input states
                 setMessageText("");
                 setSelectedFiles([]);
@@ -677,7 +689,7 @@ const ChatInterface = () => {
                     {/* Reopen chat button - Show only when chat is closed */}
                     {isChatClosed && (
                         <div className="bg-gray-800 p-2 text-center">
-                            <button 
+                            <button
                                 className="bg-teal-600 hover:bg-teal-700 px-4 py-2 rounded-lg flex items-center justify-center mx-auto"
                                 onClick={handleReopenChat}
                                 disabled={reopeningChat}
@@ -799,7 +811,7 @@ const ChatInterface = () => {
                                 className="p-2 bg-teal-600 rounded-full"
                                 onClick={handleSendMessage}
                                 disabled={
-                                    isChatClosed || 
+                                    isChatClosed ||
                                     (messageText.trim() === "" && selectedFiles.length === 0 && !recordedAudio) ||
                                     sendingMessage
                                 }

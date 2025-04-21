@@ -1,10 +1,10 @@
-// Update your WebSocketHook.jsx
 import { useEffect, useContext } from 'react';
-import { ConnectionInfo, ConnectionQR } from "/src/contexts/chats.js";
+import { ConnectionInfo, ConnectionQR, WebSocketMessage } from "/src/contexts/chats.js";
 
 const WebSocketHook = () => {
     const { setCodigoQR } = useContext(ConnectionQR);
-    const {  setIsConnected } = useContext(ConnectionInfo);
+    const { setIsConnected } = useContext(ConnectionInfo);
+    const { setMessageData } = useContext(WebSocketMessage);
 
     useEffect(() => {
         let conn;
@@ -31,7 +31,8 @@ const WebSocketHook = () => {
                     const data = JSON.parse(e.data);
                     console.log("WebSocket data received: ", data);
                     
-                    if (data.estatus === "DISCONNECTED") {
+                    // Detectar el tipo de mensaje por sus propiedades
+                    if (data.status === "DISCONNECTED" || data.estatus === "DISCONNECTED") {
                         console.log("No hay sesion activa (WebSocket)");
                         setIsConnected({
                             sesion: false,
@@ -41,12 +42,32 @@ const WebSocketHook = () => {
                         if (data.qr_code) {
                             setCodigoQR(data.qr_code);
                         }
-                    } else if (data.estatus === "CONNECTED") {
+                    } else if (data.status === "CONNECTED" || data.estatus === "CONNECTED") {
                         setIsConnected({
                             sesion: true,
                             name: data.name || '',
                             number: data.number || ''
                         });
+                    }
+                    
+                    // Si es un mensaje de chat (tiene campo body), enviarlo al contexto
+                    if (data.body) {
+                        console.log("Mensaje de chat recibido:", data);
+                        // Normalizar la estructura del mensaje
+                        const normalizedMessage = {
+                            id: data.id_message_wp || Date.now().toString(),
+                            body: data.body,
+                            from_me: data.from_me === true || data.from_me === "true",
+                            chat_id: data.chat_id,
+                            number: data.number,
+                            notify_name: data.notify_name,
+                            timestamp: data.timestamp ? new Date(data.timestamp * 1000).toISOString() : new Date().toISOString(),
+                            created_at: data.created_at || new Date().toISOString(),
+                            media_type: data.media_type || 'chat',
+                            media_url: data.media_url || '',
+                            is_private: data.is_private || 0
+                        };
+                        setMessageData(normalizedMessage);
                     }
                 } catch (err) {
                     console.error("Error parsing WebSocket message:", err);
@@ -61,7 +82,7 @@ const WebSocketHook = () => {
                 conn.close();
             }
         };
-    }, []);
+    }, [setCodigoQR, setIsConnected, setMessageData]);
     
     return null;
 };

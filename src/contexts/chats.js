@@ -46,3 +46,5 @@ export const ConnectionQR = createContext(false);
 export const StateFilter = createContext(0);
 export const TagFilter = createContext(0);
 export const AgentFilter = createContext(0);
+
+export const WebSocketMessage  = createContext();

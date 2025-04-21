@@ -1,11 +1,12 @@
 /* eslint-disable react/prop-types */
 import { useState, useEffect, useRef, useCallback, useContext } from "react";
 import { Search, MessageSquarePlus, ChevronLeftCircle, ChevronRightCircle, Loader } from "lucide-react";
-import { ChatInterfaceClick, NewMessage, StateFilter, TagFilter, AgentFilter } from "/src/contexts/chats.js";
+import { ChatInterfaceClick, NewMessage, StateFilter, TagFilter, AgentFilter, WebSocketMessage } from "/src/contexts/chats.js";
 import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
 import { getChatList, updateChat } from "/src/services/chats.js";
 import { getContact, getContactChatsByName, getContactChatsByPhone } from "/src/services/contacts.js";
 import { getAgents } from "/src/services/agents.js";
+import { getTags } from "/src/services/tags.js";
 import Resize from "/src/hooks/responsiveHook.jsx";
 //import { GetCookieItem } from "/src/utilities/cookies.js" // Asumiendo que existe esta función
 //import toast from "react-hot-toast";
@@ -87,16 +88,20 @@ const TagsBar = ({ tags }) => {
           >
             Todos
           </li>
-          {Object.entries(tags).map(([key, value]) => (
-            <li
-              key={key}
-              className={`flex items-center gap-2 cursor-pointer rounded-full p-2 text-xs ${tagSelected === parseInt(key) ? "bg-gray-700 text-white" : "hover:text-gray-300"
-                }`}
-              onClick={() => setTagSelected(parseInt(key))}
-            >
-              {value}
-            </li>
-          ))}
+          {Array.isArray(tags) ? (
+            tags.map((tag) => (
+              <li
+                key={tag.id}
+                className={`flex items-center gap-2 cursor-pointer rounded-full p-2 text-xs ${tagSelected === tag.id ? "bg-gray-700 text-white" : "hover:text-gray-300"
+                  }`}
+                onClick={() => setTagSelected(tag.id)}
+              >
+                {tag.name}
+              </li>
+            ))
+          ) : (
+            <li className="text-xs text-gray-400">No hay etiquetas disponibles</li>
+          )}
         </ul>
       </div>
 
@@ -238,6 +243,7 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats }) => {
             } if (item.isContact) {
               setSelectedChatId({
                 id: item.chat_id,
+                tag_id: item.tag_id,
                 status: item.state,
                 idContact: item.idContact,
                 name: item.name,
@@ -309,6 +315,8 @@ const ChatList = ({ role = "admin" }) => {
     total: 0
   });
   const chatListRef = useRef(null);
+  const { messageData } = useContext(WebSocketMessage);
+  const { selectedChatId } = useContext(ChatInterfaceClick);
 
   // Contextos para filtros (UI solamente por ahora)
   const { stateSelected } = useContext(StateFilter);
@@ -317,17 +325,77 @@ const ChatList = ({ role = "admin" }) => {
 
   // Estado para indicar si se está realizando una búsqueda
   const [isSearching, setIsSearching] = useState(false);
+  const [tags, setTags] = useState([]);
 
-  // Ejemplo de tags (ahora manejados como objetos con id)
-  const tags = {
-    1: "Revisión",
-    2: "Confirmar Pago",
-    3: "Pago pendiente",
-    4: "Llamar mas tarde",
+  useEffect(() => {
+    if (messageData && messageData.body) {
+      console.log("Nuevo mensaje recibido en ChatList:", messageData);
+
+      // Verificar si el chat ya existe en la lista
+      const existingChatIndex = chats.findIndex(chat =>
+        chat.id === messageData.chat_id ||
+        (chat.number && chat.number === messageData.number)
+      );
+
+      if (existingChatIndex >= 0) {
+        // Chat existe, actualizarlo y moverlo al principio
+        setChats(prevChats => {
+          const updatedChats = [...prevChats];
+          const existingChat = updatedChats[existingChatIndex];
+
+          // Actualizar el chat existente
+          const updatedChat = {
+            ...existingChat,
+            last_message: messageData.body,
+            unread_message: existingChat.id === selectedChatId?.id ? 0 : (existingChat.unread_message || 0) + 1,
+            updated_at: messageData.created_at,
+            timestamp: messageData.timestamp
+          };
+
+          // Eliminar el chat de su posición actual
+          updatedChats.splice(existingChatIndex, 1);
+
+          // Agregar el chat actualizado al principio
+          return [updatedChat, ...updatedChats];
+        });
+      } else {
+        // Chat no existe, crear uno nuevo y agregarlo al principio
+        // (eliminando el último si es necesario para mantener el límite)
+        setChats(prevChats => {
+          const newChat = {
+            id: messageData.chat_id,
+            number: messageData.number,
+            name: messageData.notify_name || `Chat con ${messageData.number}`,
+            last_message: messageData.body,
+            unread_message: 1,
+            updated_at: messageData.created_at,
+            timestamp: messageData.timestamp,
+            avatar: "/src/assets/images/default-avatar.jpg",
+            state: "OPEN",
+            isContact: false
+          };
+
+          // Mantener un máximo de 50 chats en la lista
+          const updatedChats = [newChat, ...prevChats];
+          if (updatedChats.length > 50) {
+            updatedChats.pop(); // Eliminar el último chat
+          }
+
+          return updatedChats;
+        });
+      }
+    }
+  }, [messageData]);
+
+  const loadTags = async () => {
+    try {
+      const response = await callEndpoint(getTags({ page: 1 }));
+      setTags(response.data || []);
+    } catch (error) {
+      console.error("Error obteniendo Tags:", error);
+      setTags([]);
+    }
   };
-
-  // Obtener el id del usuario logueado desde las cookies
-  // const userId = GetCookieItem("userData") ? JSON.parse(GetCookieItem("userData")).id : null;
 
   const loadChats = async (params = {}, append = false) => {
     try {
@@ -352,9 +420,6 @@ const ChatList = ({ role = "admin" }) => {
       } else {
         setIsSearching(false);
 
-        // Sin búsqueda, usa el endpoint normal de chats
-        // NOTA: Actualmente getChatList no admite filtros, pero la UI está preparada
-
         endpoint = getChatList(params);
 
         const filterParams = { ...params };
@@ -370,18 +435,11 @@ const ChatList = ({ role = "admin" }) => {
         }
 
         endpoint = getChatList(filterParams);
-        /* 
-        // CÓDIGO COMENTADO: Para cuando el backend implemente los filtros        
+
         // Aplica filtro por etiqueta
         if (tagSelected !== 0) {
           filterParams.id_tag = tagSelected;
         }
-        
-        // Aplica filtro por agente
-      
-        
-       
-        */
       }
 
       const response = await callEndpoint(endpoint, endpointKey);
@@ -461,14 +519,15 @@ const ChatList = ({ role = "admin" }) => {
 
     const nextPage = page + 1;
     setPage(nextPage);
-
-    // Si estamos buscando, no incluimos parámetro de página ya que 
-    // los endpoints de búsqueda podrían no soportarlo
     const params = isSearching ? {} : { page: nextPage };
 
     loadChats(params, true);
   }, [page, hasMoreChats, loading, searchQuery, isSearching]);
 
+
+  useEffect(() => {
+    loadTags();
+  }, []);
   // Efecto para cargar chats cuando cambian los criterios
   useEffect(() => {
     setPage(1);
