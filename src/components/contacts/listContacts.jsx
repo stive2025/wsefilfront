@@ -22,7 +22,7 @@ const SearchInput = ({ searchTerm, onSearchChange }) => (
       <Search className="absolute left-1 text-gray-400" size={18} />
     </div>
   </div>
-);
+);    
 
 const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, loadingMore, lastContactRef, setSelectedChatId, setNewMessage }) => {
   const navigate = useNavigate();
@@ -47,12 +47,24 @@ const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, lo
               if (location.pathname === "/contacts") {
                 navigate("/chatList");
               }
-              setSelectedChatId({
-                idContact: item.id,
-                name: item.name,
-                photo: item.profile_picture,
-                number: item.phone_number
-              });
+              console.log("Contacto seleccionado:", item);
+              if(item.chat){
+                setSelectedChatId({
+                  id: item.chat.id,
+                  idContact: item.id,
+                  name: item.name,
+                  photo: item.profile_picture,
+                  number: item.phone_number
+                });
+              }else{
+                setSelectedChatId({
+                  idContact: item.id,
+                  name: item.name,
+                  photo: item.profile_picture,
+                  number: item.phone_number
+                });
+              }
+              
               setNewMessage(false);
             }}
           >

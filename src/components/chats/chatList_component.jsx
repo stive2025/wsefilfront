@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useState, useEffect, useRef, useCallback, useContext } from "react";
-import { Search, MessageSquarePlus, ChevronLeftCircle, ChevronRightCircle, Loader } from "lucide-react";
+import { Search, MessageSquarePlus, ChevronLeftCircle, ChevronRightCircle, Loader, Check, Clock, AlertTriangle } from "lucide-react";
 import { ChatInterfaceClick, NewMessage, StateFilter, TagFilter, AgentFilter, WebSocketMessage } from "/src/contexts/chats.js";
 import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
 import { getChatList, updateChat } from "/src/services/chats.js";
@@ -8,7 +8,7 @@ import { getContact, getContactChatsByName, getContactChatsByPhone } from "/src/
 import { getAgents } from "/src/services/agents.js";
 import { getTags } from "/src/services/tags.js";
 import Resize from "/src/hooks/responsiveHook.jsx";
-//import { GetCookieItem } from "/src/utilities/cookies.js" // Asumiendo que existe esta función
+import { GetCookieItem } from "/src/utilities/cookies.js" // Asumiendo que existe esta función
 //import toast from "react-hot-toast";
 
 
@@ -94,7 +94,7 @@ const TagsBar = ({ tags }) => {
                 key={tag.id}
                 className={`flex items-center gap-2 cursor-pointer rounded-full p-2 text-xs ${tagSelected === tag.id ? "bg-gray-700 text-white" : "hover:text-gray-300"
                   }`}
-                onClick={() => setTagSelected(tag.id)}
+                onClick={() => { setTagSelected(tag.id); console.log("TAG", tagSelected) }}
               >
                 {tag.name}
               </li>
@@ -167,21 +167,79 @@ const AgentSelect = ({ role }) => {
   );
 };
 
-const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats }) => {
+const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessages, setChats }) => {
   const { selectedChatId, setSelectedChatId } = useContext(ChatInterfaceClick);
   const observerRef = useRef(null);
   const lastChatRef = useRef(null);
   const { callEndpoint } = useFetchAndLoad();
   const [readChats, setReadChats] = useState(new Set());
 
+  const renderAckStatus = (ackStatus) => {
+    switch (ackStatus) {
+      case -1: // ACK_ERROR
+        return <AlertTriangle size={14} className="text-yellow-500" />;
+      case 0: // ACK_PENDING
+        return <Clock size={14} className="text-gray-400" />;
+      case 1: // ACK_SERVER
+        return <Check size={14} className="text-gray-400" />;
+      case 2: // ACK_DEVICE
+        return (
+          <div className="relative">
+            <Check size={14} className="text-gray-400" />
+            <Check size={14} className="text-gray-400 absolute top-0 left-1" />
+          </div>
+        );
+      case 3: // ACK_READ
+        return (
+          <div className="relative">
+            <Check size={14} className="text-blue-500" />
+            <Check size={14} className="text-blue-500 absolute top-0 left-1" />
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
   const handleUpdateChat = async (idChat, dataChat) => {
     try {
-      const response = await callEndpoint(updateChat(idChat, dataChat), `update_chat_${idChat}`);
-      console.log("Chat actualizado ", response);
+      await callEndpoint(updateChat(idChat, dataChat), `update_chat_${idChat}`);
+
+      // Actualiza también el estado local de los chats
+      setChats(prevChats =>
+        prevChats.map(chat =>
+          chat.id === idChat
+            ? { ...chat, ...dataChat }
+            : chat
+        )
+      );
     } catch (error) {
       console.error("Error actualizando chat ", error);
     }
   };
+
+  // El useEffect para manejar los mensajes entrantes
+  useEffect(() => {
+    console.log("Incoming messages:", incomingMessages);
+    if (incomingMessages && incomingMessages.chat_id) {
+      setReadChats(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(incomingMessages.chat_id);
+        return newSet;
+      });
+    }
+  }, [incomingMessages]);
+
+  // useEffect para mantener actualizado el contador en chats leídos
+  useEffect(() => {
+    // Verificar y actualizar todos los chats que estén en readChats
+    chats.forEach(chat => {
+      if (readChats.has(chat.id) && (chat.unread_message > 0 || chat.unreadCount > 0)) {
+        handleUpdateChat(chat.id, { unread_message: 0 });
+        console.log(`Actualizando contador de mensajes no leídos a 0 para chat ${chat.id}`);
+      }
+    });
+  }, [chats, readChats]);
 
   useEffect(() => {
     if (loading || !hasMoreChats) return;
@@ -208,6 +266,7 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats }) => {
     };
   }, [loading, hasMoreChats, loadMoreChats, chats.length]);
 
+
   if (loading && chats.length === 0) {
     return (
       <div className="flex justify-center items-center py-10 bg-gray-900">
@@ -231,16 +290,18 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats }) => {
           className={`w-full flex items-center space-x-3 p-4 hover:bg-gray-800 cursor-pointer ${selectedChatId && selectedChatId.id == item.id ? "bg-gray-700" : ""
             }`}
           onClick={() => {
-            console.log("Chat seleccionado es contacto? ", item);
             if (item.state === "PENDING" && item.state !== "CLOSED") {
+              // Actualizar en DB y localmente
               handleUpdateChat(item.id, { unread_message: 0, state: "OPEN" });
               // Marca este chat como leído
               setReadChats(prev => new Set(prev).add(item.id));
             } else if (item.unread_message > 0) {
+              // Actualizar en DB y localmente
               handleUpdateChat(item.id, { unread_message: 0 });
               // Marca este chat como leído
               setReadChats(prev => new Set(prev).add(item.id));
-            } if (item.isContact) {
+            }
+            if (item.isContact) {
               setSelectedChatId({
                 id: item.chat_id,
                 tag_id: item.tag_id,
@@ -261,7 +322,6 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats }) => {
                 number: item.number,
               });
             }
-
           }}
         >
           <div className="relative">
@@ -277,8 +337,13 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats }) => {
 
           <div className="flex-1">
             <div className="font-medium text-sm md:text-base">{item.name}</div>
-            <div className="text-xs md:text-sm text-gray-400 overflow-hidden text-ellipsis whitespace-nowrap max-w-[150px] sm:max-w-[200px]">
-              {item.last_message || item.lastMessage}
+            <div className="flex items-center gap-1 overflow-hidden">
+              {item.from_me === "true" && (
+                <span className="shrink-0">{renderAckStatus(item.ack)}</span>
+              )}
+              <span className="overflow-hidden text-ellipsis whitespace-nowrap">
+                {item.last_message || item.lastMessage}
+              </span>
             </div>
           </div>
 
@@ -315,7 +380,8 @@ const ChatList = ({ role = "admin" }) => {
     total: 0
   });
   const chatListRef = useRef(null);
-  const { messageData } = useContext(WebSocketMessage);
+  const { messageData, setMessageData } = useContext(WebSocketMessage);
+  const [messageDataLocal, setMessageDataLocal] = useState(null);
   const { selectedChatId } = useContext(ChatInterfaceClick);
 
   // Contextos para filtros (UI solamente por ahora)
@@ -329,63 +395,38 @@ const ChatList = ({ role = "admin" }) => {
 
   useEffect(() => {
     if (messageData && messageData.body) {
-      console.log("Nuevo mensaje recibido en ChatList:", messageData);
-
-      // Verificar si el chat ya existe en la lista
-      const existingChatIndex = chats.findIndex(chat =>
-        chat.id === messageData.chat_id ||
+      // Obtener user_data de las cookies
+      const userData = GetCookieItem("user_data");
+      const currentUserId = userData ? JSON.parse(userData).id : null;
+  
+      // Verificar coincidencia de user_id
+      if (!currentUserId || messageData.user_id !== currentUserId) {
+        console.log("Mensaje ignorado - user_id no coincide:", 
+          `Cookie: ${currentUserId}`, 
+          `Mensaje: ${messageData.user_id}`);
+        return;
+      }
+  
+      console.log("Procesando mensaje para el usuario actual:", currentUserId);
+      
+      // Resto del código para procesar el mensaje...
+      const existingChatIndex = chats.findIndex(chat => 
+        chat.id === messageData.chat_id || 
         (chat.number && chat.number === messageData.number)
       );
-
+  
       if (existingChatIndex >= 0) {
-        // Chat existe, actualizarlo y moverlo al principio
-        setChats(prevChats => {
-          const updatedChats = [...prevChats];
-          const existingChat = updatedChats[existingChatIndex];
-
-          // Actualizar el chat existente
-          const updatedChat = {
-            ...existingChat,
-            last_message: messageData.body,
-            unread_message: existingChat.id === selectedChatId?.id ? 0 : (existingChat.unread_message || 0) + 1,
-            updated_at: messageData.created_at,
-            timestamp: messageData.timestamp
-          };
-
-          // Eliminar el chat de su posición actual
-          updatedChats.splice(existingChatIndex, 1);
-
-          // Agregar el chat actualizado al principio
-          return [updatedChat, ...updatedChats];
-        });
+        // ... (código existente para actualizar chat)
       } else {
-        // Chat no existe, crear uno nuevo y agregarlo al principio
-        // (eliminando el último si es necesario para mantener el límite)
-        setChats(prevChats => {
-          const newChat = {
-            id: messageData.chat_id,
-            number: messageData.number,
-            name: messageData.notify_name || `Chat con ${messageData.number}`,
-            last_message: messageData.body,
-            unread_message: 1,
-            updated_at: messageData.created_at,
-            timestamp: messageData.timestamp,
-            avatar: "/src/assets/images/default-avatar.jpg",
-            state: "OPEN",
-            isContact: false
-          };
-
-          // Mantener un máximo de 50 chats en la lista
-          const updatedChats = [newChat, ...prevChats];
-          if (updatedChats.length > 50) {
-            updatedChats.pop(); // Eliminar el último chat
-          }
-
-          return updatedChats;
-        });
+        // ... (código existente para nuevo chat)
+      }
+  
+      if (messageData != null) {
+        setMessageDataLocal(messageData);
+        setMessageData(null);
       }
     }
-  }, [messageData]);
+  }, [messageData, chats, selectedChatId]);
 
   const loadTags = async () => {
     try {
@@ -434,16 +475,18 @@ const ChatList = ({ role = "admin" }) => {
           filterParams.agent_id = agentSelected;
         }
 
+        if (tagSelected !== 0) {
+          filterParams.id_tag = tagSelected;
+          console.log("filterParams.tag_id", filterParams)
+        }
+
         endpoint = getChatList(filterParams);
 
         // Aplica filtro por etiqueta
-        if (tagSelected !== 0) {
-          filterParams.id_tag = tagSelected;
-        }
+
       }
 
       const response = await callEndpoint(endpoint, endpointKey);
-
       setPaginationInfo({
         current_page: response.current_page,
         last_page: response.last_page,
@@ -453,6 +496,7 @@ const ChatList = ({ role = "admin" }) => {
       setHasMoreChats(response.current_page < response.last_page);
 
       const chatData = response.data || [];
+      console.log("Datos de chats:", chatData);
       const enrichedChats = await Promise.all(
         chatData.map(async (chat, index) => {
           let chatIsContact = isContact;
@@ -475,12 +519,11 @@ const ChatList = ({ role = "admin" }) => {
                   name: contactResponse.name,
                   number: contactResponse.phone_number,
                   avatar: contactResponse.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
-                  isContact: chatIsContact  // Añadir la bandera aquí
+                  isContact: chatIsContact
                 };
               }
             } catch (error) {
               console.error("Error fetching contact details for ID:", chat.contact_id, error);
-              // También manejamos el caso de error
               return {
                 ...chat,
                 isContact: chatIsContact,
@@ -488,22 +531,19 @@ const ChatList = ({ role = "admin" }) => {
               };
             }
           }
-
           return {
             ...chat,
             isContact: chatIsContact,
             profile_picture: chat.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
           };
+
         })
       );
 
       if (append) {
         setChats(prev => [...prev, ...enrichedChats]);
-        console.log("Chat enriquecido:", chats);
       } else {
         setChats(enrichedChats);
-        console.log("Chat enriquecido:", chats);
-
       }
     } catch (error) {
       console.error("Error loading chats:", error);
@@ -542,8 +582,6 @@ const ChatList = ({ role = "admin" }) => {
   // NOTA: Este efecto está comentado porque los filtros no afectan la búsqueda actualmente
 
   useEffect(() => {
-    // Solo recargamos si no estamos en modo búsqueda
-    // porque los endpoints de búsqueda no soportan estos filtros
     if (!isSearching) {
       setPage(1);
       setHasMoreChats(true);
@@ -570,18 +608,15 @@ const ChatList = ({ role = "admin" }) => {
         {/* Los filtros se muestran pero no están activos durante la búsqueda */}
         <AgentSelect role={role} />
         <TagsBar tags={tags} />
-        {isSearching && (
-          <div className="p-2 bg-gray-800 text-xs text-amber-400 text-center">
-            Modo búsqueda activo. Los filtros se aplicarán cuando esté disponible en el backend.
-          </div>
-        )}
       </div>
       <div className="flex-1 overflow-y-auto" ref={chatListRef}>
         <ChatItems
           chats={chats}
+          setChats={setChats}
           loading={loading}
           loadMoreChats={loadMoreChats}
           hasMoreChats={hasMoreChats}
+          incomingMessages={messageDataLocal}
         />
       </div>
     </div>
@@ -592,18 +627,15 @@ const ChatList = ({ role = "admin" }) => {
         <SearchInput searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
         <AgentSelect role={role} />
         <TagsBar tags={tags} />
-        {isSearching && (
-          <div className="p-2 bg-gray-800 text-xs text-amber-400 text-center">
-            Modo búsqueda activo. Los filtros se aplicarán cuando esté disponible en el backend.
-          </div>
-        )}
       </div>
       <div className="flex-1 overflow-y-auto scrollbar-hide" ref={chatListRef}>
         <ChatItems
           chats={chats}
+          setChats={setChats}
           loading={loading}
           loadMoreChats={loadMoreChats}
           hasMoreChats={hasMoreChats}
+          incomingMessages={messageDataLocal}
         />
       </div>
     </div>

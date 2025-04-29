@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import {
     Send, Search, MessageSquareShare, SquarePlus,
     Mic, Paperclip, X, ArrowLeft, File, Image,
-    Volume2, PlayCircle, Link, Download, EyeOff, Loader,
+    Volume2, PlayCircle, Download, EyeOff, Loader, Clock, Check, AlertTriangle,
     RefreshCcw
 } from "lucide-react";
 import Resize from "/src/hooks/responsiveHook.jsx";
@@ -34,6 +34,8 @@ const ChatInterface = () => {
     // File size limit in bytes (2MB = 2 * 1024 * 1024)
     const FILE_SIZE_LIMIT = 2 * 1024 * 1024;
     const [fileSizeError, setFileSizeError] = useState("");
+    const [isDragging, setIsDragging] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
 
     // Estados para gestionar mensajes y archivos
     const [messageText, setMessageText] = useState("");
@@ -44,29 +46,98 @@ const ChatInterface = () => {
     const [sendingMessage, setSendingMessage] = useState(false);
     const [isNewChat, setIsNewChat] = useState(false);
     const [reopeningChat, setReopeningChat] = useState(false);
-    // Estado para controlar la carga del chat
     const [isLoading, setIsLoading] = useState(true);
 
     // Referencias
     const fileInputRef = useRef(null);
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
-    const messagesContainerRef = useRef(null); // Ref for messages container
+    const messagesContainerRef = useRef(null);
 
-    // Determinar si el chat está cerrado de manera consistente
+    // Determinar si el chat está cerrado
     const isChatClosed = selectedChatId?.status === "CLOSED";
+    const shouldShowChat = selectedChatId && (selectedChatId.id || selectedChatId.idContact || selectedChatId.number);
+    const hasMessages = chatMessages && chatMessages.length > 0;
+
+    // Efectos
+    useEffect(() => {
+        const loadMessages = async () => {
+            setIsLoading(true);
+
+            if (selectedChatId && selectedChatId.id) {
+                try {
+                    const response = await callEndpoint(getChat(selectedChatId.id));
+                    setChatMessages(response.messages);
+                    setSelectedChatId(prev => ({
+                        ...prev,
+                        status: response.state || prev.state
+                    }));
+                    setIsNewChat(false);
+                } catch (error) {
+                    console.error("Error cargando mensajes:", error);
+                    setChatMessages([]);
+                    toast.error("Error al cargar los mensajes del chat");
+                }
+            } else if (selectedChatId && selectedChatId.idContact) {
+                setChatMessages([]);
+                setIsNewChat(true);
+                setSelectedChatId(prev => ({
+                    ...prev,
+                    status: "OPEN"
+                }));
+            } else {
+                setChatMessages(null);
+                setIsNewChat(false);
+            }
+
+            setIsLoading(false);
+        };
+
+        loadMessages();
+    }, [selectedChatId?.id]);
+
+    useEffect(() => {
+        if (chatMessages && chatMessages.length > 0) {
+            scrollToBottom();
+        }
+    }, [chatMessages]);
 
     useEffect(() => {
         if (messageData && messageData.body) {
-            console.log("Nuevo mensaje recibido en ChatInterface:", messageData);
+            // Ignorar mensajes que ya fueron mostrados por el flujo optimista
+            const isDuplicate = chatMessages?.some(msg =>
+                (msg.id === messageData.id) || // Mensaje ya existe con ID real
+                (msg.is_temp && msg.body === messageData.body &&
+                    msg.from_me === (messageData.from_me ? "true" : "false") &&
+                    (!msg.media_path || msg.media_path === messageData.media_url)) // Mismo contenido
+            );
 
-            // Verificar si el mensaje pertenece al chat actual
-            if (selectedChatId &&
-                (selectedChatId.id === messageData.chat_id ||
-                    selectedChatId.number === messageData.number)) {
+            if (isDuplicate) return;
 
-                // Añadir el nuevo mensaje al estado
+            if (selectedChatId && (selectedChatId.id === messageData.chat_id)) {
                 setChatMessages(prevMessages => {
+                    // Si es un mensaje nuestro (from_me) y tenemos un mensaje temporal, reemplazarlo
+                    if (messageData.from_me) {
+                        const tempMessageIndex = prevMessages?.findIndex(msg =>
+                            msg.is_temp &&
+                            msg.body === messageData.body &&
+                            (!msg.media_path || msg.media_path === messageData.media_url)
+                        );
+
+                        if (tempMessageIndex !== -1 && tempMessageIndex !== undefined) {
+                            const newMessages = [...prevMessages];
+                            newMessages[tempMessageIndex] = {
+                                ...newMessages[tempMessageIndex],
+                                id: messageData.id,
+                                is_temp: false,
+                                ack: messageData.ack || 1,
+                                ...(messageData.media_url && { media_path: messageData.media_url })
+                            };
+                            return newMessages;
+                        }
+                    }
+
+                    // Si no es un mensaje nuestro o no encontramos el temporal, agregar nuevo
                     const newMessage = {
                         id: messageData.id,
                         body: messageData.body,
@@ -74,59 +145,45 @@ const ChatInterface = () => {
                         media_type: messageData.media_type || 'chat',
                         media_path: messageData.media_url || '',
                         is_private: messageData.is_private || 0,
-                        created_at: messageData.created_at || new Date().toISOString()
+                        created_at: messageData.created_at || new Date().toISOString(),
+                        ack: messageData.ack || 0
                     };
 
                     return prevMessages ? [...prevMessages, newMessage] : [newMessage];
                 });
 
-                // Scroll al final después de agregar el mensaje
                 setTimeout(scrollToBottom, 100);
             }
         }
     }, [messageData, selectedChatId]);
 
-    // Function to reopen a closed chat
-    const handleReopenChat = async () => {
-        if (!selectedChatId || !selectedChatId.id) {
-            console.error("No chat selected");
-            return;
-        }
+    useEffect(() => {
+        return () => {
+            selectedFiles.forEach(file => URL.revokeObjectURL(file.previewUrl));
+            if (recordedAudio) URL.revokeObjectURL(recordedAudio.url);
+            if (chatMessages) {
+                chatMessages.forEach(msg => {
+                    if (msg.is_temp && msg.media_path) {
+                        URL.revokeObjectURL(msg.media_path);
+                    }
+                });
+            }
+        };
+    }, [selectedFiles, recordedAudio, chatMessages]);
 
-        try {
-            setReopeningChat(true);
-            const { call, abortController } = updateChat(selectedChatId.id, { state: "OPEN" });
-            await callEndpoint({ call, abortController });
-            // Update the selectedChatId with the new state
-            setSelectedChatId(prev => ({
-                ...prev,
-                status: "OPEN"
-            }));
-
-            toast.success("Chat reabierto con éxito");
-        } catch (error) {
-            toast.error("Ocurrió un error al reabrir el chat");
-            console.error("Error al reabrir el chat:", error);
-        } finally {
-            setReopeningChat(false);
-        }
-    };
-
-    // Function to scroll to the bottom of the messages
+    // Funciones de ayuda
     const scrollToBottom = () => {
         if (messagesContainerRef.current) {
             messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
         }
     };
 
-    // Format date for message timestamps
     const formatMessageTime = (timestamp) => {
         if (!timestamp) return "";
         const date = new Date(timestamp);
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
-    // Format date for date separators
     const formatMessageDate = (timestamp) => {
         if (!timestamp) return "";
         const date = new Date(timestamp);
@@ -147,284 +204,101 @@ const ChatInterface = () => {
         }
     };
 
-    const handleMediaPreview = (mediaPath, mediaType) => {
-        setMediaPreview({ path: mediaPath, type: mediaType });
-    };
-
-    const handleDownload = (mediaPath) => {
-        const link = document.createElement('a');
-        link.href = mediaPath;
-        link.download = mediaPath.split('/').pop();
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
-    const renderMediaPreview = () => {
-        if (!mediaPreview) return null;
-
-        const closePreview = () => setMediaPreview(null);
-
-        return (
-            <div className="fixed inset-0 z-50 bg-black bg-opacity-80 flex items-center justify-center p-4">
-                <div className="relative max-w-full max-h-full">
-                    <button
-                        onClick={closePreview}
-                        className="absolute top-2 right-2 bg-red-500 rounded-full p-2"
-                    >
-                        <X size={24} color="white" />
-                    </button>
-
-                    {mediaPreview.type === 'image' ? (
-                        <img
-                            src={mediaPreview.path}
-                            alt="Preview"
-                            className="max-w-full max-h-screen object-contain"
-                        />
-                    ) : (
-                        <div className="bg-white p-6 rounded-lg text-black flex flex-col items-center">
-                            <File size={64} />
-                            <p className="mt-4">Documento: {mediaPreview.path.split('/').pop()}</p>
-                        </div>
-                    )}
-
-                    <button
-                        onClick={() => handleDownload(mediaPreview.path)}
-                        className="absolute bottom-2 right-2 bg-teal-600 rounded-full p-2"
-                    >
-                        <Download size={24} color="white" />
-                    </button>
+    const renderAckStatus = (ackStatus) => {
+        switch (ackStatus) {
+            case -1: return <AlertTriangle size={14} className="text-yellow-500" />;
+            case 0: return <Clock size={14} className="text-gray-400" />;
+            case 1: return <Check size={14} className="text-gray-400" />;
+            case 2: return (
+                <div className="relative">
+                    <Check size={14} className="text-gray-400" />
+                    <Check size={14} className="text-gray-400 absolute top-0 left-1" />
                 </div>
-            </div>
-        );
-    };
-
-    const renderMessageContent = (message, prevMessageDate) => {
-        const { media_type, body, media_path, created_at } = message;
-        const isSelf = message.from_me === "true";
-        const isPrivate = message.is_private;
-        const messageTime = formatMessageTime(created_at);
-        const messageDate = formatMessageDate(created_at);
-        const showDateSeparator = prevMessageDate !== messageDate && created_at;
-
-        const getMediaIcon = () => {
-            switch (media_type) {
-                case 'image': return <Image size={20} />;
-                case 'audio': return <Volume2 size={20} />;
-                case 'video': return <PlayCircle size={20} />;
-                case 'url': return <Link size={20} />;
-                case 'document': return <File size={20} />;
-                case 'chat': return null;
-                default: return <File size={20} />;
-            }
-        };
-
-        return (
-            <>
-                {showDateSeparator && (
-                    <div className="flex justify-center my-4">
-                        <div className="bg-gray-800 text-gray-300 px-4 py-1 rounded-full text-xs">
-                            {messageDate}
-                        </div>
-                    </div>
-                )}
-                <div key={message.id} className={`flex ${isPrivate === 1 ? "justify-center" : isSelf ? "justify-end" : "justify-start"} w-full mb-2`}>
-                    <div className={`flex ${isSelf && !isPrivate ? "flex-row-reverse" : "flex-row"} items-start space-x-2 ${isPrivate === 1 ? "max-w-[70%]" : "max-w-[60%]"} w-auto`}>
-                        <div
-                            className={`
-                            ${isPrivate === 1
-                                    ? "bg-indigo-900 mx-auto rounded-lg"
-                                    : isSelf
-                                        ? "bg-teal-700 rounded-l-lg rounded-br-lg ml-auto"
-                                        : "bg-gray-700 rounded-r-lg rounded-bl-lg mr-auto"
-                                }
-                            p-3 
-                            w-full 
-                            max-w-full 
-                            break-words 
-                            whitespace-pre-wrap 
-                            flex 
-                            flex-col
-                          `}
-                        >
-                            {isPrivate === 1 && (
-                                <div className="flex items-center justify-center mb-2 text-gray-300">
-                                    <EyeOff className="w-4 h-4 mr-1" />
-                                    <span className="text-xs">Mensaje Privado</span>
-                                </div>
-                            )}
-
-                            <div className="flex items-center space-x-2">
-                                {media_type !== 'chat' && media_type !== null && (
-                                    <span className="mr-2 flex-shrink-0">{getMediaIcon()}</span>
-                                )}
-
-                                <div className="flex-1 min-w-0">
-                                    {media_path && media_path !== 'no' ? (
-                                        <>
-                                            {body && <div className="mb-2">{body}</div>}
-                                            <div className="text-sm text-gray-300 truncate flex items-center justify-between">
-                                                {media_type === 'url' ? (
-                                                    <a
-                                                        href={media_path}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="underline overflow-hidden text-ellipsis"
-                                                    >
-                                                        {media_path}
-                                                    </a>
-                                                ) : (
-                                                    <>
-                                                        <span className="truncate max-w-[calc(100%-60px)]">{media_path.split('/').pop()}</span>
-                                                        <div className="flex space-x-2 flex-shrink-0">
-                                                            {(media_type === 'image' || media_type === 'document') && (
-                                                                <>
-                                                                    <button
-                                                                        onClick={() => handleMediaPreview(media_path, media_type)}
-                                                                        className="text-white hover:text-gray-300"
-                                                                    >
-                                                                        <Image size={20} />
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => handleDownload(media_path)}
-                                                                        className="text-white hover:text-gray-300"
-                                                                    >
-                                                                        <Download size={20} />
-                                                                    </button>
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <>{body}</>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Timestamp */}
-                            <div className={`text-xs text-gray-400 mt-1 ${isSelf ? "text-right" : "text-left"}`}>
-                                {messageTime}
-                            </div>
-                        </div>
-                    </div>
+            );
+            case 3: return (
+                <div className="relative">
+                    <Check size={14} className="text-blue-500" />
+                    <Check size={14} className="text-blue-500 absolute top-0 left-1" />
                 </div>
-            </>
-        );
-    };
-
-    useEffect(() => {
-        const loadMessages = async () => {
-            // Siempre comenzar con estado de carga al cambiar de chat
-            setIsLoading(true);
-
-            // Solo intentar cargar mensajes si hay un chat_id existente
-            if (selectedChatId && selectedChatId.id) {
-                try {
-                    const response = await callEndpoint(getChat(selectedChatId.id));
-                    setChatMessages(response.messages);
-
-                    // Update the selectedChatId with the current state from the response
-                    setSelectedChatId(prev => ({
-                        ...prev,
-                        status: response.state || prev.state
-                    }));
-
-                    setIsNewChat(false);
-                } catch (error) {
-                    console.error("Error cargando mensajes:", error);
-                    setChatMessages([]);
-                    toast.error("Error al cargar los mensajes del chat");
-                }
-            } else if (selectedChatId && selectedChatId.idContact) {
-                // Es un chat nuevo
-                setChatMessages([]);
-                setIsNewChat(true);
-
-                // Ensure state is set to "OPEN" for new chats
-                setSelectedChatId(prev => ({
-                    ...prev,
-                    status: "OPEN"
-                }));
-            } else {
-                setChatMessages(null);
-                setIsNewChat(false);
-            }
-
-            // Finalizar estado de carga después de procesar
-            setIsLoading(false);
-        };
-
-        loadMessages();
-    }, [selectedChatId?.id]); // Solo recargar mensajes cuando cambia el ID de chat
-
-    // Scroll to bottom when messages load or change
-    useEffect(() => {
-        if (chatMessages && chatMessages.length > 0) {
-            scrollToBottom();
+            );
+            default: return null;
         }
-    }, [chatMessages]);
+    };
 
-    // Verificar el tamaño total de los archivos multimedia
+    // Funciones para archivos multimedia
     const checkTotalMediaSize = (newFiles) => {
-        // Calculamos el tamaño total actual
-        let currentTotalSize = selectedFiles.reduce((total, file) => total + file.size, 0);
-
-        // Añadimos el tamaño del audio grabado si existe
+        let currentTotalSize = selectedFiles.reduce((total, file) => total + file.file.size, 0);
         if (recordedAudio) {
             currentTotalSize += recordedAudio.blob.size;
         }
-
-        // Añadimos el tamaño de los nuevos archivos
         const newTotalSize = currentTotalSize + newFiles.reduce((total, file) => total + file.size, 0);
-
-        // Verificamos si excede el límite
         return newTotalSize <= FILE_SIZE_LIMIT;
     };
 
-    // Función para manejar la selección de archivos con restricción de tamaño
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = () => {
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        setIsDragging(false);
+        handleFileSelect({ target: { files: e.dataTransfer.files } });
+    };
+
     const handleFileSelect = (event) => {
         const files = Array.from(event.target.files);
+        event.target.value = null;
 
-        // Verificar el tamaño total
+        if (!files || files.length === 0) return;
+
         if (!checkTotalMediaSize(files)) {
             setFileSizeError("La suma de los archivos multimedia no debe superar los 2MB.");
-            // Clear error message after 5 seconds
             setTimeout(() => setFileSizeError(""), 5000);
-            event.target.value = null;
             return;
         }
 
-        const validFiles = [];
-        // Check each file size
-        files.forEach(file => {
+        const validFiles = files.map(file => {
             if (file.size > FILE_SIZE_LIMIT) {
                 setFileSizeError(`El archivo "${file.name}" excede el límite de 2MB.`);
-                // Clear error message after 5 seconds
                 setTimeout(() => setFileSizeError(""), 5000);
-            } else {
-                validFiles.push(file);
+                return null;
             }
-        });
+
+            return {
+                file,
+                previewUrl: URL.createObjectURL(file),
+                type: file.type.startsWith('image/') ? 'image' :
+                    file.type.startsWith('audio/') ? 'audio' :
+                        file.type.startsWith('video/') ? 'video' : 'document'
+            };
+        }).filter(Boolean);
 
         if (validFiles.length > 0) {
             setSelectedFiles(prev => [...prev, ...validFiles]);
         }
-
-        event.target.value = null; // Reset input to allow selecting the same file again
     };
 
-    // Función para abrir el selector de archivos
     const handlePaperclipClick = () => {
         fileInputRef.current.click();
     };
 
-    // Función para iniciar/detener la grabación de audio
+    const removeFile = (index) => {
+        setSelectedFiles(prevFiles => {
+            const fileToRemove = prevFiles[index];
+            URL.revokeObjectURL(fileToRemove.previewUrl);
+            const newFiles = [...prevFiles];
+            newFiles.splice(index, 1);
+            return newFiles;
+        });
+    };
+
     const handleMicClick = async () => {
         if (isRecording) {
-            // Detener grabación
             if (mediaRecorderRef.current) {
                 mediaRecorderRef.current.stop();
                 setIsRecording(false);
@@ -444,26 +318,18 @@ const ChatInterface = () => {
 
                 mediaRecorder.onstop = () => {
                     const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+                    const totalCurrentSize = selectedFiles.reduce((total, file) => total + file.file.size, 0);
 
-                    // Check if adding this audio would exceed the total limit
-                    const totalCurrentSize = selectedFiles.reduce((total, file) => total + file.size, 0);
                     if (totalCurrentSize + audioBlob.size > FILE_SIZE_LIMIT) {
                         setFileSizeError("La suma de los archivos multimedia no debe superar los 2MB.");
-                        // Clear error message after 5 seconds
                         setTimeout(() => setFileSizeError(""), 5000);
-
-                        // Detener todas las pistas del stream
                         stream.getTracks().forEach(track => track.stop());
                         return;
                     }
 
-                    // Check if audio file size exceeds limit
                     if (audioBlob.size > FILE_SIZE_LIMIT) {
                         setFileSizeError("La grabación de audio excede el límite de 2MB.");
-                        // Clear error message after 5 seconds
                         setTimeout(() => setFileSizeError(""), 5000);
-
-                        // Detener todas las pistas del stream
                         stream.getTracks().forEach(track => track.stop());
                         return;
                     }
@@ -475,7 +341,6 @@ const ChatInterface = () => {
                         name: `audio_${new Date().toISOString()}.wav`
                     });
 
-                    // Detener todas las pistas del stream
                     stream.getTracks().forEach(track => track.stop());
                 };
 
@@ -489,96 +354,6 @@ const ChatInterface = () => {
         }
     };
 
-    // Función para enviar mensaje con archivos adjuntos
-    const handleSendMessage = async () => {
-        if (messageText.trim() === "" && selectedFiles.length === 0 && !recordedAudio) {
-            return; // No hay nada que enviar
-        }
-
-        // Check if chat is closed before attempting to send
-        if (sendingMessage || isChatClosed) return;
-
-        try {
-            setSendingMessage(true);
-
-            // Prepare media array for the message
-            const mediaArray = [
-                ...selectedFiles.map(file => ({
-                    name: file.name,
-                    caption: "" // You can add a caption logic if needed
-                })),
-                ...(recordedAudio ? [{
-                    name: recordedAudio.name,
-                    caption: "" // You can add a caption logic if needed
-                }] : [])
-            ];
-
-            // Prepare message data - Make chat_id optional
-            const messageData = {
-                number: selectedChatId.number || "", // Fallback to empty string
-                body: messageText,
-                media: mediaArray.length > 0 ? mediaArray : "",
-                from_me: true
-            };
-
-            // Only add chat_id if it exists
-            if (selectedChatId.id) {
-                messageData.chat_id = selectedChatId.id;
-            }
-
-            // For new chats, use idContact instead of chat_id
-            if (isNewChat && selectedChatId.idContact) {
-                messageData.contact_id = selectedChatId.idContact;
-            }
-
-            // Remove undefined properties
-            Object.keys(messageData).forEach(key =>
-                messageData[key] === undefined && delete messageData[key]
-            );
-
-            // Send message using the service
-            console.log("Sending message data:", messageData);
-            const { call } = sendMessage(messageData);
-            const response = await call;
-            console.log("Message response:", response);
-
-            // Handle successful message send
-            if (response) {
-                // Si era un chat nuevo y recibimos un chat_id en la respuesta
-                if (isNewChat && response.chat_id) {
-                    setSelectedChatId(prev => ({
-                        ...prev,
-                        id: response.chat_id
-                    }));
-                    setIsNewChat(false);
-                }
-
-                // Reset input states
-                setMessageText("");
-                setSelectedFiles([]);
-                setRecordedAudio(null);
-
-                // Scroll to bottom after sending a message
-                setTimeout(scrollToBottom, 100); // Small delay to ensure DOM update
-            } else {
-                // Handle error scenario
-                console.error("Failed to send message", response);
-                toast.error("No se pudo enviar el mensaje. Inténtalo de nuevo.");
-            }
-        } catch (error) {
-            console.error("Error sending message:", error);
-            toast.error("Ocurrió un error al enviar el mensaje.");
-        } finally {
-            setSendingMessage(false);
-        }
-    };
-
-    // Función para eliminar archivo seleccionado
-    const removeFile = (index) => {
-        setSelectedFiles(prev => prev.filter((_, i) => i !== index));
-    };
-
-    // Función para eliminar audio grabado
     const removeAudio = () => {
         if (recordedAudio) {
             URL.revokeObjectURL(recordedAudio.url);
@@ -586,7 +361,153 @@ const ChatInterface = () => {
         }
     };
 
-    // Group messages by date
+    // Funciones para mensajes
+    const renderMessageContent = (message, prevMessageDate) => {
+        const { media_type, body, media_path, created_at, is_temp } = message;
+        const isSelf = message.from_me === "true";
+        const isPrivate = message.is_private;
+        const messageTime = formatMessageTime(created_at);
+        const messageDate = formatMessageDate(created_at);
+        const showDateSeparator = prevMessageDate !== messageDate && created_at;
+
+        return (
+            <>
+                {showDateSeparator && (
+                    <div className="flex justify-center my-4">
+                        <div className="bg-gray-800 text-gray-300 px-4 py-1 rounded-full text-xs">
+                            {messageDate}
+                        </div>
+                    </div>
+                )}
+                <div key={message.id} className={`flex ${isPrivate === 1 ? "justify-center" : isSelf ? "justify-end" : "justify-start"} w-full mb-2`}>
+                    <div className={`flex ${isSelf && !isPrivate ? "flex-row-reverse" : "flex-row"} items-start space-x-2 ${isPrivate === 1 ? "max-w-[70%]" : "max-w-[60%]"} w-auto`}>
+                        <div
+                            className={`${isPrivate === 1
+                                ? "bg-indigo-900 mx-auto rounded-lg"
+                                : isSelf
+                                    ? "bg-teal-700 rounded-l-lg rounded-br-lg ml-auto"
+                                    : "bg-gray-700 rounded-r-lg rounded-bl-lg mr-auto"
+                                } p-3 w-full max-w-full break-words whitespace-pre-wrap flex flex-col`}
+                        >
+                            {isPrivate === 1 && (
+                                <div className="flex items-center justify-center mb-2 text-gray-300">
+                                    <EyeOff className="w-4 h-4 mr-1" />
+                                    <span className="text-xs">Mensaje Privado</span>
+                                </div>
+                            )}
+
+                            <div className="flex items-center space-x-2">
+                                <div className="flex-1 min-w-0">
+                                    {media_path && media_path !== 'no' ? (
+                                        media_type === 'url' ? (
+                                            <a
+                                                href={media_path}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="underline overflow-hidden text-ellipsis"
+                                            >
+                                                {media_path}
+                                            </a>
+                                        ) : media_type === 'image' ? (
+                                            <div className="relative group">
+                                                {body && <div className="mb-2">{body}</div>}
+                                                <img
+                                                    src={media_path}
+                                                    alt="Preview"
+                                                    className="max-w-full max-h-48 rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                                                    onClick={() => handleMediaPreview(media_path, media_type)}
+                                                />
+                                                {is_temp && (
+                                                    <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
+                                                        <Loader size={20} className="animate-spin" />
+                                                    </div>
+                                                )}
+                                                <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-2">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDownload(media_path);
+                                                        }}
+                                                        className="bg-teal-600 rounded-full p-1"
+                                                    >
+                                                        <Download size={16} color="white" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : media_type === 'audio' ? (
+                                            <div className="flex items-center space-x-2">
+                                                <audio
+                                                    controls
+                                                    src={media_path}
+                                                    className="h-8"
+                                                />
+                                                {is_temp && <Loader size={16} className="animate-spin ml-2" />}
+                                                {!is_temp && (
+                                                    <button
+                                                        onClick={() => handleDownload(media_path)}
+                                                        className="text-white hover:text-gray-300"
+                                                    >
+                                                        <Download size={20} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center space-x-2">
+                                                    {media_type === 'video' ? (
+                                                        <PlayCircle size={20} />
+                                                    ) : (
+                                                        <File size={20} />
+                                                    )}
+                                                    <span className="truncate max-w-[calc(100%-60px)]">
+                                                        {media_path.split('/').pop()}
+                                                    </span>
+                                                </div>
+                                                {!is_temp && (
+                                                    <div className="flex space-x-2 flex-shrink-0">
+                                                        {media_type === 'video' && (
+                                                            <button
+                                                                onClick={() => handleMediaPreview(media_path, media_type)}
+                                                                className="text-white hover:text-gray-300"
+                                                            >
+                                                                <Image size={20} />
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            onClick={() => handleDownload(media_path)}
+                                                            className="text-white hover:text-gray-300"
+                                                        >
+                                                            <Download size={20} />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )
+                                    ) : (
+                                        <>{body}</>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className={`text-xs text-gray-400 mt-1 ${isSelf ? "text-right" : "text-left"}`}>
+                                <div className="flex items-center gap-1 overflow-hidden">
+                                    <span className="overflow-hidden text-ellipsis whitespace-nowrap">
+                                        {messageTime}
+                                    </span>
+                                    {isSelf && (
+                                        <span className="shrink-0">
+                                            {renderAckStatus(message.ack)}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </>
+        );
+    };
+
     const renderMessagesWithDateSeparators = () => {
         if (!chatMessages || chatMessages.length === 0) return null;
 
@@ -600,22 +521,207 @@ const ChatInterface = () => {
         });
     };
 
-    // Limpiar URLs de objetos al desmontar
-    useEffect(() => {
-        return () => {
-            if (recordedAudio) {
-                URL.revokeObjectURL(recordedAudio.url);
+    const handleMediaPreview = (mediaPath, mediaType) => {
+        setMediaPreview({ path: mediaPath, type: mediaType });
+    };
+
+    const handleDownload = (mediaPath) => {
+        const link = document.createElement('a');
+        link.href = mediaPath;
+        link.download = mediaPath.split('/').pop();
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handleSendMessage = async () => {
+        if ((messageText.trim() === "" && selectedFiles.length === 0 && !recordedAudio) ||
+            sendingMessage ||
+            isChatClosed) {
+            return;
+        }
+        // Crear mensaje temporal con ID único basado en contenido
+        const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const tempSignature = `${messageText}-${selectedFiles.length}-${!!recordedAudio}`;
+
+        try {
+            setSendingMessage(true);
+            setUploadProgress(0);
+            const newMessage = {
+                id: tempId,
+                body: messageText,
+                from_me: "true",
+                created_at: new Date().toISOString(),
+                ack: 0,
+                is_temp: true,
+                tempSignature: tempSignature // Firma para identificar duplicados
+            };
+
+            // Agregar información multimedia si existe
+            if (selectedFiles[0]) {
+                newMessage.media_type = selectedFiles[0].type;
+                newMessage.media_path = selectedFiles[0].previewUrl;
+            } else if (recordedAudio) {
+                newMessage.media_type = 'audio';
+                newMessage.media_path = recordedAudio.url;
             }
-        };
-    }, []);
 
-    // Determinar si debe mostrar la interfaz de chat (si hay selectedChatId o selectedChatId.idContact)
-    const shouldShowChat = selectedChatId && (selectedChatId.id || selectedChatId.idContact);
+            setChatMessages(prev => prev ? [...prev, newMessage] : [newMessage]);
+            scrollToBottom();
 
-    // Verificar si hay mensajes para mostrar
-    const hasMessages = chatMessages && chatMessages.length > 0;
+            // Limpiar UI inmediatamente
+            setMessageText("");
+            const filesToSend = [...selectedFiles];
+            const audioToSend = recordedAudio;
+            setSelectedFiles([]);
+            setRecordedAudio(null);
 
-    // Renderizar un loader mientras se carga el chat
+            // Preparar payload para el servidor
+            const messagePayload = {
+                number: selectedChatId.number || "",
+                body: messageText,
+                from_me: true,
+                ...(selectedChatId.id && { chat_id: selectedChatId.id }),
+                ...(selectedChatId.idContact && { contact_id: selectedChatId.idContact }),
+                tempSignature: tempSignature // Incluir la firma en el payload al servidor
+            };
+
+            // Procesar archivos para enviar al servidor
+            if (filesToSend.length > 0 || audioToSend) {
+                const mediaItems = [];
+
+                const fileToBase64 = (file) => {
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.readAsDataURL(file);
+                        reader.onload = () => resolve(reader.result.split(',')[1]);
+                        reader.onerror = error => reject(error);
+                    });
+                };
+
+                // Procesar archivos seleccionados
+                for (const fileObj of filesToSend) {
+                    try {
+                        const base64Data = await fileToBase64(fileObj.file);
+                        mediaItems.push({
+                            type: fileObj.type,
+                            media: base64Data,
+                            caption: messageText || '',
+                            ...(fileObj.type === 'document' && { filename: fileObj.file.name })
+                        });
+                    } catch (error) {
+                        console.error(`Error procesando archivo ${fileObj.file.name}:`, error);
+                        continue;
+                    }
+                }
+
+                // Procesar audio grabado
+                if (audioToSend) {
+                    try {
+                        const audioBase64 = await fileToBase64(audioToSend.blob);
+                        mediaItems.push({
+                            type: 'audio',
+                            media: audioBase64,
+                            caption: messageText || '',
+                            filename: 'audio_message.wav'
+                        });
+                    } catch (error) {
+                        console.error("Error procesando audio grabado:", error);
+                    }
+                }
+
+                if (mediaItems.length > 0) {
+                    messagePayload.media = JSON.stringify(mediaItems);
+                }
+            }
+
+            // Enviar al servidor con progreso
+            const { call, abortController } = sendMessage(messagePayload, (progress) => {
+                setUploadProgress(progress);
+            });
+            const response = await callEndpoint({ call, abortController });
+
+            if (response) {
+                // Actualizar mensaje temporal con datos del servidor
+                setChatMessages(prev => {
+                    if (!prev) return [];
+
+                    return prev.map(msg => {
+                        if (msg.id === tempId || msg.tempSignature === tempSignature) {
+                            const updatedMsg = {
+                                ...msg,
+                                id: response.message_id || msg.id,
+                                ack: response.ack || 1,
+                                is_temp: false,
+                                ...(response.media_url && {
+                                    media_path: response.media_url
+                                }),
+                                // Eliminar la firma temporal ya que ahora es un mensaje real
+                                tempSignature: undefined
+                            };
+
+                            // Liberar URL temporal si existía
+                            if (msg.is_temp && msg.media_path) {
+                                URL.revokeObjectURL(msg.media_path);
+                            }
+
+                            return updatedMsg;
+                        }
+                        return msg;
+                    });
+                });
+
+                if (response.chat_id) {
+                    setSelectedChatId(prev => ({
+                        ...prev,
+                        id: response.chat_id,
+                        status: "OPEN"
+                    }));
+                    setIsNewChat(false);
+                }
+            }
+        } catch (error) {
+            console.error("Error al enviar:", error);
+
+            // Marcar mensaje como fallido usando tanto el ID como la firma
+            setChatMessages(prev => {
+                if (!prev) return [];
+                return prev.map(msg =>
+                    (msg.id === tempId || msg.tempSignature === tempSignature)
+                        ? { ...msg, ack: -1 }
+                        : msg
+                );
+            });
+
+            toast.error(error.response?.data?.message || "Error al enviar el mensaje");
+        } finally {
+            setSendingMessage(false);
+            setUploadProgress(0);
+        }
+    };
+    const handleReopenChat = async () => {
+        if (!selectedChatId || !selectedChatId.id) {
+            console.error("No chat selected");
+            return;
+        }
+
+        try {
+            setReopeningChat(true);
+            const { call, abortController } = updateChat(selectedChatId.id, { state: "OPEN" });
+            await callEndpoint({ call, abortController });
+            setSelectedChatId(prev => ({
+                ...prev,
+                status: "OPEN"
+            }));
+            toast.success("Chat reabierto con éxito");
+        } catch (error) {
+            toast.error("Ocurrió un error al reabrir el chat");
+            console.error("Error al reabrir el chat:", error);
+        } finally {
+            setReopeningChat(false);
+        }
+    };
+
     if (shouldShowChat && isLoading) {
         return (
             <div className="flex flex-col h-screen w-full bg-gray-900 text-white justify-center items-center">
@@ -716,7 +822,7 @@ const ChatInterface = () => {
                         </div>
                     )}
 
-                    {/* Messages Area - Add ref here */}
+                    {/* Messages Area */}
                     <div
                         ref={messagesContainerRef}
                         className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-hide"
@@ -726,8 +832,9 @@ const ChatInterface = () => {
                         }}
                     >
                         {isNewChat && !hasMessages ? (
-                            <div className="flex justify-center items-center h-full opacity-50">
-                                <p>Comienza un nuevo chat con este contacto</p>
+                            <div className="flex flex-col justify-center items-center h-full opacity-50">
+                                <p>Nuevo chat con {selectedChatId.name || selectedChatId.number}</p>
+                                <p className="text-sm mt-2">Escribe tu primer mensaje</p>
                             </div>
                         ) : (
                             renderMessagesWithDateSeparators()
@@ -740,22 +847,42 @@ const ChatInterface = () => {
                             <div className="text-sm text-gray-400 mb-2">Archivos adjuntos:</div>
                             <div className="flex flex-wrap gap-2">
                                 {selectedFiles.map((file, index) => (
-                                    <div key={index} className="bg-gray-700 rounded-md p-2 flex items-center space-x-2">
-                                        <File size={16} />
-                                        <span className="text-sm truncate max-w-[100px]">{file.name}</span>
-                                        <button onClick={() => removeFile(index)} className="text-red-400 hover:text-red-500">
-                                            <X size={16} />
+                                    <div key={index} className="relative">
+                                        {file.type === 'image' ? (
+                                            <img
+                                                src={file.previewUrl}
+                                                className="h-16 w-16 object-cover rounded"
+                                                alt="Preview"
+                                            />
+                                        ) : (
+                                            <div className="h-16 w-16 bg-gray-700 rounded flex items-center justify-center">
+                                                {file.type === 'audio' ? (
+                                                    <Volume2 size={24} />
+                                                ) : file.type === 'video' ? (
+                                                    <PlayCircle size={24} />
+                                                ) : (
+                                                    <File size={24} />
+                                                )}
+                                            </div>
+                                        )}
+                                        <button
+                                            onClick={() => removeFile(index)}
+                                            className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1"
+                                        >
+                                            <X size={12} />
                                         </button>
                                     </div>
                                 ))}
-
                                 {recordedAudio && (
-                                    <div className="bg-gray-700 rounded-md p-2 flex items-center space-x-2">
-                                        <Volume2 size={16} />
-                                        <span className="text-sm">Audio grabado</span>
-                                        <audio controls src={recordedAudio.url} className="h-6 w-24" />
-                                        <button onClick={removeAudio} className="text-red-400 hover:text-red-500">
-                                            <X size={16} />
+                                    <div className="relative">
+                                        <div className="h-16 w-16 bg-gray-700 rounded flex items-center justify-center">
+                                            <Volume2 size={24} />
+                                        </div>
+                                        <button
+                                            onClick={removeAudio}
+                                            className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1"
+                                        >
+                                            <X size={12} />
                                         </button>
                                     </div>
                                 )}
@@ -763,8 +890,51 @@ const ChatInterface = () => {
                         </div>
                     )}
 
+                    {/* Media Preview */}
+                    {mediaPreview && (
+                        <div className="fixed inset-0 z-50 bg-black bg-opacity-80 flex items-center justify-center p-4">
+                            <div className="relative max-w-full max-h-full">
+                                <button
+                                    onClick={() => setMediaPreview(null)}
+                                    className="absolute top-2 right-2 bg-red-500 rounded-full p-2"
+                                >
+                                    <X size={24} color="white" />
+                                </button>
+
+                                {mediaPreview.type === 'image' ? (
+                                    <img
+                                        src={mediaPreview.path}
+                                        alt="Preview"
+                                        className="max-w-full max-h-screen object-contain"
+                                    />
+                                ) : mediaPreview.type === 'video' ? (
+                                    <video controls className="max-w-full max-h-screen">
+                                        <source src={mediaPreview.path} type="video/mp4" />
+                                    </video>
+                                ) : (
+                                    <div className="bg-white p-6 rounded-lg text-black flex flex-col items-center">
+                                        <File size={64} />
+                                        <p className="mt-4">Documento: {mediaPreview.path.split('/').pop()}</p>
+                                    </div>
+                                )}
+
+                                <button
+                                    onClick={() => handleDownload(mediaPreview.path)}
+                                    className="absolute bottom-2 right-2 bg-teal-600 rounded-full p-2"
+                                >
+                                    <Download size={24} color="white" />
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Input Area - Disable when chat is closed */}
-                    <div className={`p-4 bg-gray-800 border-t border-gray-700 ${isChatClosed ? "opacity-60" : ""}`}>
+                    <div
+                        className={`p-4 bg-gray-800 border-t border-gray-700 ${isChatClosed ? "opacity-60" : ""} ${isDragging ? "border-2 border-dashed border-teal-500" : ""}`}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                    >
                         <div className="flex items-center space-x-2">
                             <textarea
                                 value={messageText}
@@ -782,43 +952,66 @@ const ChatInterface = () => {
                                 }}
                             />
 
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                onChange={handleFileSelect}
-                                multiple
-                                className="hidden"
-                                disabled={isChatClosed}
-                            />
+                            <div className="flex space-x-2">
+                                <div className="relative">
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        onChange={handleFileSelect}
+                                        multiple
+                                        className="hidden"
+                                        disabled={isChatClosed}
+                                        key={selectedFiles.length}
+                                    />
+                                    <button
+                                        className="p-2 bg-gray-700 rounded-full relative"
+                                        onClick={handlePaperclipClick}
+                                        disabled={isChatClosed}
+                                    >
+                                        <Paperclip size={20} />
+                                        {selectedFiles.length > 0 && (
+                                            <span className="absolute -top-1 -right-1 bg-teal-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                                                {selectedFiles.length}
+                                            </span>
+                                        )}
+                                    </button>
+                                </div>
 
-                            <button
-                                className={`p-2 rounded-full ${isRecording ? 'bg-red-500' : 'bg-gray-700'}`}
-                                onClick={handleMicClick}
-                                disabled={isChatClosed}
-                            >
-                                <Mic size={20} />
-                            </button>
+                                <button
+                                    className={`p-2 rounded-full ${isRecording ? 'bg-red-500' : 'bg-gray-700'}`}
+                                    onClick={handleMicClick}
+                                    disabled={isChatClosed}
+                                >
+                                    <Mic size={20} />
+                                </button>
 
-                            <button
-                                className="p-2 bg-gray-700 rounded-full"
-                                onClick={handlePaperclipClick}
-                                disabled={isChatClosed}
-                            >
-                                <Paperclip size={20} />
-                            </button>
-
-                            <button
-                                className="p-2 bg-teal-600 rounded-full"
-                                onClick={handleSendMessage}
-                                disabled={
-                                    isChatClosed ||
-                                    (messageText.trim() === "" && selectedFiles.length === 0 && !recordedAudio) ||
-                                    sendingMessage
-                                }
-                            >
-                                {sendingMessage ? <Loader size={20} className="animate-spin" /> : <Send size={20} />}
-                            </button>
+                                <button
+                                    className="p-2 bg-teal-600 rounded-full"
+                                    onClick={handleSendMessage}
+                                    disabled={
+                                        isChatClosed ||
+                                        (messageText.trim() === "" && selectedFiles.length === 0 && !recordedAudio) ||
+                                        sendingMessage
+                                    }
+                                >
+                                    {sendingMessage ? (
+                                        <Loader size={20} className="animate-spin" />
+                                    ) : (
+                                        <Send size={20} />
+                                    )}
+                                </button>
+                            </div>
                         </div>
+
+                        {/* Progress Bar */}
+                        {uploadProgress > 0 && uploadProgress < 100 && (
+                            <div className="w-full bg-gray-700 rounded-full h-2 mt-2">
+                                <div
+                                    className="bg-teal-500 h-2 rounded-full"
+                                    style={{ width: `${uploadProgress}%` }}
+                                ></div>
+                            </div>
+                        )}
                     </div>
                 </>
             ) : (
@@ -831,9 +1024,6 @@ const ChatInterface = () => {
                     </div>
                 </div>
             )}
-
-            {/* Media Preview Modal */}
-            {renderMediaPreview()}
         </div>
     );
 };

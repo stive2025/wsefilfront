@@ -48,6 +48,7 @@ const CustomFetch = async (endpoint, options = {}) => {
         return {};
       }
     } catch (error) {
+      console.log(response)
       console.error("Error al parsear JSON:", error);
       return {};
     }

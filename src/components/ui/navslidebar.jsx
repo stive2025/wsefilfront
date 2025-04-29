@@ -1,10 +1,9 @@
 import { User, LogOut, Contact, Bolt, Users, Menu, MessageSquare } from "lucide-react";
 import { ChatInterfaceClick } from "/src/contexts/chats.js"
-import { useState, useEffect, useContext } from "react";
+import { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
-import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
-import { getAgents } from "/src/services/agents.js";
 import Resize from "/src/hooks/responsiveHook.jsx"
+import {logout} from "/src/services/authService.js";
 
 // eslint-disable-next-line react/prop-types
 const NavSlideBar = ({ role }) => {
@@ -14,7 +13,6 @@ const NavSlideBar = ({ role }) => {
   const { setSelectedChatId } = useContext(ChatInterfaceClick);
 
   const toggleMenu = () => setShowMenu(!showMenu);
-  const handleLogout = () => navigate("/login");
 
   const menuOptions = {
     admin: [
@@ -47,7 +45,7 @@ const NavSlideBar = ({ role }) => {
           </div>
         </div>
 
-        <div className="text-xl cursor-pointer p-4" onClick={handleLogout}>
+        <div className="text-xl cursor-pointer p-4" onClick={logout}>
           <LogOut />
         </div>
       </div>
@@ -83,7 +81,7 @@ const NavSlideBar = ({ role }) => {
           </li>
         ))}
       </ul>
-      <div className="text-gray-400 hover:text-white text-xl mt-auto mb-4 cursor-pointer p-2 rotate-180 active:bg-gray-700 rounded-full" onClick={handleLogout}>
+      <div className="text-gray-400 hover:text-white text-xl mt-auto mb-4 cursor-pointer p-2 rotate-180 active:bg-gray-700 rounded-full" onClick={logout}>
         <LogOut />
       </div>
     </div>

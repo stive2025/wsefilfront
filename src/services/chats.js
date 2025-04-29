@@ -19,8 +19,8 @@ const getChatList = (params = {}) => {
   }
   
   // Agregar filtro por etiqueta si existe
-  if (params.tag) {
-    queryParams.append('tag_id', params.tag);
+  if (params.id_tag) {
+    queryParams.append('tag_id', params.id_tag);
   }
   
   // Agregar filtro por agente si existe
