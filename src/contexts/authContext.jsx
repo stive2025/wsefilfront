@@ -1,8 +1,8 @@
 /* eslint-disable react/prop-types */
-// src/contexts/AuthContext.jsx
+// src/contexts/AuthContext.jsx (corrección rápida)
 import { createContext, useContext, useState, useEffect } from 'react';
-import { GetCookieItem, RemoveCookieItem, setCookieItem } from '../utilities/cookies';
-import { loginService } from '../services/authService'; // Asegúrate de tener este servicio
+import { GetCookieItem, RemoveCookieItem } from '../utilities/cookies';
+import { loginService, setAuthToken, setUserData } from '../services/authService';
 
 const AuthContext = createContext();
 
@@ -19,12 +19,14 @@ export const AuthProvider = ({ children }) => {
   };
 
   const hasAnyAbility = (requiredAbilities = []) => {
-    if (!requiredAbilities.length) return false;
+    // CORRECCIÓN: Si no hay abilities requeridas, permitir acceso
+    if (requiredAbilities.length === 0) return true;
     return requiredAbilities.some(ability => hasAbility(ability));
   };
 
   const hasAllAbilities = (requiredAbilities = []) => {
-    if (!requiredAbilities.length) return false;
+    // CORRECCIÓN: Si no hay abilities requeridas, permitir acceso
+    if (requiredAbilities.length === 0) return true;
     return requiredAbilities.every(ability => hasAbility(ability));
   };
 
@@ -35,7 +37,9 @@ export const AuthProvider = ({ children }) => {
       if (userData) {
         try {
           const parsedUser = JSON.parse(userData);
+          console.log("Cargando usuario desde cookies:", parsedUser);
           setUser(parsedUser);
+          // CORRECCIÓN: Asegurar que abilities es un array
           setAbilities(parsedUser.abilities || []);
         } catch (error) {
           console.error('Error parsing user data', error);
@@ -52,25 +56,49 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     setLoading(true);
     try {
-      const response = await loginService(credentials);
+      console.log("Iniciando login con credenciales:", credentials);
+      const response = await loginService(credentials).call;
       
-      if (!response || !response.token) {
+      console.log("Respuesta de login completa:", response);
+      
+      if (!response) {
         throw new Error('Invalid login response');
       }
-
+      
+      // CORRECCIÓN: Manejar diferentes formatos de respuesta
+      let tokenValue;
+      if (response.token && response.token.plainTextToken) {
+        tokenValue = response.token.plainTextToken;
+      } else if (typeof response.token === 'string') {
+        tokenValue = response.token;
+      } else if (response.access_token) {
+        tokenValue = response.access_token;
+      } else {
+        console.error("Formato de token no reconocido:", response.token);
+        tokenValue = JSON.stringify(response.token);
+      }
+      
+      // CORRECCIÓN: Extraer abilities correctamente
+      const userAbilities = response.abilities || 
+                           (response.user && response.user.abilities) || 
+                           [];
+      
       const userData = {
-        ...response.user,
-        token: response.token,
-        abilities: response.abilities || []
+        ...(response.user || {}),
+        token: tokenValue,
+        abilities: userAbilities
       };
-
+  
+      console.log("Guardando datos de usuario:", userData);
+      
       setUser(userData);
-      setAbilities(userData.abilities);
-      setCookieItem('userData', JSON.stringify(userData), { expires: 7 });
+      setAbilities(userAbilities);
+      setAuthToken(tokenValue, 7); // 7 días de expiración
+      setUserData(userData, 7);
+      
       return true;
     } catch (error) {
       console.error('Login failed:', error);
-      logout();
       return false;
     } finally {
       setLoading(false);
@@ -81,6 +109,7 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setAbilities([]);
     RemoveCookieItem('userData');
+    RemoveCookieItem('authToken');
   };
 
   const value = {

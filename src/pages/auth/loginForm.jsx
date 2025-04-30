@@ -4,12 +4,11 @@ import "tailwindcss";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
-import { loginService,setAuthToken,setUserData  } from "/src/services/authService.js"; // Asegúrate de importar loginService
+import { useAuth } from '/src/contexts/authContext'; //
 
 const LoginForm = () => {
   const navigate = useNavigate();
-  const { loading, callEndpoint } = useFetchAndLoad();
+  const { login, loading } = useAuth();
   const [credentials, setCredentials] = useState({
     email: '',
     password: ''
@@ -19,27 +18,19 @@ const LoginForm = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
-  
+
     try {
-      const apiCall = loginService(credentials);      
-      const response = await callEndpoint(apiCall, 'login');
-  
-      if (response && response.token) {
-        // Use authService functions instead of direct cookie access
-        setAuthToken(response.token.plainTextToken);
-        
-        if (response.user) {
-          setUserData(response.user);
-        }
-  
+      const success = await login(credentials);
+      if (success) {
         navigate("/chatList");
       } else {
-        setError('No se recibió token de autenticación');
+        setError('Credenciales incorrectas');
       }
     } catch (error) {
       setError(error.message || 'Error al iniciar sesión');
     }
   };
+
 
   const handleReset = () => {
     setCredentials({
