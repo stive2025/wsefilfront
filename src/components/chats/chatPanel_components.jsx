@@ -5,6 +5,8 @@ import {
     Volume2, PlayCircle, Download, EyeOff, Loader, Clock, Check, AlertTriangle,
     RefreshCcw
 } from "lucide-react";
+import { ABILITIES } from '/src/constants/abilities';
+import AbilityGuard from '/src/components/common/AbilityGuard';
 import Resize from "/src/hooks/responsiveHook.jsx";
 import MenuInchat from "/src/components/mod/menuInchat.jsx";
 import ChatTransfer from "/src/components/mod/chatTransfer.jsx";
@@ -423,15 +425,17 @@ const ChatInterface = () => {
                                                     </div>
                                                 )}
                                                 <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-2">
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleDownload(media_path);
-                                                        }}
-                                                        className="bg-teal-600 rounded-full p-1"
-                                                    >
-                                                        <Download size={16} color="white" />
-                                                    </button>
+                                                    <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.DOWNLOAD_HISTORY]}>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDownload(media_path);
+                                                            }}
+                                                            className="bg-teal-600 rounded-full p-1"
+                                                        >
+                                                            <Download size={16} color="white" />
+                                                        </button>
+                                                    </AbilityGuard>
                                                 </div>
                                             </div>
                                         ) : media_type === 'audio' ? (
@@ -759,30 +763,36 @@ const ChatInterface = () => {
                             </div>
                         </div>
                         <div className="flex space-x-2">
-                            <button
-                                className="p-2 hover:bg-gray-700 active:bg-gray-700 rounded-full"
-                                onClick={() => setSearchInChat(prev => !prev)}
-                                disabled={isChatClosed}
-                                style={isChatClosed ? { opacity: 0.5 } : {}}
-                            >
-                                <Search size={20} />
-                            </button>
-                            <button
-                                className="p-2 hover:bg-gray-700 active:bg-gray-700 rounded-full"
-                                onClick={() => isChatClosed ? null : setTransferOpen(prev => !prev)}
-                                disabled={isChatClosed}
-                                style={isChatClosed ? { opacity: 0.5 } : {}}
-                            >
-                                <MessageSquareShare size={20} />
-                            </button>
-                            <button
-                                className="p-2 hover:bg-gray-700 active:bg-gray-700 rounded-full relative"
-                                onClick={() => isChatClosed ? null : setMenuOpen(prev => !prev)}
-                                disabled={isChatClosed}
-                                style={isChatClosed ? { opacity: 0.5 } : {}}
-                            >
-                                <SquarePlus size={20} />
-                            </button>
+                            <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.SEARCH_MESSAGES]}>
+                                <button
+                                    className="p-2 hover:bg-gray-700 active:bg-gray-700 rounded-full"
+                                    onClick={() => setSearchInChat(prev => !prev)}
+                                    disabled={isChatClosed}
+                                    style={isChatClosed ? { opacity: 0.5 } : {}}
+                                >
+                                    <Search size={20} />
+                                </button>
+                            </AbilityGuard>
+                            <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.TRANSFER]}>
+                                <button
+                                    className="p-2 hover:bg-gray-700 active:bg-gray-700 rounded-full"
+                                    onClick={() => isChatClosed ? null : setTransferOpen(prev => !prev)}
+                                    disabled={isChatClosed}
+                                    style={isChatClosed ? { opacity: 0.5 } : {}}
+                                >
+                                    <MessageSquareShare size={20} />
+                                </button>
+                            </AbilityGuard>
+                            <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.TAG_CHAT, ABILITIES.CHAT_PANEL.MARK_AS_FINISHED]} requireAll={false}>
+                                <button
+                                    className="p-2 hover:bg-gray-700 active:bg-gray-700 rounded-full relative"
+                                    onClick={() => isChatClosed ? null : setMenuOpen(prev => !prev)}
+                                    disabled={isChatClosed}
+                                    style={isChatClosed ? { opacity: 0.5 } : {}}
+                                >
+                                    <SquarePlus size={20} />
+                                </button>
+                            </AbilityGuard>
                             {menuOpen && !isChatClosed && <MenuInchat isOpen={menuOpen} onClose={() => setMenuOpen(false)} />}
                         </div>
                     </div>
@@ -936,55 +946,58 @@ const ChatInterface = () => {
                         onDrop={handleDrop}
                     >
                         <div className="flex items-center space-x-2">
-                            <textarea
-                                value={messageText}
-                                onChange={(e) => setMessageText(e.target.value)}
-                                placeholder={isChatClosed ? "Chat cerrado" : "Escribe un mensaje..."}
-                                className="flex-1 bg-gray-700 text-white rounded-lg p-3 resize-none outline-none"
-                                rows={1}
-                                style={{ minHeight: '40px' }}
-                                disabled={isChatClosed}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && !e.shiftKey) {
-                                        e.preventDefault();
-                                        handleSendMessage();
-                                    }
-                                }}
-                            />
-
+                            <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.SEND_TEXT]}>
+                                <textarea
+                                    value={messageText}
+                                    onChange={(e) => setMessageText(e.target.value)}
+                                    placeholder={isChatClosed ? "Chat cerrado" : "Escribe un mensaje..."}
+                                    className="flex-1 bg-gray-700 text-white rounded-lg p-3 resize-none outline-none"
+                                    rows={1}
+                                    style={{ minHeight: '40px' }}
+                                    disabled={isChatClosed}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            handleSendMessage();
+                                        }
+                                    }}
+                                />
+                            </AbilityGuard>
                             <div className="flex space-x-2">
-                                <div className="relative">
-                                    <input
-                                        type="file"
-                                        ref={fileInputRef}
-                                        onChange={handleFileSelect}
-                                        multiple
-                                        className="hidden"
-                                        disabled={isChatClosed}
-                                        key={selectedFiles.length}
-                                    />
+                                <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.SEND_MEDIA]}>
+                                    <div className="relative">
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            onChange={handleFileSelect}
+                                            multiple
+                                            className="hidden"
+                                            disabled={isChatClosed}
+                                            key={selectedFiles.length}
+                                        />
+                                        <button
+                                            className="p-2 bg-gray-700 rounded-full relative"
+                                            onClick={handlePaperclipClick}
+                                            disabled={isChatClosed}
+                                        >
+                                            <Paperclip size={20} />
+                                            {selectedFiles.length > 0 && (
+                                                <span className="absolute -top-1 -right-1 bg-teal-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                                                    {selectedFiles.length}
+                                                </span>
+                                            )}
+                                        </button>
+                                    </div>
+                                </AbilityGuard>
+                                <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.SEND_MEDIA]}>
                                     <button
-                                        className="p-2 bg-gray-700 rounded-full relative"
-                                        onClick={handlePaperclipClick}
+                                        className={`p-2 rounded-full ${isRecording ? 'bg-red-500' : 'bg-gray-700'}`}
+                                        onClick={handleMicClick}
                                         disabled={isChatClosed}
                                     >
-                                        <Paperclip size={20} />
-                                        {selectedFiles.length > 0 && (
-                                            <span className="absolute -top-1 -right-1 bg-teal-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                                                {selectedFiles.length}
-                                            </span>
-                                        )}
+                                        <Mic size={20} />
                                     </button>
-                                </div>
-
-                                <button
-                                    className={`p-2 rounded-full ${isRecording ? 'bg-red-500' : 'bg-gray-700'}`}
-                                    onClick={handleMicClick}
-                                    disabled={isChatClosed}
-                                >
-                                    <Mic size={20} />
-                                </button>
-
+                                </AbilityGuard>
                                 <button
                                     className="p-2 bg-teal-600 rounded-full"
                                     onClick={handleSendMessage}

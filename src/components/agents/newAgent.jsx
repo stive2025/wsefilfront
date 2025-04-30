@@ -5,6 +5,7 @@ import { useFetchAndLoad } from "/src/hooks/fechAndLoad.jsx";
 import { createAgent, updateAgent } from "/src/services/agents.js";
 import { UpdateAgentForm, AgentHandle, NewAgentForm } from "/src/contexts/chats.js";
 import { ABILITIES, ROLES, ROLE_DEFAULT_ABILITIES } from "/src/constants/abilities.js";
+import AbilityGuard from '/src/components/common/AbilityGuard.jsx';
 
 const NewAgent = () => {
   const isMobile = Resize();
@@ -23,21 +24,21 @@ const NewAgent = () => {
   const [success, setSuccess] = useState(false);
   const [showAbilitiesModal, setShowAbilitiesModal] = useState(false);
   const [selectedAbilities, setSelectedAbilities] = useState([]);
+  const [forceUpdate, setForceUpdate] = useState(0); // Estado para forzar re-renders
 
   const isFormValid = firstName.trim() && lastName.trim() && email.trim() && password.trim() && role;
   const isFormValidForUpdate = firstName.trim() && lastName.trim() && email.trim() && role;
 
   useEffect(() => {
-    // If we're in edit mode (agentFind exists), make sure the form stays open
+    // Si estamos en modo edición (agentFind existe), asegurar que el formulario permanezca abierto
     if (agentFind) {
-      // This will ensure the form stays open when switching between mobile and desktop
       setAgentNew(true);
     }
-  }, [isMobile, agentFind]);
+  }, [isMobile, agentFind, setAgentNew]);
 
+  // Efecto para cargar los datos del agente cuando se está en modo edición
   useEffect(() => {
     if (agentFind) {
-      console.log("Agente a editar ", agentFind);
       const [fName, lName] = agentFind.name.split(' ');
       setIdAgent(agentFind.id);
       setFirstName(fName || '');
@@ -46,15 +47,13 @@ const NewAgent = () => {
       setRole(agentFind.role || '');
       setPassword('');
 
-      // Manejo mejorado de abilities
+      // Procesamiento mejorado de abilities
       if (agentFind.abilities) {
-        console.log("Abilities originales:", agentFind.abilities);
-
         try {
           let parsedAbilities;
 
           if (Array.isArray(agentFind.abilities)) {
-            parsedAbilities = [...agentFind.abilities]; // Crea una copia para evitar referencias
+            parsedAbilities = [...agentFind.abilities];
           }
           else if (typeof agentFind.abilities === 'string') {
             // Si ya es un string que parece un JSON array
@@ -70,16 +69,10 @@ const NewAgent = () => {
             }
           }
 
-          console.log("Parsed Abilities:", parsedAbilities);
-          console.log("Tipo:", typeof parsedAbilities, "Es array:", Array.isArray(parsedAbilities));
-
           if (Array.isArray(parsedAbilities)) {
-            // Usamos setTimeout para asegurar que este cambio de estado ocurra después
-            // de los demás cambios de estado iniciales
-            setTimeout(() => {
-              setSelectedAbilities(parsedAbilities);
-              console.log("selectedAbilities actualizado en useEffect:", parsedAbilities);
-            }, 0);
+            setSelectedAbilities(parsedAbilities);
+            // Forzar actualización de la UI
+            setForceUpdate(prev => prev + 1);
           } else {
             console.error("Las abilities parseadas no son un array", parsedAbilities);
             setSelectedAbilities([]);
@@ -94,12 +87,9 @@ const NewAgent = () => {
     }
   }, [agentFind]);
 
+  // Actualizar las habilidades cuando cambia el rol (solo si no estamos en modo edición)
   useEffect(() => {
-    console.log("Estado de selectedAbilities actualizado:", selectedAbilities);
-  }, [selectedAbilities]);
-  // Actualizar las habilidades cuando cambia el rol
-  useEffect(() => {
-    if (role) {
+    if (role && !agentFind) {
       // Mapear el valor del rol a la clave del objeto ROLES
       let roleKey;
       switch (role) {
@@ -112,11 +102,13 @@ const NewAgent = () => {
 
       if (roleKey && ROLE_DEFAULT_ABILITIES[roleKey]) {
         setSelectedAbilities(ROLE_DEFAULT_ABILITIES[roleKey]);
+        // Forzar actualización de la UI
+        setForceUpdate(prev => prev + 1);
       } else {
         setSelectedAbilities([]);
       }
     }
-  }, [role]);
+  }, [role, agentFind]);
 
   // Efecto para limpiar el mensaje de éxito después de un tiempo
   useEffect(() => {
@@ -142,30 +134,28 @@ const NewAgent = () => {
     setRole('');
     setSelectedAbilities([]);
   };
-  const toggleAbilitySelection = (ability) => {
-    console.log("Toggle ability:", ability);
-    console.log("Estado actual:", selectedAbilities);
 
+  const toggleAbilitySelection = (ability) => {
     setSelectedAbilities(prevAbilities => {
       // Verificar que prevAbilities sea un array
       const currentAbilities = Array.isArray(prevAbilities) ? prevAbilities : [];
 
       // Verificar si la habilidad ya existe
       const exists = currentAbilities.includes(ability);
-      console.log("¿Existe ya?", exists);
 
       if (exists) {
         // Quitar la habilidad
-        const newAbilities = currentAbilities.filter(a => a !== ability);
-        console.log("Quitando ability, nuevo estado:", newAbilities);
-        return newAbilities;
+        return currentAbilities.filter(a => a !== ability);
       } else {
         // Agregar la habilidad
-        const newAbilities = [...currentAbilities, ability];
-        console.log("Agregando ability, nuevo estado:", newAbilities);
-        return newAbilities;
+        return [...currentAbilities, ability];
       }
     });
+
+    // Forzar actualización de la UI
+    setTimeout(() => {
+      setForceUpdate(prev => prev + 1);
+    }, 0);
   };
 
   const handleCreateAgent = useCallback(
@@ -200,7 +190,7 @@ const NewAgent = () => {
         }
       }
     },
-    [firstName, lastName, email, password, role, selectedAbilities, isFormValid, callEndpoint]
+    [firstName, lastName, email, password, role, selectedAbilities, isFormValid, callEndpoint, setAgentHandle]
   );
 
   const handleUpdateAgent = useCallback(
@@ -217,9 +207,6 @@ const NewAgent = () => {
           "role": role,
           "abilities": JSON.stringify(abilitiesToSend),
         };
-
-        console.log("Datos a enviar:", formAgentData);
-        console.log("Abilities a enviar:", abilitiesToSend);
 
         try {
           const response = await callEndpoint(updateAgent(idAgent, formAgentData));
@@ -240,13 +227,11 @@ const NewAgent = () => {
         }
       }
     },
-    [firstName, lastName, email, role, selectedAbilities, isFormValidForUpdate, callEndpoint, idAgent, setAgentFind]
+    [firstName, lastName, email, role, selectedAbilities, isFormValidForUpdate, callEndpoint, idAgent, setAgentFind, setAgentHandle]
   );
 
   // Renderiza cada sección de habilidades
   const renderAbilitySection = (sectionName, abilities) => {
-    console.log(`Renderizando sección ${sectionName}, selectedAbilities:`, selectedAbilities);
-
     return (
       <div key={sectionName} className="mb-4">
         <h3 className="text-[#FF9619] font-medium mb-2">{sectionName}</h3>
@@ -256,19 +241,16 @@ const NewAgent = () => {
             const isChecked = Array.isArray(selectedAbilities) &&
               selectedAbilities.includes(abilityValue);
 
-            // Log para depuración
-            console.log(`Checkbox ${abilityValue}: ${isChecked ? 'Seleccionado' : 'No seleccionado'}`);
-
             return (
               <div key={abilityValue} className="flex items-center">
                 <input
                   type="checkbox"
-                  id={abilityValue}
+                  id={`${abilityValue}-${forceUpdate}`} // Añadimos forceUpdate al id para forzar re-render
                   checked={isChecked}
                   onChange={() => toggleAbilitySelection(abilityValue)}
                   className="mr-2 h-4 w-4 accent-[#FF9619]"
                 />
-                <label htmlFor={abilityValue} className="text-sm text-gray-300">
+                <label htmlFor={`${abilityValue}-${forceUpdate}`} className="text-sm text-gray-300">
                   {abilityKey}
                 </label>
               </div>
@@ -278,178 +260,193 @@ const NewAgent = () => {
       </div>
     );
   };
+
+  // Calcular contador de permisos seleccionados - asegurándonos que es un array válido
+  const selectedAbilitiesCount = Array.isArray(selectedAbilities) ? selectedAbilities.length : 0;
+
   return (
-    <div className={`bg-gray-900 rounded-lg w-full p-6 space-y-4 h-max ${isMobile ? "" : "mt-5"}`}>
-      {/* Header */}
-      <div className="flex items-center p-4 bg-gray-800 rounded-lg">
-        <User size={20} className="text-[#FF9619] mr-4" />
-        <h1 className="text-xl font-normal">{agentFind ? 'Editar Agente' : 'Nuevo Agente'}</h1>
-      </div>
-
-      {/* Form */}
-      <div className="p-4 flex-1 flex flex-col space-y-6">
-        {/* First Name */}
-        <div className="border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
-          <input
-            type="text"
-            placeholder="Nombres"
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            className="w-full bg-transparent text-white outline-none"
-          />
+    // Envolveremos todo el componente con un AbilityGuard para verificar si puede ver este componente
+    <AbilityGuard abilities={[agentFind ? ABILITIES.AGENTS.EDIT : ABILITIES.AGENTS.CREATE]}>
+      <div className={`bg-gray-900 rounded-lg w-full p-6 space-y-4 h-max ${isMobile ? "" : "mt-5"}`}>
+        {/* Header */}
+        <div className="flex items-center p-4 bg-gray-800 rounded-lg">
+          <User size={20} className="text-[#FF9619] mr-4" />
+          <h1 className="text-xl font-normal">{agentFind ? 'Editar Agente' : 'Nuevo Agente'}</h1>
         </div>
 
-        {/* Last Name */}
-        <div className="border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
-          <input
-            type="text"
-            placeholder="Apellidos"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            className="w-full bg-transparent text-white outline-none"
-          />
-        </div>
-
-        {/* Email */}
-        <div className="border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
-          <input
-            type="email"
-            placeholder="Correo"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full bg-transparent text-white outline-none"
-          />
-        </div>
-
-        {/* Password - solo se muestra en modo creación */}
-        {!agentFind && (
+        {/* Form */}
+        <div className="p-4 flex-1 flex flex-col space-y-6">
+          {/* First Name */}
           <div className="border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
             <input
-              type="password"
-              placeholder="Contraseña"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              type="text"
+              placeholder="Nombres"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
               className="w-full bg-transparent text-white outline-none"
             />
           </div>
-        )}
 
-        {/* Role Combobox */}
-        <div className="border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            className={`w-full bg-gray-900 outline-none ${role ? 'text-white' : 'text-gray-400'}`}
-          >
-            <option value="">Seleccionar Rol</option>
-            <option value="1">Administrador</option>
-            <option value="2">Supervisor</option>
-            <option value="3">Agente</option>
-            <option value="4">Solo Lectura</option>
-          </select>
-        </div>
-
-        {/* Botón para gestionar permisos */}
-        <div className="flex justify-center">
-          <button
-            type="button"
-            onClick={() => setShowAbilitiesModal(true)}
-            className="flex items-center space-x-2 py-2 px-4 bg-gray-800 hover:bg-gray-700 text-white rounded-md"
-          >
-            <Settings size={18} className="text-[#FF9619]" />
-            <span>
-              Gestionar Permisos ({Array.isArray(selectedAbilities) ? selectedAbilities.length : 0})
-            </span>
-          </button>
-        </div>
-
-        {/* Success and Error Messages */}
-        {error && (
-          <div className="text-red-500 text-sm">
-            {error}
+          {/* Last Name */}
+          <div className="border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
+            <input
+              type="text"
+              placeholder="Apellidos"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              className="w-full bg-transparent text-white outline-none"
+            />
           </div>
-        )}
 
-        {success && (
-          <div className="text-green-500 text-sm">
-            {success}
+          {/* Email */}
+          <div className="border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
+            <input
+              type="email"
+              placeholder="Correo"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full bg-transparent text-white outline-none"
+            />
           </div>
-        )}
 
-        {/* Save Button */}
-        <div>
-          {agentFind ? (
-            <div className='flex space-x-4'>
-              <button
-                onClick={handleUpdateAgent}
-                disabled={!isFormValidForUpdate || loading}
-                className="py-2 px-4 rounded bg-naranja-base text-white transition-colors duration-300 hover:bg-naranja-medio disabled:bg-gray-600 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Guardando...' : 'Actualizar'}
-              </button>
-              <button
-                onClick={handleCancelEdit}
-                className="py-2 px-4 rounded bg-red-500 text-white"
-              >
-                Cancelar
-              </button>
-            </div>
-          ) : (
-            <button
-              disabled={!isFormValid || loading}
-              onClick={handleCreateAgent}
-              className="w-full py-3 rounded-md disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors duration-300 text-white cursor-pointer rounded-full p-2 bg-naranja-base hover:bg-naranja-medio"
-            >
-              {loading ? 'Guardando...' : 'Guardar'}
-            </button>
+          {/* Password - solo se muestra en modo creación */}
+          {!agentFind && (
+            <AbilityGuard abilities={[ABILITIES.AGENTS.CREATE]}>
+              <div className="border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
+                <input
+                  type="password"
+                  placeholder="Contraseña"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-transparent text-white outline-none"
+                />
+              </div>
+            </AbilityGuard>
           )}
-        </div>
-      </div>
 
-      {/* Modal de Abilities */}
-      {showAbilitiesModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-gray-800 rounded-lg p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl text-white font-medium flex items-center">
-                <CheckSquare size={20} className="text-[#FF9619] mr-2" />
-                Configurar Permisos
-              </h2>
+          {/* Role Combobox */}
+          <div className="border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className={`w-full bg-gray-900 outline-none ${role ? 'text-white' : 'text-gray-400'}`}
+            >
+              <option value="">Seleccionar Rol</option>
+              <option value="1">Administrador</option>
+              <option value="2">Supervisor</option>
+              <option value="3">Agente</option>
+              <option value="4">Solo Lectura</option>
+            </select>
+          </div>
+
+          {/* Botón para gestionar permisos */}
+          <AbilityGuard abilities={[agentFind ? ABILITIES.AGENTS.EDIT : ABILITIES.AGENTS.CREATE]}>
+            <div className="flex justify-center">
               <button
-                onClick={() => setShowAbilitiesModal(false)}
-                className="text-gray-400 hover:text-white"
+                type="button"
+                onClick={() => setShowAbilitiesModal(true)}
+                className="flex items-center space-x-2 py-2 px-4 bg-gray-800 hover:bg-gray-700 text-white rounded-md"
               >
-                ✕
+                <Settings size={18} className="text-[#FF9619]" />
+                <span>
+                  Gestionar Permisos ({selectedAbilitiesCount})
+                </span>
               </button>
             </div>
+          </AbilityGuard>
 
-            <div className="mb-4">
-              <p className="text-gray-300 text-sm">
-                Total de permisos seleccionados: {Array.isArray(selectedAbilities) ? selectedAbilities.length : 0}
-              </p>
+          {/* Success and Error Messages */}
+          {error && (
+            <div className="text-red-500 text-sm">
+              {error}
             </div>
+          )}
 
-            <div className="space-y-6">
-              {renderAbilitySection('Listado de Chats', ABILITIES.CHATS)}
-              {renderAbilitySection('Panel de Chat', ABILITIES.CHAT_PANEL)}
-              {renderAbilitySection('Utilidades', ABILITIES.UTILITIES)}
-              {renderAbilitySection('Contactos', ABILITIES.CONTACTS)}
-              {renderAbilitySection('Agentes', ABILITIES.AGENTS)}
-              {renderAbilitySection('Perfil', ABILITIES.PROFILE)}
+          {success && (
+            <div className="text-green-500 text-sm">
+              {success}
             </div>
+          )}
 
-            <div className="mt-6 flex justify-end">
-              <button
-                onClick={() => setShowAbilitiesModal(false)}
-                className="py-2 px-4 bg-[#FF9619] hover:bg-[#e68000] text-white rounded-md"
-              >
-                Confirmar
-              </button>
-            </div>
+          {/* Save Button */}
+          <div>
+            {agentFind ? (
+              <AbilityGuard abilities={[ABILITIES.AGENTS.EDIT]}>
+                <div className='flex space-x-4'>
+                  <button
+                    onClick={handleUpdateAgent}
+                    disabled={!isFormValidForUpdate || loading}
+                    className="py-2 px-4 rounded bg-naranja-base text-white transition-colors duration-300 hover:bg-naranja-medio disabled:bg-gray-600 disabled:cursor-not-allowed"
+                  >
+                    {loading ? 'Guardando...' : 'Actualizar'}
+                  </button>
+                  <button
+                    onClick={handleCancelEdit}
+                    className="py-2 px-4 rounded bg-red-500 text-white"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </AbilityGuard>
+            ) : (
+              <AbilityGuard abilities={[ABILITIES.AGENTS.CREATE]}>
+                <button
+                  disabled={!isFormValid || loading}
+                  onClick={handleCreateAgent}
+                  className="w-full py-3 rounded-md disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors duration-300 text-white cursor-pointer rounded-full p-2 bg-naranja-base hover:bg-naranja-medio"
+                >
+                  {loading ? 'Guardando...' : 'Guardar'}
+                </button>
+              </AbilityGuard>
+            )}
           </div>
         </div>
-      )}
-    </div>
+
+        {/* Modal de Abilities */}
+        {showAbilitiesModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="bg-gray-800 rounded-lg p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl text-white font-medium flex items-center">
+                  <CheckSquare size={20} className="text-[#FF9619] mr-2" />
+                  Configurar Permisos
+                </h2>
+                <button
+                  onClick={() => setShowAbilitiesModal(false)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <p className="text-gray-300 text-sm">
+                  Total de permisos seleccionados: {selectedAbilitiesCount}
+                </p>
+              </div>
+
+              <div className="space-y-6">
+                {renderAbilitySection('Listado de Chats', ABILITIES.CHATS)}
+                {renderAbilitySection('Panel de Chat', ABILITIES.CHAT_PANEL)}
+                {renderAbilitySection('Utilidades', ABILITIES.UTILITIES)}
+                {renderAbilitySection('Contactos', ABILITIES.CONTACTS)}
+                {renderAbilitySection('Agentes', ABILITIES.AGENTS)}
+                {renderAbilitySection('Perfil', ABILITIES.PROFILE)}
+              </div>
+
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={() => setShowAbilitiesModal(false)}
+                  className="py-2 px-4 bg-[#FF9619] hover:bg-[#e68000] text-white rounded-md"
+                >
+                  Confirmar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </AbilityGuard>
   );
 };
 
