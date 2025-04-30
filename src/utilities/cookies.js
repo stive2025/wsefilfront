@@ -8,7 +8,7 @@ export const GetCookieItem = (key) => {
 };
 
 // Set cookie with optional expiration days
-export const setCookieItem = (key, value, days = 7) => {
+export const setCookieItem = (key, value, days = 1) => {
     if (typeof document === 'undefined') return;
 
     const expirationDate = new Date();

@@ -5,7 +5,7 @@ import { loadAbort } from "../hooks/fechAndload.jsx";
 const AUTH_TOKEN_KEY = 'authToken';
 const USER_DATA_KEY = 'userData';
 
-export const loginUser = (loginData) => {
+export const loginService = (loginData) => {
     const abortController = loadAbort();
     return {
       call: CustomFetch("login", {
@@ -63,7 +63,10 @@ export const logout = () => {
 // Función para añadir el token a las peticiones fetch
 export const fetchWithAuth = async (url, options = {}) => {
   const token = getAuthToken();
-  console.log(token)
+  if (!token) {
+    throw new Error('No authentication token available');
+  }
+
   const authOptions = {
     ...options,
     headers: {
@@ -74,10 +77,8 @@ export const fetchWithAuth = async (url, options = {}) => {
   
   const response = await fetch(url, authOptions);
   
-  // Si recibimos un 401 (Unauthorized), podríamos manejar el logout automático
   if (response.status === 401) {
     logout();
-    // Opcional: redirigir al login
     window.location.href = '/login';
     throw new Error('Sesión expirada');
   }
