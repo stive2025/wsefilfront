@@ -4,13 +4,11 @@ import "tailwindcss";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
-import { setCookieItem } from "/src/utilities/cookies.js"; // Ajusta la ruta según tu estructura
-import { loginUser } from "/src/services/authService.js"; // Asegúrate de importar loginUser
+import { useAuth } from '/src/contexts/authContext'; //
 
 const LoginForm = () => {
   const navigate = useNavigate();
-  const { loading, callEndpoint } = useFetchAndLoad();
+  const { login, loading } = useAuth();
   const [credentials, setCredentials] = useState({
     email: '',
     password: ''
@@ -22,30 +20,17 @@ const LoginForm = () => {
     setError('');
 
     try {
-      // Configurar la llamada al API usando loginUser
-      const apiCall = loginUser(credentials);      
-      // Realizar la llamada al API
-      const response = await callEndpoint(apiCall, 'login');
-
-      // Verificar si recibimos un token
-      if (response && response.token) {
-        // Guardar el token en las cookies (7 días de expiración por defecto)
-        setCookieItem('authToken', response.token.plainTextToken);
-        console.log("Token guardado:", response.token.plainTextToken);
-        // Si hay información adicional del usuario, también la puedes guardar
-        if (response.user) {
-          setCookieItem('userData', JSON.stringify(response.user));
-        }
-
-        // Redirigir a la página principal después del login exitoso
+      const success = await login(credentials);
+      if (success) {
         navigate("/chatList");
       } else {
-        setError('No se recibió token de autenticación');
+        setError('Credenciales incorrectas');
       }
     } catch (error) {
       setError(error.message || 'Error al iniciar sesión');
     }
   };
+
 
   const handleReset = () => {
     setCredentials({

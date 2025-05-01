@@ -7,7 +7,10 @@ import Resize from "/src/hooks/responsiveHook.jsx";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import Cookies from "js-cookie";
-import CustomFetch from "/src/services/apiService.js";
+import { searchChat, downloadChat } from "/src/services/chats.js";
+import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
+import { ABILITIES } from '/src/constants/abilities';
+import AbilityGuard from '/src/components/common/AbilityGuard.jsx';
 
 const SearchInChat = () => {
     const { setSearchInChat } = useContext(SearchInChatClick);
@@ -20,6 +23,7 @@ const SearchInChat = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
+    const { callEndpoint } = useFetchAndLoad();
 
     const variants = {
         hidden: { opacity: 0, x: 100 },
@@ -33,13 +37,39 @@ const SearchInChat = () => {
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     };
 
-    const executeSearch = async (download = false) => {
+    // Build query parameters for API calls
+    const buildQueryParams = () => {
+        const params = new URLSearchParams();
+
+        if (startDate) params.append("start_date", formatDateForAPI(startDate));
+        if (endDate) params.append("end_date", formatDateForAPI(endDate));
+        if (searchText) params.append("body", searchText);
+
+        return params.toString();
+    };
+
+    // Build request body for search API
+    const buildRequestBody = () => {
+        return {
+            start_date: formatDateForAPI(startDate) || "",
+            end_date: formatDateForAPI(endDate) || "",
+            body: searchText || "",
+            download: false,
+        };
+    };
+
+    // Function to handle search
+    const handleSearch = async () => {
+        if (!selectedChatId || !selectedChatId.id) {
+            console.error("No chat selected");
+            return;
+        }
+
         setIsLoading(true);
         setHasSearched(true);
 
         try {
             const userData = JSON.parse(Cookies.get("userData") || "{}");
-
             const userId = userData.id;
 
             if (!userId) {
@@ -47,44 +77,88 @@ const SearchInChat = () => {
                 return;
             }
 
-            // Build the request body with the correct structure
-            const requestBody = {
-                start_date: formatDateForAPI(startDate) || "",
-                end_date: formatDateForAPI(endDate) || "",
-                body: searchText || "",
-                download: download
-            };
-            const endpoint = `chats/search/${selectedChatId.id}`;
+            const requestBody = buildRequestBody();
+            // Call search API and update search results
+            const response = await callEndpoint(searchChat(selectedChatId.id, requestBody));
 
-            const response = await CustomFetch(endpoint, {
-                method: 'POST',
-                body: JSON.stringify(requestBody)
-            });
-            // Handle download if requested
-            if (download && response.download) {
-                window.open(response.download, '_blank');
-                return;
+            // Assuming the response has a data property with the search results
+            if (response) {
+                setSearchResults(response);
+            } else {
+                setSearchResults([]);
             }
-            setSearchResults(response || []);
         } catch (error) {
             console.error("Error searching messages:", error);
+            setSearchResults([]);
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleSearch = () => executeSearch(false);
-    const formatTimestamp = (timestamp) => {
-        const date = new Date(timestamp);
-        return date.toLocaleString();
+    // Separate function to handle download
+    const handleDownload = async () => {
+        if (!selectedChatId || !selectedChatId.id) {
+            console.error("No chat selected");
+            return;
+        }
+
+        setIsLoading(true);
+
+        try {
+            // Construir la URL con todos los parámetros de búsqueda
+            const baseUrl = `${selectedChatId.id}`;
+            const params = buildQueryParams();
+            const fullUrl = `${baseUrl}?${params}`;
+
+            // Llamar al endpoint de descarga
+            const response = await callEndpoint(downloadChat(fullUrl));
+
+            // Verificar que tenemos una respuesta
+            if (!response) {
+                throw new Error('No se recibió respuesta del servidor');
+            }
+
+            // Crear una URL del blob
+            const url = window.URL.createObjectURL(response);
+
+            // Generar un nombre descriptivo para el archivo
+            const today = new Date().toISOString().split('T')[0];
+            const fileName = `chat_history_${selectedChatId.id}_${today}.pdf`;
+
+            // Crear un elemento <a> para la descarga
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', fileName);
+
+            // Hacer click en el enlace para iniciar la descarga
+            document.body.appendChild(link);
+            link.click();
+
+            // Limpiar después de la descarga
+            setTimeout(() => {
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+            }, 100);
+
+        } catch (error) {
+            console.error("Error downloading chat history:", error);
+            // Notificar al usuario del error
+            alert("Error al descargar el historial de chat. Por favor intente nuevamente.");
+        } finally {
+            setIsLoading(false);
+        }
     };
-    const downloadChatHistory = () => executeSearch(true);
 
     // Handle Enter key press in search input
     const handleKeyPress = (e) => {
         if (e.key === "Enter") {
             handleSearch();
         }
+    };
+
+    const formatTimestamp = (timestamp) => {
+        const date = new Date(timestamp);
+        return date.toLocaleString();
     };
 
     return (
@@ -107,67 +181,70 @@ const SearchInChat = () => {
                 </div>
             </div>
             <div className="p-2 bg-gray-900">
-                <div className="relative flex items-center mb-2">
-                    <input
-                        type="text"
-                        placeholder="Buscar"
-                        className="w-full bg-gray-800 rounded-lg pl-8 pr-10 py-2 text-white placeholder-gray-400"
-                        value={searchText}
-                        onChange={(e) => setSearchText(e.target.value)}
-                        onKeyPress={handleKeyPress}
-                    />
-                    <Search className="absolute left-2 text-gray-400" size={18} />
-                    <div className="absolute right-2 flex items-center gap-2">
-                        <button
-                            className="text-white cursor-pointer rounded-full p-1 hover:bg-gray-700"
-                            onClick={() => setShowDatePicker(!showDatePicker)}
-                        >
-                            <Calendar className="text-gray-400" size={18} />
-                        </button>
-                        <button
-                            className="text-white cursor-pointer rounded-full p-1 hover:bg-gray-700"
-                            onClick={handleSearch}
-                        >
-                            <ArrowRight className="text-gray-400" size={18} />
-                        </button>
-                    </div>
-                </div>
-
-                {/* Date Range Picker */}
-                {showDatePicker && (
-                    <div className="bg-gray-800 p-3 rounded-lg mb-3">
-                        <div className="flex flex-col md:flex-row gap-2">
-                            <div className="flex flex-col flex-1">
-                                <label className="text-sm text-gray-400 mb-1">Fecha inicial</label>
-                                <DatePicker
-                                    selected={startDate}
-                                    onChange={date => setStartDate(date)}
-                                    selectsStart
-                                    startDate={startDate}
-                                    endDate={endDate}
-                                    className="w-full bg-gray-900 rounded-lg px-3 py-2 text-white"
-                                    placeholderText="Seleccionar fecha inicial"
-                                    dateFormat="dd/MM/yyyy"
-                                />
-                            </div>
-                            <div className="flex flex-col flex-1">
-                                <label className="text-sm text-gray-400 mb-1">Fecha final</label>
-                                <DatePicker
-                                    selected={endDate}
-                                    onChange={date => setEndDate(date)}
-                                    selectsEnd
-                                    startDate={startDate}
-                                    endDate={endDate}
-                                    minDate={startDate}
-                                    className="w-full bg-gray-900 rounded-lg px-3 py-2 text-white"
-                                    placeholderText="Seleccionar fecha final"
-                                    dateFormat="dd/MM/yyyy"
-                                />
-                            </div>
+                <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.SEARCH_MESSAGES]}>
+                    <div className="relative flex items-center mb-2">
+                        <input
+                            type="text"
+                            placeholder="Buscar"
+                            className="w-full bg-gray-800 rounded-lg pl-8 pr-10 py-2 text-white placeholder-gray-400"
+                            value={searchText}
+                            onChange={(e) => setSearchText(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                        />
+                        <Search className="absolute left-2 text-gray-400" size={18} />
+                        <div className="absolute right-2 flex items-center gap-2">
+                            <button
+                                className="text-white cursor-pointer rounded-full p-1 hover:bg-gray-700"
+                                onClick={() => setShowDatePicker(!showDatePicker)}
+                            >
+                                <Calendar className="text-gray-400" size={18} />
+                            </button>
+                            <button
+                                className="text-white cursor-pointer rounded-full p-1 hover:bg-gray-700"
+                                onClick={handleSearch}
+                            >
+                                <ArrowRight className="text-gray-400" size={18} />
+                            </button>
                         </div>
                     </div>
-                )}
+                </AbilityGuard>
+                {/* Date Range Picker */}
+                <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.SEARCH_MESSAGES]}>
 
+                    {showDatePicker && (
+                        <div className="bg-gray-800 p-3 rounded-lg mb-3">
+                            <div className="flex flex-col md:flex-row gap-2">
+                                <div className="flex flex-col flex-1">
+                                    <label className="text-sm text-gray-400 mb-1">Fecha inicial</label>
+                                    <DatePicker
+                                        selected={startDate}
+                                        onChange={date => setStartDate(date)}
+                                        selectsStart
+                                        startDate={startDate}
+                                        endDate={endDate}
+                                        className="w-full bg-gray-900 rounded-lg px-3 py-2 text-white"
+                                        placeholderText="Seleccionar fecha inicial"
+                                        dateFormat="dd/MM/yyyy"
+                                    />
+                                </div>
+                                <div className="flex flex-col flex-1">
+                                    <label className="text-sm text-gray-400 mb-1">Fecha final</label>
+                                    <DatePicker
+                                        selected={endDate}
+                                        onChange={date => setEndDate(date)}
+                                        selectsEnd
+                                        startDate={startDate}
+                                        endDate={endDate}
+                                        minDate={startDate}
+                                        className="w-full bg-gray-900 rounded-lg px-3 py-2 text-white"
+                                        placeholderText="Seleccionar fecha final"
+                                        dateFormat="dd/MM/yyyy"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </AbilityGuard>
                 {/* Search Results */}
                 <div className="mt-4">
                     {isLoading ? (
@@ -180,31 +257,35 @@ const SearchInChat = () => {
                                 <div>
                                     <div className="flex justify-between items-center mb-2">
                                         <p className="text-sm text-gray-400">{searchResults.length} mensajes encontrados</p>
-                                        <button
-                                            className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm"
-                                            onClick={downloadChatHistory}
-                                        >
-                                            <Download size={14} /> Descargar
-                                        </button>
-                                    </div>
-                                    <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
-                                        {searchResults.map((message, index) => (
-                                            <div
-                                                key={index}
-                                                className={`p-3 rounded-lg ${message.from_me === "true" ? 'bg-blue-800 ml-8' : 'bg-gray-800 mr-8'}`}
+                                        <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.DOWNLOAD_HISTORY]}>
+                                            <button
+                                                className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm"
+                                                onClick={handleDownload}
                                             >
-                                                <div className="flex justify-between items-center mb-1">
-                                                    <span className="text-xs font-medium text-gray-400">
-                                                        {message.from_me === "true" ? 'Tú' : 'Contacto'}
-                                                    </span>
-                                                    <span className="text-xs text-gray-500">
-                                                        {formatTimestamp(message.created_at)}
-                                                    </span>
-                                                </div>
-                                                <p className="text-sm">{message.body}</p>
-                                            </div>
-                                        ))}
+                                                <Download size={14} /> Descargar
+                                            </button>
+                                        </AbilityGuard>
                                     </div>
+                                    <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.SEARCH_MESSAGES]}>
+                                        <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+                                            {searchResults.map((message, index) => (
+                                                <div
+                                                    key={index}
+                                                    className={`p-3 rounded-lg ${message.from_me === "true" ? 'bg-blue-800 ml-8' : 'bg-gray-800 mr-8'}`}
+                                                >
+                                                    <div className="flex justify-between items-center mb-1">
+                                                        <span className="text-xs font-medium text-gray-400">
+                                                            {message.from_me === "true" ? 'Tú' : selectedChatId.name}
+                                                        </span>
+                                                        <span className="text-xs text-gray-500">
+                                                            {formatTimestamp(message.created_at)}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-sm">{message.body}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </AbilityGuard>
                                 </div>
                             ) : (
                                 <div className="text-center py-6 text-gray-400">
@@ -212,7 +293,17 @@ const SearchInChat = () => {
                                 </div>
                             )}
                         </>
-                    ) : null}
+                    ) : (
+                        <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.SEARCH_MESSAGES]} fallback={
+                            <div className="text-center py-6 text-gray-400">
+                                No tienes permisos para buscar mensajes en este chat.
+                            </div>
+                        }>
+                            <div className="text-center py-6 text-gray-400">
+                                Ingresa términos de búsqueda y/o selecciona un rango de fechas.
+                            </div>
+                        </AbilityGuard>
+                    )}
                 </div>
             </div>
         </motion.div>

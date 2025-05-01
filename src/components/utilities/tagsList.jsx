@@ -5,6 +5,7 @@ import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
 import { useContext, useEffect, useState, useRef, useCallback } from "react";
 import { TagsCreateForm, UpdateTagForm, TagHandle } from "/src/contexts/chats.js";
 import { getTags, deleteTag, getTag } from "/src/services/tags.js";
+import toast from "react-hot-toast";
 
 // Reusable Search Input Component
 const SearchInput = ({ searchTerm, onSearchChange }) => (
@@ -40,7 +41,13 @@ const TagsItems = ({ tags, onDeleteTag, isDeleting, onFindTag, loadingMore, last
           <div className="w-full flex items-center space-x-3 hover:bg-gray-700 cursor-pointer active:bg-gray-600">
             {/* Tag Details */}
             <div className="flex-1">
-              <div className="font-medium text-sm md:text-base">{tag.name}</div>
+              <div className="flex items-center space-x-2 font-medium text-sm md:text-base">
+                <div
+                  className="w-4 h-4 rounded-full"
+                  style={{ backgroundColor: tag.color }}
+                ></div>
+                <span>{tag.name}</span>
+              </div>
               <div className="text-xs md:text-sm text-gray-400 overflow-hidden text-ellipsis whitespace-nowrap max-w-[200px]">
                 {tag.description || "Sin descripción"}
               </div>
@@ -70,6 +77,7 @@ const TagsItems = ({ tags, onDeleteTag, isDeleting, onFindTag, loadingMore, last
   );
 };
 
+
 const TagsList = () => {
   const { setTagsClick } = useContext(TagsCreateForm);
   const { setTagFind } = useContext(UpdateTagForm);
@@ -77,7 +85,6 @@ const TagsList = () => {
 
   const isMobile = Resize();
   const [tags, setTags] = useState([]);
-  const [error, setError] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const { loading, callEndpoint } = useFetchAndLoad();
   const [currentPage, setCurrentPage] = useState(1);
@@ -88,60 +95,58 @@ const TagsList = () => {
   const [, setTotalItems] = useState(0);
   const [isSearchMode, setIsSearchMode] = useState(false);
 
-  // Reference to the last element for intersection
   const observer = useRef();
-  const lastTagRef = useCallback(node => {
-    if (loading || loadingMore) return;
+  const lastTagRef = useCallback(
+    (node) => {
+      if (loading || loadingMore) return;
 
-    // Disconnect previous observer
-    if (observer.current) observer.current.disconnect();
+      if (observer.current) observer.current.disconnect();
 
-    observer.current = new IntersectionObserver(entries => {
-      // If the element is visible and there are more data to load
-      if (entries[0].isIntersecting && hasMore && !loadingMore) {
-        loadMoreTags();
-      }
-    }, { threshold: 0.5 }); // Activate when 50% of the element is visible
+      observer.current = new IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting && hasMore && !loadingMore) {
+            loadMoreTags();
+          }
+        },
+        { threshold: 0.5 }
+      );
 
-    if (node) observer.current.observe(node);
-  }, [hasMore, loadingMore, loading]);
+      if (node) observer.current.observe(node);
+    },
+    [hasMore, loadingMore, loading]
+  );
 
-  // Load initial data
   useEffect(() => {
     fetchTags(1, true);
-    setTagHandle(false); // Reset tag handle state when loading the list
+    setTagHandle(false);
   }, [tagHandle]);
 
-  // Effect to handle search with debounce
   useEffect(() => {
     if (searchTimeout) {
       clearTimeout(searchTimeout);
     }
 
-    setSearchTimeout(setTimeout(() => {
-      // If search term is empty, return to normal pagination
-      if (!searchTerm) {
-        setIsSearchMode(false);
-        fetchTags(1, true);
-      } else {
-        setIsSearchMode(true);
-        fetchTagsByName(searchTerm);
-      }
-    }, 500)); // Reduced to 500ms for better response
+    setSearchTimeout(
+      setTimeout(() => {
+        if (!searchTerm) {
+          setIsSearchMode(false);
+          fetchTags(1, true);
+        } else {
+          setIsSearchMode(true);
+          fetchTagsByName(searchTerm);
+        }
+      }, 500)
+    );
 
     return () => {
       if (searchTimeout) clearTimeout(searchTimeout);
     };
   }, [searchTerm]);
 
-  // Function to get tags by pagination
   const fetchTags = async (page = 1, reset = false) => {
     try {
-      // Prevent multiple simultaneous requests
       if ((loading && !reset) || (loadingMore && !reset)) return;
 
-      // If resetting, activate main loading state
-      // If loading more, activate loadingMore
       if (reset) {
         setTags([]);
         setCurrentPage(1);
@@ -150,48 +155,30 @@ const TagsList = () => {
         setLoadingMore(true);
       }
 
-      // Build parameters for API call - only pagination
-      const params = {
-        page: page
-      };
-
-      // Call getTags() with parameters
+      const params = { page };
       const tagsCall = getTags(params);
       const response = await callEndpoint(tagsCall);
 
-      // Process paginated response
       handleTagsResponse(response, reset, page);
-
     } catch (error) {
-      handleApiError(error);
+      handleApiError(error, "No se pudieron cargar las etiquetas");
     } finally {
       setLoadingMore(false);
     }
   };
 
-  // Function to search tags by name
   const fetchTagsByName = async (name) => {
     try {
       setTags([]);
-
-      // Build parameters for API call - search by name
-      const params = {
-        name: name
-      };
-
-      // Call getTags() with parameters
+      const params = { name };
       const tagsCall = getTags(params);
       const response = await callEndpoint(tagsCall);
-
-      // Process the response
       handleTagsResponse(response, true, 1);
-
     } catch (error) {
-      handleApiError(error);
+      handleApiError(error, "No se pudieron cargar las etiquetas por nombre");
     }
   };
 
-  // Helper function to handle tags responses
   const handleTagsResponse = (response, reset, page) => {
     const newTags = response.data || [];
     setTotalItems(response.total || 0);
@@ -199,31 +186,24 @@ const TagsList = () => {
     if (reset) {
       setTags(newTags);
     } else {
-      // Check for duplicates before adding
-      const existingIds = tags.map(tag => tag.id);
-      const uniqueNewTags = newTags.filter(tag => !existingIds.includes(tag.id));
-      setTags(prev => [...prev, ...uniqueNewTags]);
+      const existingIds = tags.map((tag) => tag.id);
+      const uniqueNewTags = newTags.filter((tag) => !existingIds.includes(tag.id));
+      setTags((prev) => [...prev, ...uniqueNewTags]);
     }
 
-    // Update pagination state
     setCurrentPage(page);
-
-    // Check if more pages are available
     setHasMore(response.next_page_url !== null);
   };
 
-  // Helper function to handle API errors
-  const handleApiError = (error) => {
-    // Only update error state if not an abort error
-    if (error.name !== 'AbortError') {
-      console.error("Error loading tags:", error);
-      setError("No se pudieron cargar las etiquetas");
+  const handleApiError = (error, userMessage = "Ocurrió un error") => {
+    if (error.name !== "AbortError") {
+      console.error("API Error:", error);
+      toast.error(userMessage);
     }
   };
 
   const loadMoreTags = () => {
     if (!hasMore || loadingMore || loading || isSearchMode) return;
-
     fetchTags(currentPage + 1, false);
   };
 
@@ -235,36 +215,29 @@ const TagsList = () => {
     try {
       const deleteCall = deleteTag(id);
       await callEndpoint(deleteCall);
+      toast.success("Etiqueta eliminada correctamente");
+
       if (isSearchMode && searchTerm) {
         fetchTagsByName(searchTerm);
       } else {
         fetchTags(1, true);
       }
     } catch (error) {
-      if (error.name !== 'AbortError') {
-        console.error("Error eliminando etiqueta:", error);
-        setError("No se pudo eliminar la etiqueta");
-      }
+      handleApiError(error, "No se pudo eliminar la etiqueta");
     } finally {
       setIsDeleting(false);
     }
   };
 
-  // Function to get tag to edit
   const handleFindTag = async (id) => {
     try {
       setIsDeleting(true);
       const tagCall = getTag(id);
       const response = await callEndpoint(tagCall);
       setTagFind(response.data);
-
-      // Always set tagsClick to true when editing
       setTagsClick(true);
     } catch (error) {
-      if (error.name !== 'AbortError') {
-        console.error("Error buscando etiqueta:", error);
-        setError("No se pudo cargar la información de la etiqueta");
-      }
+      handleApiError(error, "No se pudo cargar la información de la etiqueta");
     } finally {
       setIsDeleting(false);
     }
@@ -283,12 +256,9 @@ const TagsList = () => {
         <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
       </div>
 
-      {/* Tags list with scroll */}
       <div className="flex-1 overflow-y-auto">
         {loading && tags.length === 0 ? (
           <div className="p-4 text-gray-400">Cargando etiquetas...</div>
-        ) : error ? (
-          <div className="p-4 text-red-400">{error}</div>
         ) : (
           <TagsItems
             tags={tags}
@@ -301,7 +271,6 @@ const TagsList = () => {
         )}
       </div>
 
-      {/* Button to add new tag in mobile */}
       <button
         className="absolute bottom-4 right-4 mb-15 rounded-full p-3 shadow-lg text-white cursor-pointer bg-naranja-base hover:bg-naranja-medio"
         onClick={() => setTagsClick((prev) => !prev)}
@@ -310,8 +279,7 @@ const TagsList = () => {
       </button>
     </div>
   ) : (
-    <div className="flex-1 border-r border-gray-700 flex flex-col  text-white pt-10 ml-10 overflow-y-auto">
-      {/* Fixed header and search */}
+    <div className="flex-1 border-r border-gray-700 flex flex-col text-white pt-10 ml-10 overflow-y-auto">
       <div className="flex flex-row flex-shrink-0">
         <label className="p-1">Etiquetas</label>
       </div>
@@ -319,12 +287,9 @@ const TagsList = () => {
         <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
       </div>
 
-      {/* Tags list with scroll */}
-      <div className="flex-1 overflow-y-auto scrollbar-hide">
+      <div className="flex-1 overflow-y-auto">
         {loading && tags.length === 0 ? (
           <div className="p-4 text-gray-400">Cargando etiquetas...</div>
-        ) : error ? (
-          <div className="p-4 text-red-400">{error}</div>
         ) : (
           <TagsItems
             tags={tags}

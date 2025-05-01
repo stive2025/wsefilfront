@@ -1,11 +1,51 @@
-
+/* eslint-disable react/prop-types */
+// src/components/auth/ProtectedRoute.jsx (corrección rápida)
 import { Navigate, Outlet } from 'react-router-dom';
-import { isAuthenticated } from '/src/services/authService.js'; // Ajusta la ruta
+import { useAuth } from '../../contexts/authContext';
+import { useEffect } from 'react';
 
-const ProtectedRoute = () => {
-  // Si el usuario está autenticado, muestra el componente hijo
-  // Si no, redirige al login
-  return isAuthenticated() ? <Outlet /> : <Navigate to="/login" replace />;
+const ProtectedRoute = ({ requiredAbilities = [], redirectTo = '/login' }) => {
+  const { user, loading, initialCheckDone, hasAnyAbility } = useAuth();
+
+  // Log para depuración
+  useEffect(() => {
+    console.log("ProtectedRoute - Estado:", {
+      user: !!user,
+      userDetails: user ? {
+        name: user.name,
+        abilities: user.abilities ? user.abilities.length : 0
+      } : null,
+      loading,
+      initialCheckDone,
+      requiredAbilities,
+      requiereAbilitiesLength: requiredAbilities.length,
+      // CORRECCIÓN: No intentar llamar hasAnyAbility si user es null
+      userHasAbility: user && requiredAbilities.length > 0 ? hasAnyAbility(requiredAbilities) : 'N/A'
+    });
+  }, [user, loading, initialCheckDone, requiredAbilities, hasAnyAbility]);
+
+  if (!initialCheckDone || loading) {
+    return <div className="loading-screen">Cargando...</div>;
+  }
+
+  if (!user) {
+    console.log("ProtectedRoute - No hay usuario, redirigiendo a", redirectTo);
+    return <Navigate to={redirectTo} replace />;
+  }
+
+  // CORRECCIÓN: Si no hay abilities requeridas, permitir acceso directamente
+  if (requiredAbilities.length === 0) {
+    console.log("ProtectedRoute - No se requieren abilities específicas, permitiendo acceso");
+    return <Outlet />;
+  }
+
+  if (!hasAnyAbility(requiredAbilities)) {
+    console.log("ProtectedRoute - Usuario no tiene permisos necesarios, redirigiendo a /unauthorized");
+    return <Navigate to="/unauthorized" replace />;
+  }
+
+  console.log("ProtectedRoute - Acceso permitido");
+  return <Outlet />;
 };
 
 export default ProtectedRoute;

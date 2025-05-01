@@ -6,27 +6,31 @@ import { useContext, useEffect, useState, useRef, useCallback } from "react";
 import { NewContactForm, ChatInterfaceClick, NewMessage, UpdateContactForm, ContactHandle } from "/src/contexts/chats.js";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getContacts, deleteContact, getContact } from "/src/services/contacts.js";
+import { ABILITIES } from '/src/constants/abilities';
+import AbilityGuard from '/src/components/common/AbilityGuard.jsx';
+//import toast from "react-hot-toast";
 
 // Componentes reutilizables
 const SearchInput = ({ searchTerm, onSearchChange }) => (
-  <div className="p-2 bg-gray-900">
-    <div className="relative flex items-center">
-      <input
-        type="text"
-        placeholder="Search..."
-        className="w-full bg-gray-800 rounded-lg pl-8 pr-2 py-1 text-white placeholder-gray-400"
-        value={searchTerm}
-        onChange={(e) => onSearchChange(e.target.value)}
-      />
-      <Search className="absolute left-1 text-gray-400" size={18} />
+  <AbilityGuard abilities={[ABILITIES.CONTACTS.SEARCH]} fallback={null}>
+    <div className="p-2 bg-gray-900">
+      <div className="relative flex items-center">
+        <input
+          type="text"
+          placeholder="Search..."
+          className="w-full bg-gray-800 rounded-lg pl-8 pr-2 py-1 text-white placeholder-gray-400"
+          value={searchTerm}
+          onChange={(e) => onSearchChange(e.target.value)}
+        />
+        <Search className="absolute left-1 text-gray-400" size={18} />
+      </div>
     </div>
-  </div>
-);
+  </AbilityGuard>
+);    
 
 const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, loadingMore, lastContactRef, setSelectedChatId, setNewMessage }) => {
   const navigate = useNavigate();
   const location = useLocation();
-
   // Verificar si contacts existe y contiene un array antes de mapear
   if (!contacts || !contacts.length) {
     return <div className="p-4 text-gray-400">No hay contactos disponibles</div>;
@@ -47,7 +51,24 @@ const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, lo
               if (location.pathname === "/contacts") {
                 navigate("/chatList");
               }
-              setSelectedChatId(item.id);
+              console.log("Contacto seleccionado:", item);
+              if(item.chat){
+                setSelectedChatId({
+                  id: item.chat.id,
+                  idContact: item.id,
+                  name: item.name,
+                  photo: item.profile_picture,
+                  number: item.phone_number
+                });
+              }else{
+                setSelectedChatId({
+                  idContact: item.id,
+                  name: item.name,
+                  photo: item.profile_picture,
+                  number: item.phone_number
+                });
+              }
+              
               setNewMessage(false);
             }}
           >
@@ -66,19 +87,23 @@ const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, lo
           </div>
           {location.pathname === "/contacts" && (
             <div className="flex">
-              <button
-                className="mr-2 text-gray-400 hover:text-white"
-                onClick={() => onFindContact(item.id)}
-              >
-                <Pencil size={16} />
-              </button>
-              <button
-                className="text-gray-400 hover:text-white"
-                onClick={() => onDeleteContact(item.id)}
-                disabled={isDeleting}
-              >
-                <Trash2 size={16} />
-              </button>
+              <AbilityGuard abilities={[ABILITIES.CONTACTS.EDIT]}>
+                <button
+                  className="mr-2 text-gray-400 hover:text-white"
+                  onClick={() => onFindContact(item.id)}
+                >
+                  <Pencil size={16} />
+                </button>
+              </AbilityGuard>
+              <AbilityGuard abilities={[ABILITIES.CONTACTS.DELETE]}>
+                <button
+                  className="text-gray-400 hover:text-white"
+                  onClick={() => onDeleteContact(item.id)}
+                  disabled={isDeleting}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </AbilityGuard>
             </div>
           )}
         </div>
@@ -183,6 +208,7 @@ const ListContacts = () => {
       // Llamar a getContacts() con los parámetros
       const contactsCall = getContacts(params);
       const response = await callEndpoint(contactsCall);
+      console.log("Respuesta de contactos:", response);
 
       // Procesar la respuesta paginada
       handleContactsResponse(response, reset, page);
@@ -300,89 +326,99 @@ const ListContacts = () => {
     setSearchTerm(term);
   };
 
-  return isMobile ? (
-    <div className="w-full sm:w-80 mt-10 flex flex-col bg-transparent text-white">
-      <div className="flex flex-row flex-shrink-0">
-        {location.pathname === "/chatList" && (
-          <button className="text-white rounded-full cursor-pointer hover:bg-gray-700 active:bg-gray-700 active:text-black p-1"
-            onClick={() => setNewMessage(null)}>
-            <ArrowLeft size={15} />
-          </button>
-        )}
-        <label className="p-1">CONTACTOS</label>
+  return (
+    <AbilityGuard abilities={[ABILITIES.CONTACTS.VIEW]} fallback={
+      <div className="flex justify-center items-center h-screen text-white">
+        No tienes permisos para ver contactos
       </div>
-      {/* Contenedor fijo para header, search */}
-      <div className="flex flex-col flex-shrink-0">
-        <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
-      </div>
+    }>
+      {isMobile ? (
+        <div className="w-full sm:w-80 mt-10 flex flex-col bg-transparent text-white">
+          <div className="flex flex-row flex-shrink-0">
+            {location.pathname === "/chatList" && (
+              <button className="text-white rounded-full cursor-pointer hover:bg-gray-700 active:bg-gray-700 active:text-black p-1"
+                onClick={() => setNewMessage(null)}>
+                <ArrowLeft size={15} />
+              </button>
+            )}
+            <label className="p-1">CONTACTOS</label>
+          </div>
+          {/* Contenedor fijo para header, search */}
+          <div className="flex flex-col flex-shrink-0">
+            <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
+          </div>
 
-      {/* Lista de contactos con scroll */}
-      <div className="flex-1 overflow-y-auto">
-        {loading && contacts.length === 0 ? (
-          <div className="p-4 text-gray-400">Cargando contactos...</div>
-        ) : error ? (
-          <div className="p-4 text-red-400">{error}</div>
-        ) : (
-          <ContactItems
-            contacts={contacts}
-            onDeleteContact={handleDeleteContact}
-            isDeleting={isDeleting}
-            onFindContact={handleFindContact}
-            loadingMore={loadingMore}
-            lastContactRef={lastContactRef}
-            setSelectedChatId={setSelectedChatId}
-            setNewMessage={setNewMessage}
-          />
-        )}
-      </div>
+          {/* Lista de contactos con scroll */}
+          <div className="flex-1 overflow-y-auto">
+            {loading && contacts.length === 0 ? (
+              <div className="p-4 text-gray-400">Cargando contactos...</div>
+            ) : error ? (
+              <div className="p-4 text-red-400">{error}</div>
+            ) : (
+              <ContactItems
+                contacts={contacts}
+                onDeleteContact={handleDeleteContact}
+                isDeleting={isDeleting}
+                onFindContact={handleFindContact}
+                loadingMore={loadingMore}
+                lastContactRef={lastContactRef}
+                setSelectedChatId={setSelectedChatId}
+                setNewMessage={setNewMessage}
+              />
+            )}
+          </div>
 
-      {location.pathname === "/contacts" && (
-        <button
-          className="absolute bottom-4 right-4 mb-15 rounded-full p-3 shadow-lg text-white cursor-pointer bg-naranja-base hover:bg-naranja-medio"
-          onClick={() => setContactNew((prev) => !prev)}
-        >
-          <Plus size={18} />
-        </button>
-      )}
-    </div>
-  ) : (
-    <div className="flex-1 border-r border-gray-700 flex flex-col bg-transparent text-white pt-10 ml-10 overflow-y-auto">
-      {location.pathname === "/chatList" && (
-        <div className="flex flex-row items-center flex-shrink-0 p-2">
-          <button className="text-white rounded-full cursor-pointer hover:bg-gray-700 active:bg-gray-700 active:text-black p-1"
-            onClick={() => setNewMessage(null)}>
-            <ArrowLeft size={15} />
-          </button>
-          <label className="p-1">CONTACTOS</label>
+          {location.pathname === "/contacts" && (
+            <AbilityGuard abilities={[ABILITIES.CONTACTS.CREATE]}>
+              <button
+                className="absolute bottom-4 right-4 mb-15 rounded-full p-3 shadow-lg text-white cursor-pointer bg-naranja-base hover:bg-naranja-medio"
+                onClick={() => setContactNew((prev) => !prev)}
+              >
+                <Plus size={18} />
+              </button>
+            </AbilityGuard>
+          )}
+        </div>
+      ) : (
+        <div className="flex-1 border-r border-gray-700 flex flex-col bg-transparent text-white pt-10 ml-10 overflow-y-auto">
+          {location.pathname === "/chatList" && (
+            <div className="flex flex-row items-center flex-shrink-0 p-2">
+              <button className="text-white rounded-full cursor-pointer hover:bg-gray-700 active:bg-gray-700 active:text-black p-1"
+                onClick={() => setNewMessage(null)}>
+                <ArrowLeft size={15} />
+              </button>
+              <label className="p-1">CONTACTOS</label>
+            </div>
+          )}
+          {/* Fijamos el header y search */}
+          {location.pathname === "/contacts" && (
+            <div className="flex flex-col flex-shrink-0">
+              <label className="p-1">CONTACTOS</label>
+              <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
+            </div>
+          )}
+          {/* Lista de contactos con scroll */}
+          <div className="flex-1 overflow-y-auto scrollbar-hide">
+            {loading && contacts.length === 0 ? (
+              <div className="p-4 text-gray-400">Cargando contactos...</div>
+            ) : error ? (
+              <div className="p-4 text-red-400">{error}</div>
+            ) : (
+              <ContactItems
+                contacts={contacts}
+                onDeleteContact={handleDeleteContact}
+                isDeleting={isDeleting}
+                onFindContact={handleFindContact}
+                loadingMore={loadingMore}
+                lastContactRef={lastContactRef}
+                setSelectedChatId={setSelectedChatId}
+                setNewMessage={setNewMessage}
+              />
+            )}
+          </div>
         </div>
       )}
-      {/* Fijamos el header y search */}
-      {location.pathname === "/contacts" && (
-        <div className="flex flex-col flex-shrink-0">
-          <label className="p-1">CONTACTOS</label>
-          <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
-        </div>
-      )}
-      {/* Lista de contactos con scroll */}
-      <div className="flex-1 overflow-y-auto scrollbar-hide">
-        {loading && contacts.length === 0 ? (
-          <div className="p-4 text-gray-400">Cargando contactos...</div>
-        ) : error ? (
-          <div className="p-4 text-red-400">{error}</div>
-        ) : (
-          <ContactItems
-            contacts={contacts}
-            onDeleteContact={handleDeleteContact}
-            isDeleting={isDeleting}
-            onFindContact={handleFindContact}
-            loadingMore={loadingMore}
-            lastContactRef={lastContactRef}
-            setSelectedChatId={setSelectedChatId}
-            setNewMessage={setNewMessage}
-          />
-        )}
-      </div>
-    </div>
+    </AbilityGuard>
   );
 };
 

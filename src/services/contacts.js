@@ -39,6 +39,27 @@ const getContact = (contactId) => {
   };
 };
 
+
+const getContactChatsByName = (queryParams) => {
+  const abortController = loadAbort();
+  return {
+    call: CustomFetch(`contacts/chats?name=${queryParams}`, {
+      signal: abortController.controller.signal,
+    }),
+    abortController,
+  };
+};
+
+const getContactChatsByPhone = (queryParams) => {
+  const abortController = loadAbort();
+  return {
+    call: CustomFetch(`contacts/chats?phone=${queryParams}`, {
+      signal: abortController.controller.signal,
+    }),
+    abortController,
+  };
+};
+
 const createContact = (contactData) => {
   const abortController = loadAbort();
   return {
@@ -219,5 +240,7 @@ export {
   deleteContact,
   formatPhoneNumber,
   splitPhoneNumber,
-  countryPrefixes
+  countryPrefixes,
+  getContactChatsByName,
+  getContactChatsByPhone
 };

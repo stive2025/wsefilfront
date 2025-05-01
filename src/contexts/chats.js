@@ -25,6 +25,7 @@ export const TagsCreateForm = createContext(false);
 export const UpdateTagForm = createContext();
 export const TagHandle = createContext();
 
+
 // 📌 Contextos relacionados con la creación de mensajes personalizados
 export const CustomCreateForm = createContext(false);
 export const UpdateCustomForm = createContext();
@@ -41,3 +42,9 @@ export const ProfileInfoPanel = createContext(false);
 // 📌 Contexto de Informacion de Conexión
 export const ConnectionInfo = createContext(false);
 export const ConnectionQR = createContext(false);
+
+export const StateFilter = createContext(0);
+export const TagFilter = createContext(0);
+export const AgentFilter = createContext(0);
+
+export const WebSocketMessage  = createContext();

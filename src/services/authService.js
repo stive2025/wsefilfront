@@ -1,26 +1,58 @@
-import { GetCookieItem, setCookieItem, RemoveCookieItem }  from "/src/utilities/cookies.js"; 
+// src/services/authService.js (corrección rápida)
+import {
+  GetCookieItem,
+  setCookieItem,
+  RemoveCookieItem,
+} from "/src/utilities/cookies.js";
 import CustomFetch from "/src/services/apiService.js";
 import { loadAbort } from "../hooks/fechAndload.jsx";
 
-const AUTH_TOKEN_KEY = 'authToken';
-const USER_DATA_KEY = 'userData';
+const AUTH_TOKEN_KEY = "authToken";
+const USER_DATA_KEY = "userData";
 
-export const loginUser = (loginData) => {
-    const abortController = loadAbort();
-    return {
-      call: CustomFetch("login", {
-        method: "POST",
-        body: JSON.stringify(loginData),
-        signal: abortController.controller.signal,
-      }),
-      abortController,
-    };
-  };
+export const loginService = (loginData) => {
+  const abortController = loadAbort();
+  console.log("Ejecutando loginService con datos:", loginData);
   
+  return {
+    call: CustomFetch("login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(loginData),
+      signal: abortController.controller.signal,
+    })
+    .then((response) => {
+      console.log("Respuesta raw:", response);
+      
+      // CORRECCIÓN: Solo verificar si response.ok es false
+      if (!response.ok && response.status !== 200) {
+        console.error("Error en la respuesta de login:", response.status);
+        throw new Error(`Error de autenticación (${response.status})`);
+      }
+      
+      return response;
+    })
+    .then(data => {
+      console.log("Datos recibidos en loginService:", data);
+      return data;
+    })
+    .catch(error => {
+      console.error("Error en loginService:", error);
+      throw error;
+    }),
+    abortController,
+  };
+};
 
 // Guardar token de autenticación
 export const setAuthToken = (token, days = 1) => {
-  console.log("Token:", token);
+  console.log("Guardando token:", token);
+  if (!token) {
+    console.error("Intento de guardar un token vacío");
+    return;
+  }
   setCookieItem(AUTH_TOKEN_KEY, token, days);
 };
 
@@ -57,29 +89,31 @@ export const isAuthenticated = () => {
 export const logout = () => {
   RemoveCookieItem(AUTH_TOKEN_KEY);
   RemoveCookieItem(USER_DATA_KEY);
+  window.location.href = "/login";
 };
 
 // Función para añadir el token a las peticiones fetch
 export const fetchWithAuth = async (url, options = {}) => {
   const token = getAuthToken();
-  console.log(token)
+  if (!token) {
+    throw new Error("No authentication token available");
+  }
+
   const authOptions = {
     ...options,
     headers: {
       ...options.headers,
-      'Authorization': `Bearer ${token}`
-    }
+      Authorization: `Bearer ${token}`,
+    },
   };
-  
+
   const response = await fetch(url, authOptions);
-  
-  // Si recibimos un 401 (Unauthorized), podríamos manejar el logout automático
+
   if (response.status === 401) {
     logout();
-    // Opcional: redirigir al login
-    window.location.href = '/login';
-    throw new Error('Sesión expirada');
+    window.location.href = "/login";
+    throw new Error("Sesión expirada");
   }
-  
+
   return response;
 };

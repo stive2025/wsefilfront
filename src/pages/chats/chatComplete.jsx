@@ -1,4 +1,4 @@
-import { useEffect, useContext } from "react";
+import { useEffect, useContext, useState } from "react";
 import ChatInterface from "/src/components/chats/chatPanel_components.jsx";
 import ChatList from "/src/components/chats/chatList_component.jsx";
 import Resize from "/src/hooks/responsiveHook.jsx";
@@ -9,7 +9,7 @@ import ConectionMod from "/src/components/mod/conectionMod.jsx";
 import WebSocketHook from "/src/hooks/websocketHook.jsx"
 import { getCodigoQR } from "/src/services/conections.js";
 import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
-import { ContactInfoClick, ChatInterfaceClick, SearchInChatClick, NewMessage, ConnectionInfo } from "/src/contexts/chats.js";
+import { ContactInfoClick, ChatInterfaceClick, SearchInChatClick, NewMessage, ConnectionInfo, WebSocketMessage } from "/src/contexts/chats.js";
 
 const ChatComplete = () => {
     const { callEndpoint } = useFetchAndLoad();
@@ -19,60 +19,91 @@ const ChatComplete = () => {
     const { newMessage } = useContext(NewMessage);
     const { isConnected, setIsConnected } = useContext(ConnectionInfo);
     const isMobile = Resize();
+    const [messageData, setMessageData] = useState(null);
+
+    // Default value to prevent null errors
+    const connectionStatus = isConnected || { sesion: false, name: '', number: '' };
 
     useEffect(() => {
-        const fetchQR = async () => {
-            setIsConnected(true)
+        const checkConnection = async () => {
             try {
+                console.log("Verificando estado de conexión...");
                 const apiCall = getCodigoQR();
                 const response = await callEndpoint(apiCall);
-                console.log("Respuesta del backend:", response);
-                if(response.data.status != "CONNECTED"){
-                    setIsConnected(false);
+                console.log("Respuesta de conexión:", response.data);
+
+                if (response.data.status === "DISCONNECTED") {
+                    setIsConnected({
+                        sesion: false,
+                        name: '',
+                        number: ''
+                    });
+                    console.log("No hay sesión activa");
+                } else if (response.data.status === "CONNECTED") {
+                    setIsConnected({
+                        sesion: true,
+                        name: response.data.name || '',
+                        number: response.data.number || ''
+                    });
+                    console.log("Sesión activa detectada");
                 }
             } catch (error) {
                 if (error.name !== 'AbortError') {
-                    console.error("No se pudo obtener los datos de la conexion:", error);
+                    console.error("Error al verificar estado de conexión:", error);
+                    setIsConnected({
+                        sesion: false,
+                        name: '',
+                        number: ''
+                    });
                 }
             }
         };
 
-        fetchQR();
-    }, [isConnected]); // 
+        checkConnection();
+    }, []);
 
     return (
-        <div className={`flex flex-col bg-transparent text-white `}>
-            <WebSocketHook />
-            {!isConnected && <ConectionMod isOpen={true} />}
-            {isMobile ? (
-                selectedChatId == null ? (
-                    newMessage ? (
-                        <ListContacts />
-                    ) : (
-                        <ChatList />
-                    )
+        <WebSocketMessage.Provider value={{ messageData, setMessageData }}>
+            <div className="flex flex-col bg-transparent text-white h-screen">
+                {/* WebSocketHook siempre debe estar presente para manejar la conexión */}
+                <WebSocketHook />
+
+                {/* Si no hay sesión activa, solo mostrar el modal de conexión */}
+                {!connectionStatus.sesion ? (
+                    <ConectionMod isOpen={true} />
                 ) : (
-                    <>
-                        {infoOpen ? (
-                            <ContactInfo />
-                        ) : searchInChat ? (
-                            <SearchInChat />
+                    /* Renderizado condicional basado en si hay sesión activa */
+                    isMobile ? (
+                        selectedChatId == null ? (
+                            newMessage ? (
+                                <ListContacts />
+                            ) : (
+                                <ChatList />
+                            )
                         ) : (
+                            <>
+                                {infoOpen ? (
+                                    <ContactInfo />
+                                ) : searchInChat ? (
+                                    <SearchInChat />
+                                ) : (
+                                    <ChatInterface />
+                                )}
+                            </>
+                        )
+                    ) : (
+                        <div
+                            className={`h-screen bg-gray-900 text-white ${searchInChat || infoOpen ? "grid grid-cols-3" : "grid grid-cols-[35%_65%]"}`}
+                        >
+                            {newMessage ? <ListContacts /> : <ChatList />}
                             <ChatInterface />
-                        )}
-                    </>
-                )
-            ) : (
-                <div
-                    className={`h-screen bg-gray-900 text-white ${searchInChat || infoOpen ? "grid grid-cols-3" : "grid grid-cols-[35%_65%]"}`}
-                >
-                    {newMessage ? <ListContacts /> : <ChatList />}
-                    <ChatInterface />
-                    {infoOpen && <ContactInfo />}
-                    {searchInChat && <SearchInChat />}
-                </div>
-            )}
-        </div>
+                            {infoOpen && <ContactInfo />}
+                            {searchInChat && <SearchInChat />}
+                        </div>
+                    )
+                )}
+            </div>
+        </WebSocketMessage.Provider>
     );
 };
 

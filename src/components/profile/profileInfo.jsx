@@ -2,31 +2,19 @@
 import { QrCode } from "lucide-react";
 import Resize from "/src/hooks/responsiveHook.jsx";
 import { ProfileInfoPanel } from "/src/contexts/chats.js";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
+import { GetCookieItem } from "/src/utilities/cookies.js";
 
-const ProfileInfo = ({ role }) => {
+const ProfileInfo = () => {
     const { SetProfileInfoOpen } = useContext(ProfileInfoPanel);
     const isMobile = Resize();
+    const rawProfile = GetCookieItem("userData");
+    const infoProfile = JSON.parse(rawProfile);
     const [showChangePassword, setShowChangePassword] = useState(false);
-    const contacts = [
-        {
-            id: 1,
-            name: "José Sarmiento",
-            phone: "+593 99 004 6508",
-            state: "En linea",
-            contactState: ":)",
-            multimedia: [
-                { id: "1", url: "https://th.bing.com/th/id/OIP.vec1MtxNIg3BNzhFjw1WNAHaE8?rs=1&pid=ImgDetMain" },
-            ],
-            creditoInfo: [
-                { idcredit: "112244", garante: "Ximena Gonzaga", mont: "1200", payDate: "04/01/2025" }
-            ]
-        }
-    ];
 
-
-
-    const contactFind = contacts.find(contact => contact.id == 1);
+    useEffect(() => {
+        console.log("infoProfile", infoProfile);
+    }, [infoProfile]);
 
     return (
         <div className={`flex flex-col bg-transparent text-white mt-10 ${isMobile ? '' : 'ml-4'}`}>
@@ -42,24 +30,23 @@ const ProfileInfo = ({ role }) => {
                     {/* Profile Image */}
                     <div className="w-60 h-60 rounded-full overflow-hidden bg-gray-700">
                         <img
-                            src={contactFind.multimedia[0].url}
+                            src={infoProfile?.profilePicture || "https://cdn-icons-png.flaticon.com/512/780/780259.png"}
                             alt="Profile"
                             className="w-full h-full object-cover"
                         />
                     </div>
                     {/* Profile Info */}
                     <div className="flex flex-col items-center md:items-start space-y-3">
-                        <h2 className="text-xl font-bold">{contactFind.name}</h2>
-                        <p>{contactFind.phone}</p>
-                        {role == "admin" && (
-                            <button className="text-white rounded-full cursor-pointer hover:bg-gray-700 active:bg-gray-700 active:text-black p-2 mb-3"
-                                onClick={() => SetProfileInfoOpen(prev => !prev)}>
-                                <label className="flex items-center gap-2">
-                                    <QrCode size={20} />
-                                    Scanea el código QR
-                                </label>
-                            </button>
-                        )}
+                        <h2 className="text-xl font-bold">{infoProfile.name}</h2>
+                        <p className="text-gray-400">{infoProfile.email}</p>
+                        <p className="text-gray-400">{infoProfile.role}</p>
+                        <button className="text-white rounded-full cursor-pointer hover:bg-gray-700 active:bg-gray-700 active:text-black p-2 mb-3"
+                            onClick={() => SetProfileInfoOpen(prev => !prev)}>
+                            <label className="flex items-center gap-2">
+                                <QrCode size={20} />
+                                Scanea el código QR
+                            </label>
+                        </button>
                         <button
                             className="bg-naranja-base hover:bg-naranja-medio text-white font-bold py-2 px-4 rounded transition duration-300"
                             onClick={() => setShowChangePassword(true)}>

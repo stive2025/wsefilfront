@@ -1,53 +1,69 @@
 /* eslint-disable react/prop-types */
 import { useState, useEffect, useRef, useCallback, useContext } from "react";
-import { Search, MessageSquarePlus, ChevronLeftCircle, ChevronRightCircle, Loader } from "lucide-react";
-import { ChatInterfaceClick, NewMessage } from "/src/contexts/chats.js";
+import { Search, MessageSquarePlus, ChevronLeftCircle, ChevronRightCircle, Loader, Check, Clock, AlertTriangle } from "lucide-react";
+import { ChatInterfaceClick, NewMessage, StateFilter, TagFilter, AgentFilter, WebSocketMessage } from "/src/contexts/chats.js";
 import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
 import { getChatList, updateChat } from "/src/services/chats.js";
-import { getContact } from "/src/services/contacts.js";
+import { getContact, getContactChatsByName, getContactChatsByPhone } from "/src/services/contacts.js";
 import { getAgents } from "/src/services/agents.js";
+import { getTags } from "/src/services/tags.js";
 import Resize from "/src/hooks/responsiveHook.jsx";
-//import { toast } from "sonner"; // Asume que estás usando una librería de notificaciones
+import { GetCookieItem } from "/src/utilities/cookies.js";
+import { ABILITIES } from '/src/constants/abilities';
+import AbilityGuard from '/src/components/common/AbilityGuard';
+import { useAuth } from '/src/contexts/authContext';
 
 const ChatHeader = () => {
   const { setNewMessage } = useContext(NewMessage);
+
   return (
     <div className="p-1 flex items-center justify-between bg-gray-900">
       <div className="flex items-center space-x-2">
         <img src="/src/assets/images/logoCRM.png" alt="Logo" className="w-22 h-9" />
       </div>
       <div className="flex space-x-2">
-        <button className="p-2 hover:bg-gray-700 active:bg-gray-700 rounded-full" onClick={() => setNewMessage(true)}>
-          <MessageSquarePlus size={15} />
-        </button>
+        <AbilityGuard
+          abilities={[ABILITIES.CHAT_PANEL.SEND_TEXT]}
+          fallback={null}
+        >
+          <button
+            className="p-2 hover:bg-gray-700 active:bg-gray-700 rounded-full"
+            onClick={() => setNewMessage(true)}
+          >
+            <MessageSquarePlus size={15} />
+          </button>
+        </AbilityGuard>
       </div>
     </div>
   );
 };
 
 const SearchInput = ({ searchQuery, setSearchQuery }) => {
-  const handleSearchChange = (e) => {
-    setSearchQuery(e.target.value);
-  };
 
   return (
-    <div className="p-2 bg-gray-900">
-      <div className="relative flex items-center">
-        <input
-          type="text"
-          placeholder="Search..."
-          value={searchQuery}
-          onChange={handleSearchChange}
-          className="w-full bg-gray-800 rounded-lg pl-8 pr-2 py-1 text-white placeholder-gray-400"
-        />
-        <Search className="absolute left-1 text-gray-400" size={18} />
+    <AbilityGuard
+      abilities={[ABILITIES.CHATS.SEARCH]}
+      fallback={<div className="p-2 bg-gray-900 text-gray-400 text-sm">No tienes permiso para buscar chats</div>}
+    >
+      <div className="p-2 bg-gray-900">
+        <div className="relative flex items-center">
+          <input
+            type="text"
+            placeholder="Buscar por nombre o teléfono..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-gray-800 rounded-lg pl-8 pr-2 py-1 text-white placeholder-gray-400"
+          />
+          <Search className="absolute left-1 text-gray-400" size={18} />
+        </div>
       </div>
-    </div>
+    </AbilityGuard>
   );
 };
 
-const TagsBar = ({ tags, activeTag, setActiveTag }) => {
+const TagsBar = ({ tags }) => {
   const containerRef = useRef(null);
+  const { tagSelected, setTagSelected } = useContext(TagFilter);
 
   const scrollRight = () => {
     if (containerRef.current) {
@@ -62,89 +78,189 @@ const TagsBar = ({ tags, activeTag, setActiveTag }) => {
   };
 
   return (
-    <div className="relative flex items-center bg-gray-900 p-2">
-      <button
-        onClick={scrollLeft}
-        className="absolute left-0 h-5 w-5 ml-2 flex items-center justify-center bg-transparent hover:bg-gray-700 active:bg-gray-700 rounded-full z-10"
-      >
-        <ChevronLeftCircle size={15} />
-      </button>
+    <AbilityGuard
+      abilities={[ABILITIES.CHATS.FILTER_BY_TAG, ABILITIES.CHATS.FILTER_BY_STATUS]}
+      fallback={null}
+    >
+      <div className="relative flex items-center bg-gray-900 p-2">
+        <button
+          onClick={scrollLeft}
+          className="absolute left-0 h-5 w-5 ml-2 flex items-center justify-center bg-transparent hover:bg-gray-700 active:bg-gray-700 rounded-full z-10"
+        >
+          <ChevronLeftCircle size={15} />
+        </button>
 
-      <div
-        ref={containerRef}
-        className="bg-transparent text-white h-8 w-full overflow-hidden shadow-md flex items-center p-1 overflow-x-auto scrollbar-hide mx-8"
-      >
-        <ul className="flex whitespace-nowrap">
-          {Object.entries(tags).map(([key, value]) => (
+        <div
+          ref={containerRef}
+          className="bg-transparent text-white h-8 w-full overflow-hidden shadow-md flex items-center p-1 overflow-x-auto scrollbar-hide mx-8"
+        >
+          <ul className="flex whitespace-nowrap">
             <li
-              key={key}
-              className={`flex items-center gap-2 cursor-pointer rounded-full p-2 text-xs ${activeTag === key ? "bg-gray-700 text-white" : "hover:text-gray-300"
+              className={`flex items-center gap-2 cursor-pointer rounded-full p-2 text-xs ${tagSelected === 0 ? "bg-gray-700 text-white" : "hover:text-gray-300"
                 }`}
-              onClick={() => setActiveTag(key)}
+              onClick={() => setTagSelected(0)}
             >
-              {value}
+              Todos
             </li>
-          ))}
-        </ul>
+            {Array.isArray(tags) ? (
+              tags.map((tag) => (
+                <li
+                  key={tag.id}
+                  className={`flex items-center gap-2 cursor-pointer rounded-full p-2 text-xs ${tagSelected === tag.id ? "bg-gray-700 text-white" : "hover:text-gray-300"
+                    }`}
+                  onClick={() => { setTagSelected(tag.id); console.log("TAG", tagSelected) }}
+                >
+                  {tag.name}
+                </li>
+              ))
+            ) : (
+              <li className="text-xs text-gray-400">No hay etiquetas disponibles</li>
+            )}
+          </ul>
+        </div>
+
+        <button
+          onClick={scrollRight}
+          className="absolute right-0 h-5 w-5 mr-2 flex items-center justify-center bg-transparent hover:bg-gray-700 active:bg-gray-700 rounded-full z-10"
+        >
+          <ChevronRightCircle size={15} />
+        </button>
       </div>
-
-      <button
-        onClick={scrollRight}
-        className="absolute right-0 h-5 w-5 mr-2 flex items-center justify-center bg-transparent hover:bg-gray-700 active:bg-gray-700 rounded-full z-10"
-      >
-        <ChevronRightCircle size={15} />
-      </button>
-    </div>
+    </AbilityGuard>
   );
 };
 
-const AgentSelect = ({ role, agents, selectedAgent, setSelectedAgent, loading }) => {
+
+const AgentSelect = ({ role }) => {
+  const { loading, callEndpoint } = useFetchAndLoad();
+  const [agents, setAgents] = useState([]);
+  const { agentSelected, setAgentSelected } = useContext(AgentFilter);
+
+  useEffect(() => {
+    const loadAgents = async () => {
+      if (role == "admin") {
+        try {
+          const response = await callEndpoint(getAgents({ page: 1 }));
+          setAgents(response.data || []);
+        } catch (error) {
+          console.error("Error obteniendo agentes:", error);
+          setAgents([]);
+        }
+      }
+    };
+
+    loadAgents();
+  }, [role]);
+
   if (role !== "admin") return null;
+
   return (
-    <div className="cursor-pointer p-4 flex border-b border-gray-700 bg-gray-900">
-      <select
-        className={`w-full bg-gray-900 outline-none ${selectedAgent ? 'text-white' : 'text-gray-400'}`}
-        value={selectedAgent ? selectedAgent.id : ""}
-        onChange={(e) => {
-          const agent = agents.find((a) => a.id === parseInt(e.target.value));
-          setSelectedAgent(agent);
-        }}
-        disabled={loading}
-      >
-        <option value="" disabled>
-          {loading ? "Cargando agentes..." : "Seleccionar agente"}
-        </option>
-        {agents.length > 0 ? (
-          agents.map((agent) => (
-            <option key={agent.id} value={agent.id}>
-              {agent.name}
-            </option>
-          ))
-        ) : (
-          <option disabled>No hay agentes</option>
-        )}
-      </select>
-    </div>
+    <AbilityGuard
+      abilities={[ABILITIES.CHATS.FILTER_BY_AGENT]}
+      fallback={null}
+    >
+      <div className="cursor-pointer p-4 flex border-b border-gray-700 bg-gray-900">
+        <select
+          className={`w-full bg-gray-900 outline-none ${agentSelected ? 'text-white' : 'text-gray-400'}`}
+          value={agentSelected || ""}
+          onChange={(e) => {
+            const agentId = e.target.value ? parseInt(e.target.value) : null;
+            setAgentSelected(agentId);
+            console.log(agentSelected);
+          }}
+          disabled={loading}
+        >
+          <option value="">
+            {loading ? "Cargando agentes..." : "Todos los agentes"}
+          </option>
+          {agents.length > 0 ? (
+            agents.map((agent) => (
+              <option key={agent.id} value={agent.id}>
+                {agent.name}
+              </option>
+            ))
+          ) : (
+            <option disabled>No hay agentes</option>
+          )}
+        </select>
+      </div>
+    </AbilityGuard>
   );
 };
 
-const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats }) => {
+const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessages, setChats }) => {
   const { selectedChatId, setSelectedChatId } = useContext(ChatInterfaceClick);
   const observerRef = useRef(null);
   const lastChatRef = useRef(null);
   const { callEndpoint } = useFetchAndLoad();
   const [readChats, setReadChats] = useState(new Set());
 
-  const handleUpdateChat = async (idChat, dataChat) => {
-    try {
-      const response = await callEndpoint(updateChat(idChat, dataChat), `update_chat_${idChat}`);
-      console.log("Chat actualizado ", response);
-      //toast.success("Chat actualizado con éxito");
-    } catch (error) {
-      console.error("Error actualizando chat ", error);
-      //toast.error(`Error al actualizar el chat: ${error.message || "Verifica la conexión"}`);
+  const renderAckStatus = (ackStatus) => {
+    switch (ackStatus) {
+      case -1: // ACK_ERROR
+        return <AlertTriangle size={14} className="text-yellow-500" />;
+      case 0: // ACK_PENDING
+        return <Clock size={14} className="text-gray-400" />;
+      case 1: // ACK_SERVER
+        return <Check size={14} className="text-gray-400" />;
+      case 2: // ACK_DEVICE
+        return (
+          <div className="relative">
+            <Check size={14} className="text-gray-400" />
+            <Check size={14} className="text-gray-400 absolute top-0 left-1" />
+          </div>
+        );
+      case 3: // ACK_READ
+        return (
+          <div className="relative">
+            <Check size={14} className="text-blue-500" />
+            <Check size={14} className="text-blue-500 absolute top-0 left-1" />
+          </div>
+        );
+      default:
+        return null;
     }
   };
+
+  const handleUpdateChat = async (idChat, dataChat) => {
+    try {
+      await callEndpoint(updateChat(idChat, dataChat), `update_chat_${idChat}`);
+
+      // Actualiza también el estado local de los chats
+      setChats(prevChats =>
+        prevChats.map(chat =>
+          chat.id === idChat
+            ? { ...chat, ...dataChat }
+            : chat
+        )
+      );
+    } catch (error) {
+      console.error("Error actualizando chat ", error);
+    }
+  };
+
+  // El useEffect para manejar los mensajes entrantes
+  useEffect(() => {
+    console.log("Incoming messages:", incomingMessages);
+    if (incomingMessages && incomingMessages.chat_id) {
+      setReadChats(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(incomingMessages.chat_id);
+        return newSet;
+      });
+    }
+  }, [incomingMessages]);
+
+  // useEffect para mantener actualizado el contador en chats leídos
+  useEffect(() => {
+    // Verificar y actualizar todos los chats que estén en readChats
+    chats.forEach(chat => {
+      if (readChats.has(chat.id) && (chat.unread_message > 0 || chat.unreadCount > 0)) {
+        handleUpdateChat(chat.id, { unread_message: 0 });
+        console.log(`Actualizando contador de mensajes no leídos a 0 para chat ${chat.id}`);
+      }
+    });
+  }, [chats, readChats]);
 
   useEffect(() => {
     if (loading || !hasMoreChats) return;
@@ -171,15 +287,14 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats }) => {
     };
   }, [loading, hasMoreChats, loadMoreChats, chats.length]);
 
+
   if (loading && chats.length === 0) {
     return (
       <div className="flex justify-center items-center py-10 bg-gray-900">
         <Loader className="animate-spin" size={24} />
       </div>
     );
-  }
-
-  if (chats.length === 0) {
+  } else if (chats.length === 0) {
     return (
       <div className="flex justify-center items-center py-10 bg-gray-900 text-gray-400">
         No hay chats disponibles
@@ -188,76 +303,102 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats }) => {
   }
 
   return (
-    <div className="bg-gray-900">
-      {chats.map((item, index) => (
-        <div
-          key={item.id}
-          ref={index === chats.length - 1 ? lastChatRef : null}
-          className={`w-full flex items-center space-x-3 p-4 hover:bg-gray-800 cursor-pointer ${selectedChatId && selectedChatId.id == item.id ? "bg-gray-700" : ""
-            }`}
-          onClick={() => {
-            if (item.unread_message > 0) {
-              handleUpdateChat(item.id, { unread_message: 0 });
+    <AbilityGuard
+      abilities={[ABILITIES.CHATS.VIEW]}
+      fallback={
+        <div className="flex justify-center items-center py-10 bg-gray-900 text-gray-400">
+          No tienes permisos para ver la lista de chats
+        </div>
+      }
+    >
+      <div className="bg-gray-900">
+        {chats.map((item, index) => (
+          <div
+            key={item.id}
+            ref={index === chats.length - 1 ? lastChatRef : null}
+            className={`w-full flex items-center space-x-3 p-4 hover:bg-gray-800 cursor-pointer ${selectedChatId && selectedChatId.id == item.id ? "bg-gray-700" : ""
+              }`}
+            onClick={() => {
+              if (item.state === "PENDING" && item.state !== "CLOSED") {
+                handleUpdateChat(item.id, { unread_message: 0, state: "OPEN" });
+                setReadChats(prev => new Set(prev).add(item.id));
+              } else if (item.unread_message > 0) {
+                handleUpdateChat(item.id, { unread_message: 0 });
+                setReadChats(prev => new Set(prev).add(item.id));
+              }
+              if (item.isContact) {
+                setSelectedChatId({
+                  id: item.chat_id,
+                  tag_id: item.tag_id,
+                  status: item.state,
+                  idContact: item.idContact,
+                  name: item.name,
+                  photo: item.avatar,
+                  number: item.number,
+                });
+              } else {
+                setSelectedChatId({
+                  id: item.id,
+                  tag_id: item.tag_id,
+                  status: item.state,
+                  idContact: item.idContact,
+                  name: item.name,
+                  photo: item.avatar,
+                  number: item.number,
+                });
+              }
+            }}
+          >
+            <div className="relative">
+              <img
+                src={item.avatar || "/src/assets/images/default-avatar.jpg"}
+                alt="Avatar"
+                className="w-10 h-10 rounded-full"
+              />
+              {item.online && (
+                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-gray-900 rounded-full"></div>
+              )}
+            </div>
 
-              // Marca este chat como leído
-              setReadChats(prev => new Set(prev).add(item.id));
-            }
+            <div className="flex-1">
+              <div className="font-medium text-sm md:text-base">{item.name}</div>
+              <div className="flex items-center gap-1 overflow-hidden">
+                {item.from_me === "true" && (
+                  <span className="shrink-0">{renderAckStatus(item.ack)}</span>
+                )}
+                <span className="overflow-hidden text-ellipsis whitespace-nowrap">
+                  {item.last_message || item.lastMessage}
+                </span>
+              </div>
+            </div>
 
-            setSelectedChatId({
-              id: item.id,
-              idContact: item.idContact,
-              name: item.name,
-              photo: item.avatar,
-              number: item.number,
-            });
-          }}
-        >
-          <div className="relative">
-            <img
-              src={item.avatar || "/src/assets/images/default-avatar.jpg"}
-              alt="Avatar"
-              className="w-10 h-10 rounded-full"
-            />
-            {item.online && (
-              <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-gray-900 rounded-full"></div>
-            )}
-          </div>
-
-          <div className="flex-1">
-            <div className="font-medium text-sm md:text-base">{item.name}</div>
-            <div className="text-xs md:text-sm text-gray-400 overflow-hidden text-ellipsis whitespace-nowrap max-w-[150px] sm:max-w-[200px]">
-              {item.last_message || item.lastMessage}
+            <div className="text-xs text-gray-400 flex flex-col items-end">
+              <div>{item.timestamp || new Date(item.updated_at).toLocaleDateString()}</div>
+              {(item.unread_message > 0 || item.unreadCount > 0) && !readChats.has(item.id) && (
+                <div className="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center mt-1">
+                  {item.unread_message || item.unreadCount}
+                </div>
+              )}
             </div>
           </div>
+        ))}
 
-          <div className="text-xs text-gray-400 flex flex-col items-end">
-            <div>{item.timestamp || new Date(item.updated_at).toLocaleDateString()}</div>
-            {(item.unread_message > 0 || item.unreadCount > 0) && !readChats.has(item.id) && (
-              <div className="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center mt-1">
-                {item.unread_message || item.unreadCount}
-              </div>
-            )}
+        {loading && chats.length > 0 && (
+          <div className="flex justify-center items-center py-4 bg-gray-900">
+            <Loader className="animate-spin" size={20} />
           </div>
-        </div>
-      ))}
-
-      {loading && chats.length > 0 && (
-        <div className="flex justify-center items-center py-4 bg-gray-900">
-          <Loader className="animate-spin" size={20} />
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </AbilityGuard>
   );
 };
 
+
 const ChatList = ({ role = "admin" }) => {
   const isMobile = Resize();
-  const { loading, fetchLoading, callEndpoint } = useFetchAndLoad();
-  const [agents, setAgents] = useState([]);
-  const [selectedAgent, setSelectedAgent] = useState(null);
+  const { loading, callEndpoint } = useFetchAndLoad();
   const [chats, setChats] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTag, setActiveTag] = useState("label_all");
   const [page, setPage] = useState(1);
   const [hasMoreChats, setHasMoreChats] = useState(true);
   const [, setPaginationInfo] = useState({
@@ -266,19 +407,112 @@ const ChatList = ({ role = "admin" }) => {
     total: 0
   });
   const chatListRef = useRef(null);
+  const { messageData, setMessageData } = useContext(WebSocketMessage);
+  const [messageDataLocal, setMessageDataLocal] = useState(null);
+  const { selectedChatId } = useContext(ChatInterfaceClick);
+  const { stateSelected } = useContext(StateFilter);
+  const { tagSelected } = useContext(TagFilter);
+  const { agentSelected } = useContext(AgentFilter);
+  const [isSearching, setIsSearching] = useState(false);
+  const [tags, setTags] = useState([]);
+  const { hasAbility } = useAuth();
 
-  const tags = {
-    label_all: "Todos",
-    label_rev: "Revisión",
-    label_pay: "Confirmar Pago",
-    label_pendingPay: "Pago pendiente",
-    label_callLater: "Llamar mas tarde",
+
+  useEffect(() => {
+    if (messageData && messageData.body) {
+      // Obtener user_data de las cookies
+      const userData = GetCookieItem("user_data");
+      const currentUserId = userData ? JSON.parse(userData).id : null;
+
+      // Verificar coincidencia de user_id
+      if (!currentUserId || messageData.user_id !== currentUserId) {
+        console.log("Mensaje ignorado - user_id no coincide:",
+          `Cookie: ${currentUserId}`,
+          `Mensaje: ${messageData.user_id}`);
+        return;
+      }
+
+      console.log("Procesando mensaje para el usuario actual:", currentUserId);
+
+      // Resto del código para procesar el mensaje...
+      const existingChatIndex = chats.findIndex(chat =>
+        chat.id === messageData.chat_id ||
+        (chat.number && chat.number === messageData.number)
+      );
+
+      if (existingChatIndex >= 0) {
+        // ... (código existente para actualizar chat)
+      } else {
+        // ... (código existente para nuevo chat)
+      }
+
+      if (messageData != null) {
+        setMessageDataLocal(messageData);
+        setMessageData(null);
+      }
+    }
+  }, [messageData, chats, selectedChatId]);
+
+  const loadTags = async () => {
+    try {
+      const response = await callEndpoint(getTags({ page: 1 }));
+      setTags(response.data || []);
+    } catch (error) {
+      console.error("Error obteniendo Tags:", error);
+      setTags([]);
+    }
   };
+
 
   const loadChats = async (params = {}, append = false) => {
     try {
-      const response = await callEndpoint(getChatList(params), 'chatList');
+      let endpoint;
+      let endpointKey = 'chatList';
+      let isContact = false;
 
+      // Verifica si hay una consulta de búsqueda
+      if (searchQuery) {
+        setIsSearching(true);
+
+        // Determina si es búsqueda por teléfono o por nombre
+        if (/^\d+$/.test(searchQuery)) {
+          endpoint = getContactChatsByPhone(searchQuery);
+          endpointKey = 'contactChatsByPhone';
+          isContact = true;
+        } else {
+          endpoint = getContactChatsByName(searchQuery);
+          endpointKey = 'contactChatsByName';
+          isContact = true;
+        }
+      } else {
+        setIsSearching(false);
+
+        endpoint = getChatList(params);
+
+        const filterParams = { ...params };
+        console.log(filterParams)
+
+        if (stateSelected !== "ALL") {
+          filterParams.state = stateSelected;
+          console.log(filterParams)
+        }
+
+        if (agentSelected) {
+          filterParams.agent_id = agentSelected;
+        }
+
+        if (tagSelected !== 0) {
+          filterParams.id_tag = tagSelected;
+          console.log("filterParams.tag_id", filterParams)
+        }
+
+        endpoint = getChatList(filterParams);
+
+        // Aplica filtro por etiqueta
+
+      }
+
+      const response = await callEndpoint(endpoint, endpointKey);
       setPaginationInfo({
         current_page: response.current_page,
         last_page: response.last_page,
@@ -288,9 +522,11 @@ const ChatList = ({ role = "admin" }) => {
       setHasMoreChats(response.current_page < response.last_page);
 
       const chatData = response.data || [];
-
+      console.log("Datos de chats:", chatData);
       const enrichedChats = await Promise.all(
         chatData.map(async (chat, index) => {
+          let chatIsContact = isContact;
+
           if (chat.contact_id) {
             try {
               const contactKey = `contact_${chat.contact_id}_${index}`;
@@ -300,6 +536,7 @@ const ChatList = ({ role = "admin" }) => {
                   ...chat,
                   name: "Unknown Contact",
                   avatar: "/src/assets/images/default-avatar.jpg",
+                  isContact: chatIsContact  // Añadir la bandera aquí
                 };
               } else {
                 return {
@@ -308,13 +545,24 @@ const ChatList = ({ role = "admin" }) => {
                   name: contactResponse.name,
                   number: contactResponse.phone_number,
                   avatar: contactResponse.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
+                  isContact: chatIsContact
                 };
               }
             } catch (error) {
               console.error("Error fetching contact details for ID:", chat.contact_id, error);
+              return {
+                ...chat,
+                isContact: chatIsContact,
+                profile_picture: chat.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
+              };
             }
           }
-          return chat;
+          return {
+            ...chat,
+            isContact: chatIsContact,
+            profile_picture: chat.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
+          };
+
         })
       );
 
@@ -337,65 +585,38 @@ const ChatList = ({ role = "admin" }) => {
 
     const nextPage = page + 1;
     setPage(nextPage);
-
-    const params = {
-      page: nextPage,
-    };
-
-    if (searchQuery) {
-      params.name = searchQuery;
-    }
-
-    if (activeTag !== 'label_all') {
-      params.tag = activeTag.replace('label_', '');
-    }
-
-    if (selectedAgent) {
-      params.agent_id = selectedAgent.id;
-    }
+    const params = isSearching ? {} : { page: nextPage };
 
     loadChats(params, true);
-  }, [page, hasMoreChats, loading, searchQuery, activeTag, selectedAgent]);
+  }, [page, hasMoreChats, loading, searchQuery, isSearching]);
+
 
   useEffect(() => {
-    const loadAgents = async () => {
-      if (role === "admin") {
-        try {
-          const response = await callEndpoint(getAgents({ page: 1 }));
-          setAgents(response.data || []);
-        } catch (error) {
-          console.error("Error obteniendo agentes:", error);
-          setAgents([]);
-        }
-      }
-    };
-
-    loadAgents();
-  }, [role]);
-
+    loadTags();
+  }, []);
+  // Efecto para cargar chats cuando cambian los criterios
   useEffect(() => {
     setPage(1);
     setHasMoreChats(true);
 
-    const params = {
-      page: 1,
-    };
-
-    if (searchQuery) {
-      params.name = searchQuery;
-    }
-
-    if (activeTag !== 'label_all') {
-      params.tag = activeTag.replace('label_', '');
-    }
-
-    if (selectedAgent) {
-      params.agent_id = selectedAgent.id;
-    }
+    // Solo incluimos parámetro de página para getChatList, no para búsquedas
+    const params = searchQuery ? {} : { page: 1 };
 
     loadChats(params, false);
-  }, [searchQuery, activeTag, selectedAgent]);
+  }, [searchQuery]);
 
+  // NOTA: Este efecto está comentado porque los filtros no afectan la búsqueda actualmente
+
+  useEffect(() => {
+    if (!isSearching) {
+      setPage(1);
+      setHasMoreChats(true);
+      loadChats({ page: 1 }, false);
+    }
+  }, [stateSelected, tagSelected, agentSelected]);
+
+
+  // Efecto para manejar el debounce de la búsqueda
   useEffect(() => {
     const timer = setTimeout(() => {
       setPage(1);
@@ -405,26 +626,31 @@ const ChatList = ({ role = "admin" }) => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  // Verificar permisos al inicio
+  if (!hasAbility(ABILITIES.CHATS.VIEW)) {
+    return (
+      <div className="flex justify-center items-center h-full bg-gray-900 text-gray-400">
+        No tienes permisos para acceder a esta sección
+      </div>
+    );
+  }
+
   return isMobile ? (
     <div className="w-full sm:w-80 border-r border-gray-700 flex flex-col bg-gray-900 text-white h-screen">
       <div className="flex flex-col flex-shrink-0 mt-14">
         <ChatHeader />
         <SearchInput searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
-        <AgentSelect
-          role={role}
-          agents={agents}
-          selectedAgent={selectedAgent}
-          setSelectedAgent={setSelectedAgent}
-          loading={fetchLoading}
-        />
-        <TagsBar tags={tags} activeTag={activeTag} setActiveTag={setActiveTag} />
+        <AgentSelect role={role} />
+        <TagsBar tags={tags} />
       </div>
       <div className="flex-1 overflow-y-auto" ref={chatListRef}>
         <ChatItems
           chats={chats}
+          setChats={setChats}
           loading={loading}
           loadMoreChats={loadMoreChats}
           hasMoreChats={hasMoreChats}
+          incomingMessages={messageDataLocal}
         />
       </div>
     </div>
@@ -433,21 +659,17 @@ const ChatList = ({ role = "admin" }) => {
       <div className="flex flex-col flex-shrink-0">
         <ChatHeader />
         <SearchInput searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
-        <AgentSelect
-          role={role}
-          agents={agents}
-          selectedAgent={selectedAgent}
-          setSelectedAgent={setSelectedAgent}
-          loading={fetchLoading}
-        />
-        <TagsBar tags={tags} activeTag={activeTag} setActiveTag={setActiveTag} />
+        <AgentSelect role={role} />
+        <TagsBar tags={tags} />
       </div>
       <div className="flex-1 overflow-y-auto scrollbar-hide" ref={chatListRef}>
         <ChatItems
           chats={chats}
+          setChats={setChats}
           loading={loading}
           loadMoreChats={loadMoreChats}
           hasMoreChats={hasMoreChats}
+          incomingMessages={messageDataLocal}
         />
       </div>
     </div>

@@ -19,13 +19,18 @@ const getChatList = (params = {}) => {
   }
   
   // Agregar filtro por etiqueta si existe
-  if (params.tag) {
-    queryParams.append('tag', params.tag);
+  if (params.id_tag) {
+    queryParams.append('tag_id', params.id_tag);
   }
   
   // Agregar filtro por agente si existe
   if (params.agent_id) {
-    queryParams.append('agent_id', params.agent_id);
+    queryParams.append('user_id', params.agent_id);
+    console.log("params.agent_id", queryParams);
+  }
+
+  if (params.state) {
+    queryParams.append('state', params.state);
   }
   
   // Añadir los parámetros a la URL si existen
@@ -85,4 +90,45 @@ const deleteChat = (id) => {
   };
 };
 
-export { getChatList, createChat, deleteChat, updateChat, getChat };
+const transferChat = (chatId, transferData) => {
+  const abortController = loadAbort();
+  return {
+    call: CustomFetch(`chats/transfer/${chatId}`, {
+      method: "PUT",
+      body: JSON.stringify(transferData),
+      signal: abortController.controller.signal,
+    }),
+    abortController,
+  };
+};
+
+const searchChat = (chatId, searchBody) => {
+  const abortController = loadAbort();
+  return {
+    call: CustomFetch(`chats/search/${chatId}`, {
+      method: "POST",
+      body: JSON.stringify(searchBody),
+      signal: abortController.controller.signal,
+    }),
+    abortController,
+  };
+};
+
+const downloadChat = (params) => {
+  const abortController = loadAbort();
+  return {
+    call: CustomFetch(`chats/download/${params}`, {
+      signal: abortController.controller.signal,
+      responseType: 'blob',  // Indicar que esperamos un blob
+      method: 'GET'
+    }),
+    abortController,
+  };
+};
+
+
+
+
+
+
+export { getChatList, createChat, deleteChat, updateChat, getChat, transferChat, searchChat, downloadChat };
