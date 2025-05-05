@@ -4,7 +4,8 @@ import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
 import { createAutoMessage, updateAutoMessage } from "/src/services/AutoMessages.js";
 import { UpdateAutoForm, AutoHandle, AutoCreateForm } from "/src/contexts/chats.js";
 import { BotMessageSquare } from 'lucide-react';
-
+import { ABILITIES } from '/src/constants/abilities.js';
+import AbilityGuard from '/src/components/common/AbilityGuard.jsx';
 
 const TagCreationModal = () => {
   const isMobile = Resize();
@@ -26,7 +27,7 @@ const TagCreationModal = () => {
     if (autoFind) {
       setAutoClick(true);
     }
-  }, [autoFind]);
+  }, [autoFind, setAutoClick]);
 
   useEffect(() => {
     if (autoFind) {
@@ -81,7 +82,7 @@ const TagCreationModal = () => {
         }
       }
     },
-    [labelName, labelDescription, isFormValid, callEndpoint]
+    [labelName, labelDescription, isFormValid, callEndpoint, setAutoHandle]
   );
 
   const handleUpdateTag = useCallback(
@@ -109,92 +110,99 @@ const TagCreationModal = () => {
         }
       }
     },
-    [labelName, labelDescription, isFormValid, callEndpoint, idAuto, setAutoFind]
+    [labelName, labelDescription, isFormValid, callEndpoint, idAuto, setAutoFind, setAutoHandle]
   );
 
   return (
-    <div className={` rounded-lg w-full p-6 space-y-4 ${isMobile ? "" : "mt-16"} h-max`}>
-      <div className="flex items-center p-4 bg-gray-800 rounded-lg">
-        <BotMessageSquare size={20} className="text-[#FF9619] mr-4" />
-        <h1 className="text-xl font-normal">
-          {autoFind ? 'EDITAR MENSAJE AUTOMÁTICO' : 'NUEVO MENSAJE AUTOMÁTICO'}
-        </h1>
-      </div>
-
-      <div className="mb-6 border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
-      <label
-          htmlFor="label-name"
-          className="block text-sm font-medium text-gray-300 mb-2"
-        >
-          Nombre del Mensaje Automático
-        </label>
-        <input
-          id="label-name"
-          type="text"
-          placeholder="Introduzca el nombre"
-          value={labelName}
-          onChange={(e) => setLabelName(e.target.value)}
-          className="w-full bg-transparent text-white outline-none"
-          />
-      </div>
-
-      <div className="mb-6 border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
-        <label
-          htmlFor="label-description"
-          className="block text-sm font-medium text-gray-300 mb-2"
-        >
-          Descripción
-        </label>
-        <textarea
-          id="label-description"
-          placeholder="¿Para que sirve este Mensaje Automático?"
-          value={labelDescription}
-          onChange={(e) => setLabelDescription(e.target.value)}
-          className="w-full bg-transparent text-white outline-none"
-          />
-      </div>
-
-      {/* Error and Success Messages */}
-      {error && (
-        <div className="text-red-500 text-sm">
-          {error}
+    // Wrapping the entire component with AbilityGuard to check if user can access this component
+    <AbilityGuard abilities={[autoFind ? ABILITIES.UTILITIES.EDIT : ABILITIES.UTILITIES.CREATE]}>
+      <div className={` rounded-lg w-full p-6 space-y-4 ${isMobile ? "" : "mt-16"} h-max`}>
+        <div className="flex items-center p-4 bg-gray-800 rounded-lg">
+          <BotMessageSquare size={20} className="text-[#FF9619] mr-4" />
+          <h1 className="text-xl font-normal">
+            {autoFind ? 'EDITAR MENSAJE AUTOMÁTICO' : 'NUEVO MENSAJE AUTOMÁTICO'}
+          </h1>
         </div>
-      )}
 
-      {success && (
-        <div className="text-green-500 text-sm">
-          {success}
-        </div>
-      )}
-
-      {/* Save Button */}
-      {autoFind ? (
-        <div className='flex space-x-4'>
-          <button
-            onClick={handleUpdateTag}
-            disabled={!isFormValid || loading}
-            className="py-2 px-4 rounded bg-naranja-base text-white transition-colors duration-300 hover:bg-naranja-medio disabled:bg-gray-600 disabled:cursor-not-allowed"
+        <div className="mb-6 border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
+          <label
+            htmlFor="label-name"
+            className="block text-sm font-medium text-gray-300 mb-2"
           >
-            {loading ? 'Guardando...' : 'Actualizar'}
-          </button>
-          <button
-            onClick={handleCancelEdit}
-            className="py-2 px-4 rounded bg-red-500 text-white"
-          >
-            Cancelar
-          </button>
+            Nombre del Mensaje Automático
+          </label>
+          <input
+            id="label-name"
+            type="text"
+            placeholder="Introduzca el nombre"
+            value={labelName}
+            onChange={(e) => setLabelName(e.target.value)}
+            className="w-full bg-transparent text-white outline-none"
+          />
         </div>
-      ) : (
-        <button
-          onClick={handleCreateTag}
-          disabled={!isFormValid || loading}
-          className="w-full py-3 rounded-md disabled:bg-gray-600 disabled:cursor-not-allowed
-                       transition-colors duration-300 text-white cursor-pointer rounded-full p-2 bg-naranja-base hover:bg-naranja-medio"
-        >
-          {loading ? 'Guardando...' : 'Guardar'}
-        </button>
-      )}
-    </div>
+
+        <div className="mb-6 border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
+          <label
+            htmlFor="label-description"
+            className="block text-sm font-medium text-gray-300 mb-2"
+          >
+            Descripción
+          </label>
+          <textarea
+            id="label-description"
+            placeholder="¿Para que sirve este Mensaje Automático?"
+            value={labelDescription}
+            onChange={(e) => setLabelDescription(e.target.value)}
+            className="w-full bg-transparent text-white outline-none"
+          />
+        </div>
+
+        {/* Error and Success Messages */}
+        {error && (
+          <div className="text-red-500 text-sm">
+            {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="text-green-500 text-sm">
+            {success}
+          </div>
+        )}
+
+        {/* Save Button */}
+        {autoFind ? (
+          <AbilityGuard abilities={[ABILITIES.UTILITIES.EDIT]}>
+            <div className='flex space-x-4'>
+              <button
+                onClick={handleUpdateTag}
+                disabled={!isFormValid || loading}
+                className="py-2 px-4 rounded bg-naranja-base text-white transition-colors duration-300 hover:bg-naranja-medio disabled:bg-gray-600 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Guardando...' : 'Actualizar'}
+              </button>
+              <button
+                onClick={handleCancelEdit}
+                className="py-2 px-4 rounded bg-red-500 text-white"
+              >
+                Cancelar
+              </button>
+            </div>
+          </AbilityGuard>
+        ) : (
+          <AbilityGuard abilities={[ABILITIES.UTILITIES.CREATE]}>
+            <button
+              onClick={handleCreateTag}
+              disabled={!isFormValid || loading}
+              className="w-full py-3 rounded-md disabled:bg-gray-600 disabled:cursor-not-allowed
+                         transition-colors duration-300 text-white cursor-pointer rounded-full p-2 bg-naranja-base hover:bg-naranja-medio"
+            >
+              {loading ? 'Guardando...' : 'Guardar'}
+            </button>
+          </AbilityGuard>
+        )}
+      </div>
+    </AbilityGuard>
   );
 };
 

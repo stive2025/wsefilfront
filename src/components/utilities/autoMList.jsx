@@ -5,21 +5,25 @@ import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
 import { useContext, useEffect, useState, useRef, useCallback } from "react";
 import { AutoCreateForm, UpdateAutoForm, AutoHandle } from "/src/contexts/chats.js";
 import { getAutoMessages, deleteAutoMessage, getAutoMessage } from "/src/services/AutoMessages.js";
+import { ABILITIES } from '/src/constants/abilities.js';
+import AbilityGuard from '/src/components/common/AbilityGuard.jsx';
 
 // Reusable Search Input Component
 const SearchInput = ({ searchTerm, onSearchChange }) => (
-  <div className="p-2 bg-gray-900">
-    <div className="relative flex items-center">
-      <input
-        type="text"
-        placeholder="Search..."
-        className="w-full bg-gray-800 rounded-lg pl-8 pr-2 py-1 text-white placeholder-gray-400"
-        value={searchTerm}
-        onChange={(e) => onSearchChange(e.target.value)}
-      />
-      <Search className="absolute left-1 text-gray-400" size={18} />
+  <AbilityGuard abilities={[ABILITIES.UTILITIES.SEARCH]} fallback={<div className="p-2 bg-gray-900"></div>}>
+    <div className="p-2 bg-gray-900">
+      <div className="relative flex items-center">
+        <input
+          type="text"
+          placeholder="Search..."
+          className="w-full bg-gray-800 rounded-lg pl-8 pr-2 py-1 text-white placeholder-gray-400"
+          value={searchTerm}
+          onChange={(e) => onSearchChange(e.target.value)}
+        />
+        <Search className="absolute left-1 text-gray-400" size={18} />
+      </div>
     </div>
-  </div>
+  </AbilityGuard>
 );
 
 // Auto Items Component
@@ -35,7 +39,7 @@ const AutoItems = ({ AutoMessages, onDeleteAuto, isDeleting, onFindAuto, loading
         <div
           key={Auto.id}
           className="w-full flex items-center p-4"
-          ref={index === Auto.length - 1 ? lastAutoRef : null}
+          ref={index === AutoMessages.length - 1 ? lastAutoRef : null}
         >
           <div className="w-full flex items-center space-x-3 hover:bg-gray-700 cursor-pointer active:bg-gray-600">
             {/* Tag Details */}
@@ -47,19 +51,23 @@ const AutoItems = ({ AutoMessages, onDeleteAuto, isDeleting, onFindAuto, loading
             </div>
           </div>
           <div className="flex">
-            <button
-              className="mr-2 text-gray-400 hover:text-white"
-              onClick={() => onFindAuto(Auto.id)}
-            >
-              <Pencil size={16} />
-            </button>
-            <button
-              className="text-gray-400 hover:text-white"
-              onClick={() => onDeleteAuto(Auto.id)}
-              disabled={isDeleting}
-            >
-              <Trash2 size={16} />
-            </button>
+            <AbilityGuard abilities={[ABILITIES.UTILITIES.EDIT]}>
+              <button
+                className="mr-2 text-gray-400 hover:text-white"
+                onClick={() => onFindAuto(Auto.id)}
+              >
+                <Pencil size={16} />
+              </button>
+            </AbilityGuard>
+            <AbilityGuard abilities={[ABILITIES.UTILITIES.DELETE]}>
+              <button
+                className="text-gray-400 hover:text-white"
+                onClick={() => onDeleteAuto(Auto.id)}
+                disabled={isDeleting}
+              >
+                <Trash2 size={16} />
+              </button>
+            </AbilityGuard>
           </div>
         </div>
       ))}
@@ -110,6 +118,7 @@ const TagsList = () => {
   useEffect(() => {
     fetchAuto(1, true);
     setAutoHandle(false); // Reset tag handle state when loading the list
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoHandle]);
 
   // Effect to handle search with debounce
@@ -132,6 +141,7 @@ const TagsList = () => {
     return () => {
       if (searchTimeout) clearTimeout(searchTimeout);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm]);
 
   // Function to get tags by pagination
@@ -273,69 +283,89 @@ const TagsList = () => {
     setSearchTerm(term);
   };
 
-  return isMobile ? (
-    <div className="w-full sm:w-80 mt-10 flex flex-col text-white">
-      <div className="flex flex-row flex-shrink-0">
-        <label className="p-1">Mensajes Automaticos</label>
+  return (
+    <AbilityGuard abilities={[ABILITIES.UTILITIES.VIEW]} fallback={
+      <div className="w-full flex items-center justify-center h-full text-gray-400">
+        No tienes permisos para ver la lista de mensajes automáticos
       </div>
-      <div className="flex flex-col flex-shrink-0">
-        <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
-      </div>
+    }>
+      {isMobile ? (
+        <div className="w-full sm:w-80 mt-10 flex flex-col text-white">
+          <div className="flex flex-row flex-shrink-0">
+            <label className="p-1">Mensajes Automáticos</label>
+          </div>
+          <div className="flex flex-col flex-shrink-0">
+            <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
+          </div>
 
-      {/* Tags list with scroll */}
-      <div className="flex-1 overflow-y-auto">
-        {loading && messages.length === 0 ? (
-          <div className="p-4 text-gray-400">Cargando Mensajes Automáticos...</div>
-        ) : error ? (
-          <div className="p-4 text-red-400">{error}</div>
-        ) : (
-          <AutoItems
-            tags={messages}
-            onDeleteAuto={handleDeleteAuto}
-            isDeleting={isDeleting}
-            onFindAuto={handleFindAuto}
-            loadingMore={loadingMore}
-            lastAutoRef={lastAutoRef}
-          />
-        )}
-      </div>
+          {/* Messages list with scroll */}
+          <div className="flex-1 overflow-y-auto">
+            {loading && messages.length === 0 ? (
+              <div className="p-4 text-gray-400">Cargando Mensajes Automáticos...</div>
+            ) : error ? (
+              <div className="p-4 text-red-400">{error}</div>
+            ) : (
+              <AutoItems
+                AutoMessages={messages}
+                onDeleteAuto={handleDeleteAuto}
+                isDeleting={isDeleting}
+                onFindAuto={handleFindAuto}
+                loadingMore={loadingMore}
+                lastAutoRef={lastAutoRef}
+              />
+            )}
+          </div>
 
-      {/* Button to add new tag in mobile */}
-      <button
-        className="absolute bottom-4 right-4 mb-15 rounded-full p-3 shadow-lg text-white cursor-pointer bg-naranja-base hover:bg-naranja-medio"
-        onClick={() => setAutoClick((prev) => !prev)}
-      >
-        <Plus size={18} />
-      </button>
-    </div>
-  ) : (
-    <div className="flex-1 border-r border-gray-700 flex flex-col  text-white pt-10 ml-10 overflow-y-auto">
-      {/* Fixed header and search */}
-      <div className="flex flex-row flex-shrink-0">
-        <label className="p-1">Mensajes Automaticos</label>
-      </div>
-      <div className="flex flex-col flex-shrink-0">
-        <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
-      </div>
+          {/* Button to add new auto message in mobile */}
+          <AbilityGuard abilities={[ABILITIES.UTILITIES.CREATE]}>
+            <button
+              className="absolute bottom-4 right-4 mb-15 rounded-full p-3 shadow-lg text-white cursor-pointer bg-naranja-base hover:bg-naranja-medio"
+              onClick={() => setAutoClick((prev) => !prev)}
+            >
+              <Plus size={18} />
+            </button>
+          </AbilityGuard>
+        </div>
+      ) : (
+        <div className="flex-1 border-r border-gray-700 flex flex-col text-white pt-10 ml-10 overflow-y-auto">
+          {/* Fixed header and search */}
+          <div className="flex flex-row flex-shrink-0">
+            <label className="p-1">Mensajes Automáticos</label>
+          </div>
+          <div className="flex flex-col flex-shrink-0">
+            <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
+          </div>
 
-      {/* Tags list with scroll */}
-      <div className="flex-1 overflow-y-auto scrollbar-hide">
-        {loading && messages.length === 0 ? (
-          <div className="p-4 text-gray-400">Cargando Mensajes Automáticos...</div>
-        ) : error ? (
-          <div className="p-4 text-red-400">{error}</div>
-        ) : (
-          <AutoItems
-            tags={messages}
-            onDeleteAuto={handleDeleteAuto}
-            isDeleting={isDeleting}
-            onFindAuto={handleFindAuto}
-            loadingMore={loadingMore}
-            lastAutoRef={lastAutoRef}
-          />
-        )}
-      </div>
-    </div>
+          {/* Messages list with scroll */}
+          <div className="flex-1 overflow-y-auto scrollbar-hide">
+            {loading && messages.length === 0 ? (
+              <div className="p-4 text-gray-400">Cargando Mensajes Automáticos...</div>
+            ) : error ? (
+              <div className="p-4 text-red-400">{error}</div>
+            ) : (
+              <AutoItems
+                AutoMessages={messages}
+                onDeleteAuto={handleDeleteAuto}
+                isDeleting={isDeleting}
+                onFindAuto={handleFindAuto}
+                loadingMore={loadingMore}
+                lastAutoRef={lastAutoRef}
+              />
+            )}
+          </div>
+
+          {/* Button to add new auto message in desktop */}
+          <AbilityGuard abilities={[ABILITIES.UTILITIES.CREATE]}>
+            <button
+              className="fixed bottom-4 right-4 mb-4 rounded-full p-3 shadow-lg text-white cursor-pointer bg-naranja-base hover:bg-naranja-medio"
+              onClick={() => setAutoClick((prev) => !prev)}
+            >
+              <Plus size={18} />
+            </button>
+          </AbilityGuard>
+        </div>
+      )}
+    </AbilityGuard>
   );
 };
 

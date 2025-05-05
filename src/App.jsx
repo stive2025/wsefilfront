@@ -4,7 +4,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import { AuthProvider } from './contexts/authContext';
 
 const LoginForm = lazy(() => import('./pages/auth/loginForm'));
-const LoginDebug = lazy(() => import('./pages/auth/LoginDebug'));
+//const LoginDebug = lazy(() => import('./pages/auth/LoginDebug'));
 const Navs = lazy(() => import("./pages/Layout/generalLayout"));
 const UtilNavs = lazy(() => import("./pages/Layout/utilitiesLayout"));
 const ChatComplete = lazy(() => import("/src/pages/chats/chatComplete.jsx"));
@@ -98,7 +98,6 @@ function App() {
                     <ChatInterfaceClick.Provider value={{ selectedChatId, setSelectedChatId }}>
                       <Suspense fallback={<div>Loading...</div>}>
                         <Routes>
-                        <Route path="/login-debug" element={<LoginDebug />} />
                           <Route path="/login" element={<LoginForm />} />
                           <Route element={<ProtectedRoute />}>
                             <Route path="/utilities" element={<UtilNavs />

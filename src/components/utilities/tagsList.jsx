@@ -5,22 +5,26 @@ import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
 import { useContext, useEffect, useState, useRef, useCallback } from "react";
 import { TagsCreateForm, UpdateTagForm, TagHandle } from "/src/contexts/chats.js";
 import { getTags, deleteTag, getTag } from "/src/services/tags.js";
+import { ABILITIES } from '/src/constants/abilities';
+import AbilityGuard from '/src/components/common/AbilityGuard.jsx';
 import toast from "react-hot-toast";
 
 // Reusable Search Input Component
 const SearchInput = ({ searchTerm, onSearchChange }) => (
-  <div className="p-2 bg-gray-900">
-    <div className="relative flex items-center">
-      <input
-        type="text"
-        placeholder="Search..."
-        className="w-full bg-gray-800 rounded-lg pl-8 pr-2 py-1 text-white placeholder-gray-400"
-        value={searchTerm}
-        onChange={(e) => onSearchChange(e.target.value)}
-      />
-      <Search className="absolute left-1 text-gray-400" size={18} />
+  <AbilityGuard abilities={[ABILITIES.UTILITIES.SEARCH]} fallback={<div className="p-2 bg-gray-900"></div>}>
+    <div className="p-2 bg-gray-900">
+      <div className="relative flex items-center">
+        <input
+          type="text"
+          placeholder="Search..."
+          className="w-full bg-gray-800 rounded-lg pl-8 pr-2 py-1 text-white placeholder-gray-400"
+          value={searchTerm}
+          onChange={(e) => onSearchChange(e.target.value)}
+        />
+        <Search className="absolute left-1 text-gray-400" size={18} />
+      </div>
     </div>
-  </div>
+  </AbilityGuard>
 );
 
 // Tags Items Component
@@ -31,14 +35,14 @@ const TagsItems = ({ tags, onDeleteTag, isDeleting, onFindTag, loadingMore, last
   }
 
   return (
-    <div>
+    <div className="bg-gray-900">
       {tags.map((tag, index) => (
         <div
           key={tag.id}
           className="w-full flex items-center p-4"
           ref={index === tags.length - 1 ? lastTagRef : null}
         >
-          <div className="w-full flex items-center space-x-3 hover:bg-gray-700 cursor-pointer active:bg-gray-600">
+          <div className="w-full flex items-center space-x-3 hover:bg-gray-800 cursor-pointer active:bg-gray-700">
             {/* Tag Details */}
             <div className="flex-1">
               <div className="flex items-center space-x-2 font-medium text-sm md:text-base">
@@ -54,19 +58,23 @@ const TagsItems = ({ tags, onDeleteTag, isDeleting, onFindTag, loadingMore, last
             </div>
           </div>
           <div className="flex">
-            <button
-              className="mr-2 text-gray-400 hover:text-white"
-              onClick={() => onFindTag(tag.id)}
-            >
-              <Pencil size={16} />
-            </button>
-            <button
-              className="text-gray-400 hover:text-white"
-              onClick={() => onDeleteTag(tag.id)}
-              disabled={isDeleting}
-            >
-              <Trash2 size={16} />
-            </button>
+            <AbilityGuard abilities={[ABILITIES.UTILITIES.EDIT]}>
+              <button
+                className="mr-2 text-gray-400 hover:text-white"
+                onClick={() => onFindTag(tag.id)}
+              >
+                <Pencil size={16} />
+              </button>
+            </AbilityGuard>
+            <AbilityGuard abilities={[ABILITIES.UTILITIES.DELETE]}>
+              <button
+                className="text-gray-400 hover:text-white"
+                onClick={() => onDeleteTag(tag.id)}
+                disabled={isDeleting}
+              >
+                <Trash2 size={16} />
+              </button>
+            </AbilityGuard>
           </div>
         </div>
       ))}
@@ -94,6 +102,7 @@ const TagsList = () => {
   const [searchTimeout, setSearchTimeout] = useState(null);
   const [, setTotalItems] = useState(0);
   const [isSearchMode, setIsSearchMode] = useState(false);
+  const [error, setError] = useState(null);
 
   const observer = useRef();
   const lastTagRef = useCallback(
@@ -119,6 +128,7 @@ const TagsList = () => {
   useEffect(() => {
     fetchTags(1, true);
     setTagHandle(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tagHandle]);
 
   useEffect(() => {
@@ -198,6 +208,7 @@ const TagsList = () => {
   const handleApiError = (error, userMessage = "Ocurrió un error") => {
     if (error.name !== "AbortError") {
       console.error("API Error:", error);
+      setError("No se pudieron cargar las etiquetas");
       toast.error(userMessage);
     }
   };
@@ -247,61 +258,84 @@ const TagsList = () => {
     setSearchTerm(term);
   };
 
-  return isMobile ? (
-    <div className="w-full sm:w-80 mt-10 flex flex-col text-white">
-      <div className="flex flex-row flex-shrink-0">
-        <label className="p-1">Etiquetas</label>
+  return (
+    <AbilityGuard abilities={[ABILITIES.UTILITIES.VIEW]} fallback={
+      <div className="w-full flex items-center justify-center h-full text-gray-400">
+        No tienes permisos para ver la lista de etiquetas
       </div>
-      <div className="flex flex-col flex-shrink-0">
-        <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
-      </div>
+    }>
+      {isMobile ? (
+        <div className="w-full sm:w-80 mt-10 flex flex-col text-white">
+          <div className="flex flex-row flex-shrink-0">
+            <label className="p-1">Etiquetas</label>
+          </div>
+          <div className="flex flex-col flex-shrink-0">
+            <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
+          </div>
 
-      <div className="flex-1 overflow-y-auto">
-        {loading && tags.length === 0 ? (
-          <div className="p-4 text-gray-400">Cargando etiquetas...</div>
-        ) : (
-          <TagsItems
-            tags={tags}
-            onDeleteTag={handleDeleteTag}
-            isDeleting={isDeleting}
-            onFindTag={handleFindTag}
-            loadingMore={loadingMore}
-            lastTagRef={lastTagRef}
-          />
-        )}
-      </div>
+          <div className="flex-1 overflow-y-auto">
+            {loading && tags.length === 0 ? (
+              <div className="p-4 text-gray-400">Cargando etiquetas...</div>
+            ) : error ? (
+              <div className="p-4 text-red-400">{error}</div>
+            ) : (
+              <TagsItems
+                tags={tags}
+                onDeleteTag={handleDeleteTag}
+                isDeleting={isDeleting}
+                onFindTag={handleFindTag}
+                loadingMore={loadingMore}
+                lastTagRef={lastTagRef}
+              />
+            )}
+          </div>
 
-      <button
-        className="absolute bottom-4 right-4 mb-15 rounded-full p-3 shadow-lg text-white cursor-pointer bg-naranja-base hover:bg-naranja-medio"
-        onClick={() => setTagsClick((prev) => !prev)}
-      >
-        <Plus size={18} />
-      </button>
-    </div>
-  ) : (
-    <div className="flex-1 border-r border-gray-700 flex flex-col text-white pt-10 ml-10 overflow-y-auto">
-      <div className="flex flex-row flex-shrink-0">
-        <label className="p-1">Etiquetas</label>
-      </div>
-      <div className="flex flex-col flex-shrink-0">
-        <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
-      </div>
+          <AbilityGuard abilities={[ABILITIES.UTILITIES.CREATE]}>
+            <button
+              className="absolute bottom-4 right-4 mb-15 rounded-full p-3 shadow-lg text-white cursor-pointer bg-naranja-base hover:bg-naranja-medio"
+              onClick={() => setTagsClick((prev) => !prev)}
+            >
+              <Plus size={18} />
+            </button>
+          </AbilityGuard>
+        </div>
+      ) : (
+        <div className="flex-1 border-r border-gray-700 flex flex-col text-white pt-10 ml-10 overflow-y-auto">
+          <div className="flex flex-row flex-shrink-0">
+            <label className="p-1">Etiquetas</label>
+          </div>
+          <div className="flex flex-col flex-shrink-0">
+            <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
+          </div>
 
-      <div className="flex-1 overflow-y-auto">
-        {loading && tags.length === 0 ? (
-          <div className="p-4 text-gray-400">Cargando etiquetas...</div>
-        ) : (
-          <TagsItems
-            tags={tags}
-            onDeleteTag={handleDeleteTag}
-            isDeleting={isDeleting}
-            onFindTag={handleFindTag}
-            loadingMore={loadingMore}
-            lastTagRef={lastTagRef}
-          />
-        )}
-      </div>
-    </div>
+          <div className="flex-1 overflow-y-auto scrollbar-hide">
+            {loading && tags.length === 0 ? (
+              <div className="p-4 text-gray-400">Cargando etiquetas...</div>
+            ) : error ? (
+              <div className="p-4 text-red-400">{error}</div>
+            ) : (
+              <TagsItems
+                tags={tags}
+                onDeleteTag={handleDeleteTag}
+                isDeleting={isDeleting}
+                onFindTag={handleFindTag}
+                loadingMore={loadingMore}
+                lastTagRef={lastTagRef}
+              />
+            )}
+          </div>
+
+          <AbilityGuard abilities={[ABILITIES.UTILITIES.CREATE]}>
+            <button
+              className="fixed bottom-4 right-4 mb-4 rounded-full p-3 shadow-lg text-white cursor-pointer bg-naranja-base hover:bg-naranja-medio"
+              onClick={() => setTagsClick((prev) => !prev)}
+            >
+              <Plus size={18} />
+            </button>
+          </AbilityGuard>
+        </div>
+      )}
+    </AbilityGuard>
   );
 };
 

@@ -1,7 +1,7 @@
 import { useState, useCallback, useContext, useEffect } from 'react';
-import { User } from 'lucide-react';
+import { User, CheckSquare } from 'lucide-react';
 import Resize from "/src/hooks/responsiveHook.jsx";
-import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
+import { useFetchAndLoad } from "/src/hooks/fechAndLoad.jsx";
 import {
   createContact,
   updateContact,
@@ -9,7 +9,7 @@ import {
   splitPhoneNumber,
   countryPrefixes
 } from "/src/services/contacts.js";
-import { UpdateContactForm, ContactHandle } from "/src/contexts/chats.js";
+import { UpdateContactForm, ContactHandle, NewContactForm } from "/src/contexts/chats.js";
 import Select from 'react-select';
 import toast from "react-hot-toast";
 import { ABILITIES } from '/src/constants/abilities';
@@ -20,6 +20,7 @@ const NewContact = () => {
   const { loading, callEndpoint } = useFetchAndLoad();
   const { contactFind, setContactFind } = useContext(UpdateContactForm);
   const { setContactHandle } = useContext(ContactHandle);
+  const { setContactNew } = useContext(NewContactForm);
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -34,9 +35,12 @@ const NewContact = () => {
 
   const isFormValid = firstName.trim() && lastName.trim() && phoneNumber.trim() && selectedCountry?.value;
 
-  // Depuración de renderizados
-  console.log('Render - contactFind:', contactFind);
-  console.log('Render - countries length:', countries.length);
+  // Efecto para asegurar que el formulario permanezca abierto en modo edición
+  useEffect(() => {
+    if (contactFind) {
+      setContactNew(true);
+    }
+  }, [isMobile, contactFind, setContactNew]);
 
   useEffect(() => {
     const fetchCountries = async () => {
@@ -78,7 +82,7 @@ const NewContact = () => {
     fetchCountries();
   }, []);
 
-  // Efecto optimizado para cargar datos de contacto
+  // Efecto para cargar datos de contacto en modo edición
   useEffect(() => {
     if (contactFind && countries.length > 0) {
       console.log("Contacto a editar ", contactFind);
@@ -105,6 +109,19 @@ const NewContact = () => {
       }
     }
   }, [contactFind, countries.length]);
+
+  // Efecto para limpiar mensaje de éxito
+  useEffect(() => {
+    let timer;
+    if (success) {
+      timer = setTimeout(() => {
+        setSuccess(false);
+      }, 3000);
+    }
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [success]);
 
   const handleCountryChange = (selectedOption) => {
     setSelectedCountry(selectedOption);
@@ -186,6 +203,7 @@ const NewContact = () => {
           toast.success("Contacto creado con éxito")
           setContactHandle(true);
 
+          // Resetear el formulario
           setFirstName('');
           setLastName('');
           setPhoneNumber('');
@@ -201,6 +219,7 @@ const NewContact = () => {
         } catch (error) {
           toast.error("Error creando contacto")
           console.error("Error creando contacto ", error);
+          setError("Error al crear el contacto: " + (error.message || "Verifica la conexión"));
         }
       }
     },
@@ -228,6 +247,7 @@ const NewContact = () => {
           setContactHandle(true);
           setContactFind(null);
 
+          // Resetear el formulario
           setFirstName('');
           setLastName('');
           setPhoneNumber('');
@@ -243,46 +263,29 @@ const NewContact = () => {
         } catch (error) {
           toast.error("Error actualizando contacto")
           console.error("Error actualizando contacto ", error);
+          setError("Error al actualizar el contacto: " + (error.message || "Verifica la conexión"));
         }
       }
     },
     [firstName, lastName, phoneNumber, isFormValid, callEndpoint, idContact, setContactFind, setContactHandle, selectedCountry, countries]
   );
 
-  // Componente de mensaje para usuarios sin permisos
-  const AccessDeniedMessage = () => (
-    <div className="bg-gray-900 rounded-lg w-full p-6 flex flex-col items-center justify-center h-max">
-      <User size={40} className="text-gray-500 mb-4" />
-      <h2 className="text-xl font-medium text-gray-400 mb-2">Acceso restringido</h2>
-      <p className="text-gray-500 text-center">No tienes permisos para gestionar contactos.</p>
-    </div>
-  );
-
-  // Componente para contactos de solo lectura
-  const ViewOnlyContact = () => (
-    <div className={`bg-gray-900 rounded-lg w-full p-6 space-y-4 h-max ${isMobile ? "" : "mt-5"}`}>
-      <div className="flex flex-col items-center justify-center p-8">
-        <p className="text-gray-400 mb-4 text-center">
-          Tienes permiso para ver contactos pero no para crear o editar.
-        </p>
-        <p className="text-gray-500 text-sm text-center">
-          Puedes buscar y consultar la información de contactos existentes.
-        </p>
-      </div>
-    </div>
-  );
+  // Determinamos si debemos mostrar el formulario:
+  // - Si existe contactFind (modo edición) y tenemos permiso de edición
+  // - O si no existe contactFind (modo creación) y tenemos permiso de creación
+  const shouldShowForm = contactFind ? true : false;
 
   return (
-    <AbilityGuard
-      abilities={[ABILITIES.CONTACTS.VIEW]}
-      fallback={<AccessDeniedMessage />}
-    >
-      {/* Solo mostrar el formulario si el usuario tiene permisos de crear o editar */}
-      <AbilityGuard
-        abilities={[ABILITIES.CONTACTS.CREATE, ABILITIES.CONTACTS.EDIT]}
-        requireAll={false} // Requiere cualquiera de los dos permisos
-        fallback={<ViewOnlyContact />}
-      >
+    // Verificamos primero si el usuario tiene permiso general para ver contactos
+    <AbilityGuard abilities={[ABILITIES.CONTACTS.VIEW]} fallback={
+      <div className="bg-gray-900 rounded-lg w-full p-6 flex flex-col items-center justify-center h-max">
+      </div>
+    }>
+      {/* Si debemos mostrar el formulario o si tiene permisos de creación */}
+      <AbilityGuard abilities={shouldShowForm ? [ABILITIES.CONTACTS.EDIT] : [ABILITIES.CONTACTS.CREATE]} fallback={
+        <div className="bg-gray-900 rounded-lg w-full p-6 flex flex-col items-center justify-center h-max">
+        </div>
+      }>
         <div className={`bg-gray-900 rounded-lg w-full p-6 space-y-4 h-max ${isMobile ? "" : "mt-5"}`}>
           {/* Header */}
           <div className="flex items-center p-4 bg-gray-800 rounded-lg">
@@ -291,9 +294,9 @@ const NewContact = () => {
           </div>
 
           {/* Form */}
-          <div className="p-4 flex-1 flex flex-col">
-            {/* First name */}
-            <div className="mb-6 border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
+          <div className="p-4 flex-1 flex flex-col space-y-6">
+            {/* First Name */}
+            <div className="border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
               <input
                 type="text"
                 placeholder="Nombres"
@@ -303,8 +306,8 @@ const NewContact = () => {
               />
             </div>
 
-            {/* Last name */}
-            <div className="mb-6 border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
+            {/* Last Name */}
+            <div className="border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
               <input
                 type="text"
                 placeholder="Apellidos"
@@ -314,7 +317,7 @@ const NewContact = () => {
               />
             </div>
 
-            {/* Phone */}
+            {/* Phone Section */}
             <div className="space-y-2">
               <div className="flex space-x-2">
                 <div className="w-1/2">
@@ -387,64 +390,49 @@ const NewContact = () => {
 
             {/* Success and Error Messages */}
             {error && (
-              <div className="text-red-500 text-sm mb-4 mt-4">
+              <div className="text-red-500 text-sm">
                 {error}
               </div>
             )}
 
             {success && (
-              <div className="text-green-500 text-sm mb-4 mt-4">
+              <div className="text-green-500 text-sm">
                 {success}
               </div>
             )}
 
-            {/* Save or Update button */}
-            {contactFind ? (
-              <AbilityGuard
-                abilities={[ABILITIES.CONTACTS.EDIT]}
-                fallback={
-                  <div className="flex justify-center mt-6 mb-6">
-                    <p className="text-yellow-500">No tienes permisos para editar contactos</p>
+            {/* Save Button - solo visible con permisos específicos */}
+            <div>
+              {contactFind ? (
+                <AbilityGuard abilities={[ABILITIES.CONTACTS.EDIT]}>
+                  <div className='flex space-x-4'>
+                    <button
+                      onClick={handleUpdateContact}
+                      disabled={!isFormValid || loading}
+                      className="py-2 px-4 rounded bg-naranja-base text-white transition-colors duration-300 hover:bg-naranja-medio disabled:bg-gray-600 disabled:cursor-not-allowed"
+                    >
+                      {loading ? 'Guardando...' : 'Actualizar'}
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      className="py-2 px-4 rounded bg-red-500 text-white"
+                    >
+                      Cancelar
+                    </button>
                   </div>
-                }
-              >
-                <div className="flex space-x-4 mb-6 mt-6">
-                  <button
-                    onClick={handleUpdateContact}
-                    disabled={!isFormValid || loading}
-                    className="py-2 px-4 rounded bg-naranja-base text-white transition-colors duration-300 hover:bg-naranja-medio disabled:bg-gray-600 disabled:cursor-not-allowed"
-                  >
-                    {loading ? 'Guardando...' : 'Actualizar'}
-                  </button>
-                  <button
-                    onClick={handleCancelEdit}
-                    className="py-2 px-4 rounded bg-red-500 text-white"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </AbilityGuard>
-            ) : (
-              <AbilityGuard
-                abilities={[ABILITIES.CONTACTS.CREATE]}
-                fallback={
-                  <div className="flex justify-center mt-6 mb-6">
-                    <p className="text-yellow-500">No tienes permisos para crear contactos</p>
-                  </div>
-                }
-              >
-                <div className="mt-6 mb-6">
+                </AbilityGuard>
+              ) : (
+                <AbilityGuard abilities={[ABILITIES.CONTACTS.CREATE]}>
                   <button
                     disabled={!isFormValid || loading}
                     onClick={handleCreateContact}
-                    className="w-full py-3 rounded-md disabled:bg-gray-600 disabled:cursor-not-allowed disabled:hover:bg-gray-600
-                            transition-colors duration-300 text-white cursor-pointer rounded-full p-2 bg-naranja-base hover:bg-naranja-medio"
+                    className="w-full py-3 rounded-md disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors duration-300 text-white cursor-pointer rounded-full p-2 bg-naranja-base hover:bg-naranja-medio"
                   >
                     {loading ? 'Guardando...' : 'Guardar'}
                   </button>
-                </div>
-              </AbilityGuard>
-            )}
+                </AbilityGuard>
+              )}
+            </div>
           </div>
         </div>
       </AbilityGuard>

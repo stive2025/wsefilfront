@@ -12,7 +12,7 @@ import AbilityGuard from '/src/components/common/AbilityGuard.jsx';
 
 // Componentes reutilizables
 const SearchInput = ({ searchTerm, onSearchChange }) => (
-  <AbilityGuard abilities={[ABILITIES.CONTACTS.SEARCH]} fallback={null}>
+  <AbilityGuard abilities={[ABILITIES.CONTACTS.SEARCH]} fallback={<div className="p-2 bg-gray-900"></div>}>
     <div className="p-2 bg-gray-900">
       <div className="relative flex items-center">
         <input
@@ -81,7 +81,6 @@ const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, lo
               <div className="font-medium text-sm md:text-base">{item.name || 'Sin nombre'}</div>
               <div className="text-xs md:text-sm text-gray-400 overflow-hidden text-ellipsis whitespace-nowrap max-w-[150px] sm:max-w-[200px]">
                 {item.phone_number || 'Sin número'}
-                {item.id || 'Sin id'}
               </div>
             </div>
           </div>
@@ -119,7 +118,7 @@ const ListContacts = () => {
   const { setNewMessage } = useContext(NewMessage);
   const { setContactNew } = useContext(NewContactForm);
   const { setContactFind } = useContext(UpdateContactForm);
-  const { contactHandle } = useContext(ContactHandle);
+  const { contactHandle, setContactHandle } = useContext(ContactHandle);
   const { setSelectedChatId } = useContext(ChatInterfaceClick);
 
   const isMobile = Resize();
@@ -158,7 +157,7 @@ const ListContacts = () => {
   // Cargar datos iniciales
   useEffect(() => {
     fetchContacts(1, true);
-    //setContactHandle(false); // Resetear el estado de contacto al cargar la lista
+    setContactHandle(false); // Resetear el estado de contacto al cargar la lista
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contactHandle]);
 
@@ -208,7 +207,6 @@ const ListContacts = () => {
       // Llamar a getContacts() con los parámetros
       const contactsCall = getContacts(params);
       const response = await callEndpoint(contactsCall);
-      console.log("Respuesta de contactos:", response);
 
       // Procesar la respuesta paginada
       handleContactsResponse(response, reset, page);
@@ -308,10 +306,9 @@ const ListContacts = () => {
       const contactCall = getContact(id);
       const response = await callEndpoint(contactCall);
       setContactFind(response);
-      console.log("Contacto encontrado:", response);
 
-      // Ajustar visualización según el dispositivo
-      isMobile ? setContactNew(true) : setContactNew(false);
+      // Always set contactNew to true when editing, regardless of device type
+      setContactNew(true);
     } catch (error) {
       if (error.name !== 'AbortError') {
         console.error("Error buscando contacto:", error);
@@ -328,27 +325,32 @@ const ListContacts = () => {
 
   return (
     <AbilityGuard abilities={[ABILITIES.CONTACTS.VIEW]} fallback={
-      <div className="flex justify-center items-center h-screen text-white">
-        No tienes permisos para ver contactos
+      <div className="w-full flex items-center justify-center h-full text-gray-400">
+        No tienes permisos para ver la lista de contactos
       </div>
     }>
       {isMobile ? (
-        <div className="w-full sm:w-80 mt-10 flex flex-col bg-transparent text-white">
-          <div className="flex flex-row flex-shrink-0">
+        <div className="w-full sm:w-80 flex flex-col bg-gray-900 text-white">
+          <div className="flex flex-col flex-shrink-0 mt-14">
             {location.pathname === "/chatList" && (
-              <button className="text-white rounded-full cursor-pointer hover:bg-gray-700 active:bg-gray-700 active:text-black p-1"
-                onClick={() => setNewMessage(null)}>
-                <ArrowLeft size={15} />
-              </button>
+              <div className="flex items-center p-2">
+                <button 
+                  className="text-white rounded-full cursor-pointer hover:bg-gray-700 active:bg-gray-700 active:text-black p-1"
+                  onClick={() => setNewMessage(null)}
+                >
+                  <ArrowLeft size={15} />
+                </button>
+                <label className="ml-2">CONTACTOS</label>
+              </div>
             )}
-            <label className="p-1">CONTACTOS</label>
-          </div>
-          {/* Contenedor fijo para header, search */}
-          <div className="flex flex-col flex-shrink-0">
+            {location.pathname === "/contacts" && (
+              <div className="p-2">
+                <label>CONTACTOS</label>
+              </div>
+            )}
             <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
           </div>
 
-          {/* Lista de contactos con scroll */}
           <div className="flex-1 overflow-y-auto">
             {loading && contacts.length === 0 ? (
               <div className="p-4 text-gray-400">Cargando contactos...</div>
@@ -380,24 +382,27 @@ const ListContacts = () => {
           )}
         </div>
       ) : (
-        <div className="flex-1 border-r border-gray-700 flex flex-col bg-transparent text-white pt-10 ml-10 overflow-y-auto">
-          {location.pathname === "/chatList" && (
-            <div className="flex flex-row items-center flex-shrink-0 p-2">
-              <button className="text-white rounded-full cursor-pointer hover:bg-gray-700 active:bg-gray-700 active:text-black p-1"
-                onClick={() => setNewMessage(null)}>
-                <ArrowLeft size={15} />
-              </button>
-              <label className="p-1">CONTACTOS</label>
-            </div>
-          )}
-          {/* Fijamos el header y search */}
-          {location.pathname === "/contacts" && (
-            <div className="flex flex-col flex-shrink-0">
-              <label className="p-1">CONTACTOS</label>
-              <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
-            </div>
-          )}
-          {/* Lista de contactos con scroll */}
+        <div className="flex-1 border-r border-gray-700 flex flex-col bg-gray-900 text-white pt-10 ml-10 overflow-y-auto">
+          <div className="flex flex-col flex-shrink-0">
+            {location.pathname === "/chatList" && (
+              <div className="flex items-center p-2">
+                <button 
+                  className="text-white rounded-full cursor-pointer hover:bg-gray-700 active:bg-gray-700 active:text-black p-1"
+                  onClick={() => setNewMessage(null)}
+                >
+                  <ArrowLeft size={15} />
+                </button>
+                <label className="ml-2">CONTACTOS</label>
+              </div>
+            )}
+            {location.pathname === "/contacts" && (
+              <div className="p-2">
+                <label>CONTACTOS</label>
+              </div>
+            )}
+            <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
+          </div>
+
           <div className="flex-1 overflow-y-auto scrollbar-hide">
             {loading && contacts.length === 0 ? (
               <div className="p-4 text-gray-400">Cargando contactos...</div>
@@ -416,6 +421,17 @@ const ListContacts = () => {
               />
             )}
           </div>
+
+          {location.pathname === "/contacts" && (
+            <AbilityGuard abilities={[ABILITIES.CONTACTS.CREATE]}>
+              <button
+                className="fixed bottom-4 right-4 mb-4 rounded-full p-3 shadow-lg text-white cursor-pointer bg-naranja-base hover:bg-naranja-medio"
+                onClick={() => setContactNew((prev) => !prev)}
+              >
+                <Plus size={18} />
+              </button>
+            </AbilityGuard>
+          )}
         </div>
       )}
     </AbilityGuard>
