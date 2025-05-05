@@ -89,8 +89,8 @@ const NewAgent = () => {
 
   // Actualizar las habilidades cuando cambia el rol (solo si no estamos en modo edición)
   useEffect(() => {
-    //if (role && !agentFind) {
-    if (role) {
+    if (role && !agentFind) {
+
 
       // Mapear el valor del rol a la clave del objeto ROLES
       let roleKey;

@@ -1,11 +1,19 @@
 import Resize from "/src/hooks/responsiveHook.jsx"
 import { StateFilter } from "/src/contexts/chats.js";
 import { useContext } from "react";
+import { useLocation } from "react-router-dom";
+
 
 
 const Navtopbar = () => {
   const isMobile = Resize();
   const { setStateSelected } = useContext(StateFilter);
+  const location = useLocation();
+  
+  if (location.pathname !== '/chatList') {
+    return null;
+  }
+
   const menuOptions = [
     /*{ key: "ALL", label: "TODO" },*/
     { key: "PENDING", label: "PENDIENTE" },
