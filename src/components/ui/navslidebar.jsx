@@ -39,7 +39,7 @@ const NavSlideBar = () => {
     {
       icon: <Bolt />,
       label: "Configuración",
-      path: "/utilities",
+      path: "/utilities/tags",
       abilities: [ABILITIES.UTILITIES.VIEW, ABILITIES.UTILITIES.CREATE, ABILITIES.UTILITIES.UPDATE, ABILITIES.UTILITIES.DELETE]
     },
     {
@@ -57,8 +57,9 @@ const NavSlideBar = () => {
   ];
 
   const isActive = (path) => {
-    // Check if current path starts with menu item path
-    // This handles sub-paths like /utilities/tags showing utilities as active
+    if (path.startsWith('/utilities')) {
+      return activePath.startsWith('/utilities');
+    }
     return activePath === path || (path !== '/' && activePath.startsWith(path));
   };
 
