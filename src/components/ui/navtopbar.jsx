@@ -1,18 +1,22 @@
+/* eslint-disable react/prop-types */
 import Resize from "/src/hooks/responsiveHook.jsx"
 import { StateFilter } from "/src/contexts/chats.js";
-import { useContext } from "react";
+import { useContext, useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useTheme } from "/src/contexts/themeContext.jsx";
 
 const Navtopbar = () => {
   const isMobile = Resize();
-  const { setStateSelected } = useContext(StateFilter);
+  const { stateSelected, setStateSelected } = useContext(StateFilter);
   const location = useLocation();
   const { theme } = useTheme();
-  
+  const [activeItem, setActiveItem] = useState("PENDING"); // Default active item
+
   if (location.pathname !== '/chatList') {
     return null;
   }
+
+
 
   const menuOptions = [
     /*{ key: "ALL", label: "TODO" },*/
@@ -20,6 +24,42 @@ const Navtopbar = () => {
     { key: "OPEN", label: "PROCESO" },
     { key: "CLOSED", label: "RESUELTOS" }
   ];
+
+  const MenuItem = ({ item }) => {
+    const isActive = activeItem === item.key;
+    // Update active item when stateSelected changes
+    useEffect(() => {
+      if (stateSelected) {
+        setActiveItem(stateSelected);
+      }
+    }, [stateSelected]);
+    
+    return (
+      <li
+        onClick={() => {
+          setStateSelected(item.key);
+          setActiveItem(item.key);
+          console.log(item.key);
+        }}
+        className={`
+          flex items-center gap-2 cursor-pointer rounded-full p-2 transition-colors duration-200
+          ${isActive
+            ? theme === 'light'
+              ? 'text-[rgb(var(--color-primary-light))]'
+              : 'text-[rgb(var(--color-primary-dark))]'
+            : theme === 'light'
+              ? 'text-[rgb(var(--color-text-secondary-light))] hover:text-[rgb(var(--color-primary-light))]'
+              : 'text-[rgb(var(--color-text-secondary-dark))] hover:text-[rgb(var(--color-primary-dark))]'
+          }
+          ${theme === 'light'
+            ? 'active:bg-[rgb(var(--color-primary-light))] active:bg-opacity-20'
+            : 'active:bg-[rgb(var(--color-primary-dark))] active:bg-opacity-20'}
+        `}
+      >
+        {item.label}
+      </li>
+    );
+  };
 
   return isMobile ? (
     <footer className={`
@@ -32,23 +72,7 @@ const Navtopbar = () => {
       `}>
         <ul className="flex w-full justify-around">
           {Object.values(menuOptions).map((item) => (
-            <li key={item.key}
-              className={`
-                flex items-center gap-2 cursor-pointer rounded-full p-2 transition-colors duration-200
-                ${theme === 'light' 
-                  ? 'text-[rgb(var(--color-text-secondary-light))] hover:text-[rgb(var(--color-primary-light))]' 
-                  : 'text-[rgb(var(--color-text-secondary-dark))] hover:text-[rgb(var(--color-primary-dark))]'}
-                ${theme === 'light' 
-                  ? 'active:bg-[rgb(var(--color-primary-light))] active:bg-opacity-20' 
-                  : 'active:bg-[rgb(var(--color-primary-dark))] active:bg-opacity-20'}
-              `}
-              onClick={() => {
-                setStateSelected(item.key);
-                console.log(item.key);
-              }}
-            >
-              {item.label}
-            </li>
+            <MenuItem key={item.key} item={item} />
           ))}
         </ul>
       </nav>
@@ -64,23 +88,7 @@ const Navtopbar = () => {
       `}>
         <ul className="flex flex-row gap-4 items-center w-full">
           {Object.values(menuOptions).map((item) => (
-            <li key={item.key}
-              onClick={() => {
-                setStateSelected(item.key);
-                console.log(item.key);
-              }}
-              className={`
-                flex items-center gap-2 cursor-pointer rounded-full p-2 transition-colors duration-200
-                ${theme === 'light' 
-                  ? 'text-[rgb(var(--color-text-secondary-light))] hover:text-[rgb(var(--color-primary-light))]' 
-                  : 'text-[rgb(var(--color-text-secondary-dark))] hover:text-[rgb(var(--color-primary-dark))]'}
-                ${theme === 'light' 
-                  ? 'active:bg-[rgb(var(--color-primary-light))] active:bg-opacity-20' 
-                  : 'active:bg-[rgb(var(--color-primary-dark))] active:bg-opacity-20'}
-              `}
-            >
-              {item.label}
-            </li>
+            <MenuItem key={item.key} item={item} />
           ))}
         </ul>
       </nav>

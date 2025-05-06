@@ -1,5 +1,5 @@
 import { useState, useCallback, useContext, useEffect } from 'react';
-import { User, CheckSquare } from 'lucide-react';
+import { User } from 'lucide-react';
 import Resize from "/src/hooks/responsiveHook.jsx";
 import { useFetchAndLoad } from "/src/hooks/fechAndLoad.jsx";
 import {
@@ -14,6 +14,7 @@ import Select from 'react-select';
 import toast from "react-hot-toast";
 import { ABILITIES } from '/src/constants/abilities';
 import AbilityGuard from '/src/components/common/AbilityGuard.jsx';
+import { useTheme } from "/src/contexts/themeContext";
 
 const NewContact = () => {
   const isMobile = Resize();
@@ -21,6 +22,7 @@ const NewContact = () => {
   const { contactFind, setContactFind } = useContext(UpdateContactForm);
   const { setContactHandle } = useContext(ContactHandle);
   const { setContactNew } = useContext(NewContactForm);
+  const { theme } = useTheme();
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -278,42 +280,42 @@ const NewContact = () => {
   return (
     // Verificamos primero si el usuario tiene permiso general para ver contactos
     <AbilityGuard abilities={[ABILITIES.CONTACTS.VIEW]} fallback={
-      <div className="bg-gray-900 rounded-lg w-full p-6 flex flex-col items-center justify-center h-max">
+      <div className={`bg-[rgb(var(--color-bg-${theme}))] rounded-lg w-full p-6 flex flex-col items-center justify-center h-max`}>
       </div>
     }>
       {/* Si debemos mostrar el formulario o si tiene permisos de creación */}
       <AbilityGuard abilities={shouldShowForm ? [ABILITIES.CONTACTS.EDIT] : [ABILITIES.CONTACTS.CREATE]} fallback={
-        <div className="bg-gray-900 rounded-lg w-full p-6 flex flex-col items-center justify-center h-max">
+        <div className={`bg-[rgb(var(--color-bg-${theme}))] rounded-lg w-full p-6 flex flex-col items-center justify-center h-max`}>
         </div>
       }>
-        <div className={`bg-gray-900 rounded-lg w-full p-6 space-y-4 h-max ${isMobile ? "" : "mt-5"}`}>
+        <div className={`bg-[rgb(var(--color-bg-${theme}))] rounded-lg w-full p-6 space-y-4 h-max ${isMobile ? "" : "mt-5"}`}>
           {/* Header */}
-          <div className="flex items-center p-4 bg-gray-800 rounded-lg">
-            <User size={20} className="text-[#FF9619] mr-4" />
-            <h1 className="text-xl font-normal">{contactFind ? 'Editar Contacto' : 'Nuevo Contacto'}</h1>
+          <div className={`flex items-center p-4 bg-[rgb(var(--color-bg-${theme}-secondary))] rounded-lg`}>
+            <User size={20} className={`text-[rgb(var(--color-secondary-${theme}))] mr-4`} />
+            <h1 className={`text-xl font-normal text-[rgb(var(--color-text-primary-${theme}))]`}>{contactFind ? 'Editar Contacto' : 'Nuevo Contacto'}</h1>
           </div>
 
           {/* Form */}
           <div className="p-4 flex-1 flex flex-col space-y-6">
             {/* First Name */}
-            <div className="border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
+            <div className={`border-b border-[rgb(var(--color-text-secondary-${theme}))] pb-2 focus-within:border-[rgb(var(--color-primary-${theme}))]`}>
               <input
                 type="text"
                 placeholder="Nombres"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                className="w-full bg-transparent text-white outline-none"
+                className={`w-full bg-transparent text-[rgb(var(--color-text-primary-${theme}))] outline-none`}
               />
             </div>
 
             {/* Last Name */}
-            <div className="border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
+            <div className={`border-b border-[rgb(var(--color-text-secondary-${theme}))] pb-2 focus-within:border-[rgb(var(--color-primary-${theme}))]`}>
               <input
                 type="text"
                 placeholder="Apellidos"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
-                className="w-full bg-transparent text-white outline-none"
+                className={`w-full bg-transparent text-[rgb(var(--color-text-primary-${theme}))] outline-none`}
               />
             </div>
 
@@ -336,36 +338,33 @@ const NewContact = () => {
                       callingCode: country.callingCode,
                     }))}
                     placeholder="Código de país"
-                    className="text-white"
+                    className={`text-[rgb(var(--color-text-primary-${theme}))]`}
                     openMenuOnClick={false}
                     openMenuOnFocus={true}
-                    onKeyDown={(e) => {
-                      if (!e.target.className.includes("is-open")) {
-                        e.preventDefault();
-                        e.target.click();
-                      }
-                    }}
                     styles={{
                       control: (base) => ({
                         ...base,
-                        backgroundColor: '#1f2937',
-                        borderColor: '#374151',
+                        backgroundColor: `rgb(var(--color-bg-${theme}-secondary))`,
+                        borderColor: `rgb(var(--color-text-secondary-${theme}))`,
                       }),
                       menu: (base) => ({
                         ...base,
-                        backgroundColor: '#1f2937',
+                        backgroundColor: `rgb(var(--color-bg-${theme}-secondary))`,
                       }),
                       option: (base, state) => ({
                         ...base,
-                        backgroundColor: state.isFocused ? '#374151' : '#1f2937',
+                        backgroundColor: state.isFocused 
+                          ? `rgb(var(--color-primary-${theme}))`
+                          : `rgb(var(--color-bg-${theme}-secondary))`,
+                        color: `rgb(var(--color-text-primary-${theme}))`,
                       }),
                       singleValue: (base) => ({
                         ...base,
-                        color: 'white',
+                        color: `rgb(var(--color-text-primary-${theme}))`,
                       }),
                       input: (base) => ({
                         ...base,
-                        color: 'white',
+                        color: `rgb(var(--color-text-primary-${theme}))`,
                       }),
                     }}
                   />
@@ -376,7 +375,7 @@ const NewContact = () => {
                     placeholder="Número de teléfono"
                     value={phoneNumber}
                     onChange={handlePhoneChange}
-                    className="w-full p-2 bg-gray-800 text-white rounded-md"
+                    className={`w-full p-2 bg-[rgb(var(--color-bg-${theme}-secondary))] text-[rgb(var(--color-text-primary-${theme}))] rounded-md`}
                   />
                 </div>
               </div>
@@ -409,7 +408,7 @@ const NewContact = () => {
                     <button
                       onClick={handleUpdateContact}
                       disabled={!isFormValid || loading}
-                      className="py-2 px-4 rounded bg-naranja-base text-white transition-colors duration-300 hover:bg-naranja-medio disabled:bg-gray-600 disabled:cursor-not-allowed"
+                      className={`py-2 px-4 rounded bg-[rgb(var(--color-primary-${theme}))] text-[rgb(var(--color-text-primary-${theme}))] transition-colors duration-300 hover:bg-[rgb(var(--color-secondary-${theme}))] disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                       {loading ? 'Guardando...' : 'Actualizar'}
                     </button>
@@ -426,7 +425,7 @@ const NewContact = () => {
                   <button
                     disabled={!isFormValid || loading}
                     onClick={handleCreateContact}
-                    className="w-full py-3 rounded-md disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors duration-300 text-white cursor-pointer rounded-full p-2 bg-naranja-base hover:bg-naranja-medio"
+                    className={`w-full py-3 rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300 text-[rgb(var(--color-text-primary-${theme}))] cursor-pointer bg-[rgb(var(--color-secondary-${theme}))] hover:bg-[rgb(var(--color-primary-${theme}))]`}
                   >
                     {loading ? 'Guardando...' : 'Guardar'}
                   </button>

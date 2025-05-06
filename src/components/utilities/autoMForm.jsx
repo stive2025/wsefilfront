@@ -6,6 +6,7 @@ import { UpdateAutoForm, AutoHandle, AutoCreateForm } from "/src/contexts/chats.
 import { BotMessageSquare } from 'lucide-react';
 import { ABILITIES } from '/src/constants/abilities.js';
 import AbilityGuard from '/src/components/common/AbilityGuard.jsx';
+import { useTheme } from "/src/contexts/themeContext";
 
 const TagCreationModal = () => {
   const isMobile = Resize();
@@ -13,6 +14,7 @@ const TagCreationModal = () => {
   const { autoFind, setAutoFind } = useContext(UpdateAutoForm);
   const { setAutoHandle } = useContext(AutoHandle);
   const { setAutoClick } = useContext(AutoCreateForm);
+  const { theme } = useTheme();
 
   const [labelName, setLabelName] = useState('');
   const [labelDescription, setLabelDescription] = useState('');
@@ -116,18 +118,18 @@ const TagCreationModal = () => {
   return (
     // Wrapping the entire component with AbilityGuard to check if user can access this component
     <AbilityGuard abilities={[autoFind ? ABILITIES.UTILITIES.EDIT : ABILITIES.UTILITIES.CREATE]}>
-      <div className={` rounded-lg w-full p-6 space-y-4 ${isMobile ? "" : "mt-16"} h-max`}>
-        <div className="flex items-center p-4 bg-gray-800 rounded-lg">
-          <BotMessageSquare size={20} className="text-[#FF9619] mr-4" />
-          <h1 className="text-xl font-normal">
+      <div className={`bg-[rgb(var(--color-bg-${theme}))] rounded-lg w-full p-6 space-y-4 ${isMobile ? "" : "mt-16"} h-max`}>
+        <div className={`flex items-center p-4 bg-[rgb(var(--color-bg-${theme}-secondary))] rounded-lg`}>
+          <BotMessageSquare size={20} className={`text-[rgb(var(--color-secondary-${theme}))] mr-4`} />
+          <h1 className={`text-xl font-normal text-[rgb(var(--color-text-primary-${theme}))]`}>
             {autoFind ? 'EDITAR MENSAJE AUTOMÁTICO' : 'NUEVO MENSAJE AUTOMÁTICO'}
           </h1>
         </div>
 
-        <div className="mb-6 border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
+        <div className={`mb-6 border-b border-[rgb(var(--color-text-secondary-${theme}))] pb-2 focus-within:border-[rgb(var(--color-primary-${theme}))]`}>
           <label
             htmlFor="label-name"
-            className="block text-sm font-medium text-gray-300 mb-2"
+            className={`block text-sm font-medium text-[rgb(var(--color-text-secondary-${theme}))] mb-2`}
           >
             Nombre del Mensaje Automático
           </label>
@@ -137,14 +139,14 @@ const TagCreationModal = () => {
             placeholder="Introduzca el nombre"
             value={labelName}
             onChange={(e) => setLabelName(e.target.value)}
-            className="w-full bg-transparent text-white outline-none"
+            className={`w-full bg-transparent text-[rgb(var(--color-text-primary-${theme}))] outline-none`}
           />
         </div>
 
-        <div className="mb-6 border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
+        <div className={`mb-6 border-b border-[rgb(var(--color-text-secondary-${theme}))] pb-2 focus-within:border-[rgb(var(--color-primary-${theme}))]`}>
           <label
             htmlFor="label-description"
-            className="block text-sm font-medium text-gray-300 mb-2"
+            className={`block text-sm font-medium text-[rgb(var(--color-text-secondary-${theme}))] mb-2`}
           >
             Descripción
           </label>
@@ -153,7 +155,7 @@ const TagCreationModal = () => {
             placeholder="¿Para que sirve este Mensaje Automático?"
             value={labelDescription}
             onChange={(e) => setLabelDescription(e.target.value)}
-            className="w-full bg-transparent text-white outline-none"
+            className={`w-full bg-transparent text-[rgb(var(--color-text-primary-${theme}))] outline-none`}
           />
         </div>
 
@@ -177,7 +179,9 @@ const TagCreationModal = () => {
               <button
                 onClick={handleUpdateTag}
                 disabled={!isFormValid || loading}
-                className="py-2 px-4 rounded bg-naranja-base text-white transition-colors duration-300 hover:bg-naranja-medio disabled:bg-gray-600 disabled:cursor-not-allowed"
+                className={`py-2 px-4 rounded bg-[rgb(var(--color-primary-${theme}))] 
+                text-[rgb(var(--color-text-primary-${theme}))] transition-colors duration-300 
+                hover:bg-[rgb(var(--color-secondary-${theme}))] disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 {loading ? 'Guardando...' : 'Actualizar'}
               </button>
@@ -194,8 +198,9 @@ const TagCreationModal = () => {
             <button
               onClick={handleCreateTag}
               disabled={!isFormValid || loading}
-              className="w-full py-3 rounded-md disabled:bg-gray-600 disabled:cursor-not-allowed
-                         transition-colors duration-300 text-white cursor-pointer rounded-full p-2 bg-naranja-base hover:bg-naranja-medio"
+              className={`w-full py-3 rounded-full disabled:opacity-50 disabled:cursor-not-allowed 
+              transition-colors duration-300 text-[rgb(var(--color-text-primary-${theme}))] cursor-pointer 
+              bg-[rgb(var(--color-secondary-${theme}))] hover:bg-[rgb(var(--color-primary-${theme}))]`}
             >
               {loading ? 'Guardando...' : 'Guardar'}
             </button>

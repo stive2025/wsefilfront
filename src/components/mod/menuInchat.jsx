@@ -47,10 +47,7 @@ const MenuInchat = ({ onClose, isOpen }) => {
                     exit="exit"
                     variants={variants}
                     className={`
-                        fixed w-16 flex flex-col items-center py-4 shadow-lg mt-10
-                        ${theme === 'light' 
-                            ? 'bg-[rgb(var(--color-bg-light))]' 
-                            : 'bg-[rgb(var(--color-bg-dark))]'}
+                        fixed w-16 flex flex-col items-center py-4  mt-10
                     `}
                     onClick={onClose}
                 >

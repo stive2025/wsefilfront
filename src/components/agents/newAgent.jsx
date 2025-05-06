@@ -6,6 +6,7 @@ import { createAgent, updateAgent } from "/src/services/agents.js";
 import { UpdateAgentForm, AgentHandle, NewAgentForm } from "/src/contexts/chats.js";
 import { ABILITIES, ROLES, ROLE_DEFAULT_ABILITIES } from "/src/constants/abilities.js";
 import AbilityGuard from '/src/components/common/AbilityGuard.jsx';
+import { useTheme } from "/src/contexts/themeContext";
 
 const NewAgent = () => {
   const isMobile = Resize();
@@ -13,6 +14,7 @@ const NewAgent = () => {
   const { agentFind, setAgentFind } = useContext(UpdateAgentForm);
   const { setAgentHandle } = useContext(AgentHandle);
   const { setAgentNew } = useContext(NewAgentForm);
+  const { theme } = useTheme();
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -269,69 +271,71 @@ const NewAgent = () => {
   return (
     // Envolveremos todo el componente con un AbilityGuard para verificar si puede ver este componente
     <AbilityGuard abilities={[agentFind ? ABILITIES.AGENTS.EDIT : ABILITIES.AGENTS.CREATE]}>
-      <div className={`bg-gray-900 rounded-lg w-full p-6 space-y-4 h-max ${isMobile ? "" : "mt-5"}`}>
+      <div className={`bg-[rgb(var(--color-bg-${theme}))] rounded-lg w-full p-6 space-y-4 h-max ${isMobile ? "" : "mt-5"}`}>
         {/* Header */}
-        <div className="flex items-center p-4 bg-gray-800 rounded-lg">
-          <User size={20} className="text-[#FF9619] mr-4" />
-          <h1 className="text-xl font-normal">{agentFind ? 'Editar Agente' : 'Nuevo Agente'}</h1>
+        <div className={`flex items-center p-4 bg-[rgb(var(--color-bg-${theme}-secondary))] rounded-lg`}>
+          <User size={20} className={`text-[rgb(var(--color-secondary-${theme}))] mr-4`} />
+          <h1 className={`text-xl font-normal text-[rgb(var(--color-text-primary-${theme}))]`}>
+            {agentFind ? 'Editar Agente' : 'Nuevo Agente'}
+          </h1>
         </div>
 
         {/* Form */}
         <div className="p-4 flex-1 flex flex-col space-y-6">
           {/* First Name */}
-          <div className="border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
+          <div className={`border-b border-[rgb(var(--color-text-secondary-${theme}))] pb-2 focus-within:border-[rgb(var(--color-primary-${theme}))]`}>
             <input
               type="text"
               placeholder="Nombres"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
-              className="w-full bg-transparent text-white outline-none"
+              className={`w-full bg-transparent text-[rgb(var(--color-text-primary-${theme}))] outline-none`}
             />
           </div>
 
           {/* Last Name */}
-          <div className="border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
+          <div className={`border-b border-[rgb(var(--color-text-secondary-${theme}))] pb-2 focus-within:border-[rgb(var(--color-primary-${theme}))]`}>
             <input
               type="text"
               placeholder="Apellidos"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
-              className="w-full bg-transparent text-white outline-none"
+              className={`w-full bg-transparent text-[rgb(var(--color-text-primary-${theme}))] outline-none`}
             />
           </div>
 
           {/* Email */}
-          <div className="border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
+          <div className={`border-b border-[rgb(var(--color-text-secondary-${theme}))] pb-2 focus-within:border-[rgb(var(--color-primary-${theme}))]`}>
             <input
               type="email"
               placeholder="Correo"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-transparent text-white outline-none"
+              className={`w-full bg-transparent text-[rgb(var(--color-text-primary-${theme}))] outline-none`}
             />
           </div>
 
           {/* Password - solo se muestra en modo creación */}
           {!agentFind && (
             <AbilityGuard abilities={[ABILITIES.AGENTS.CREATE]}>
-              <div className="border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
+              <div className={`border-b border-[rgb(var(--color-text-secondary-${theme}))] pb-2 focus-within:border-[rgb(var(--color-primary-${theme}))]`}>
                 <input
                   type="password"
                   placeholder="Contraseña"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-transparent text-white outline-none"
+                  className={`w-full bg-transparent text-[rgb(var(--color-text-primary-${theme}))] outline-none`}
                 />
               </div>
             </AbilityGuard>
           )}
 
           {/* Role Combobox */}
-          <div className="border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
+          <div className={`border-b border-[rgb(var(--color-text-secondary-${theme}))] pb-2 focus-within:border-[rgb(var(--color-primary-${theme}))]`}>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              className={`w-full bg-gray-900 outline-none ${role ? 'text-white' : 'text-gray-400'}`}
+              className={`w-full bg-[rgb(var(--color-bg-${theme}))] outline-none ${role ? `text-[rgb(var(--color-text-primary-${theme}))]` : `text-[rgb(var(--color-text-secondary-${theme}))]`}`}
             >
               <option value="">Seleccionar Rol</option>
               <option value="1">Administrador</option>
@@ -347,9 +351,9 @@ const NewAgent = () => {
               <button
                 type="button"
                 onClick={() => setShowAbilitiesModal(true)}
-                className="flex items-center space-x-2 py-2 px-4 bg-gray-800 hover:bg-gray-700 text-white rounded-md"
+                className={`flex items-center space-x-2 py-2 px-4 bg-[rgb(var(--color-bg-${theme}-secondary))] hover:bg-[rgb(var(--color-primary-${theme}))] text-[rgb(var(--color-text-primary-${theme}))] rounded-md`}
               >
-                <Settings size={18} className="text-[#FF9619]" />
+                <Settings size={18} className={`text-[rgb(var(--color-secondary-${theme}))]`} />
                 <span>
                   Gestionar Permisos ({selectedAbilitiesCount})
                 </span>
@@ -378,7 +382,7 @@ const NewAgent = () => {
                   <button
                     onClick={handleUpdateAgent}
                     disabled={!isFormValidForUpdate || loading}
-                    className="py-2 px-4 rounded bg-naranja-base text-white transition-colors duration-300 hover:bg-naranja-medio disabled:bg-gray-600 disabled:cursor-not-allowed"
+                    className={`py-2 px-4 rounded bg-[rgb(var(--color-primary-${theme}))] text-[rgb(var(--color-text-primary-${theme}))] transition-colors duration-300 hover:bg-[rgb(var(--color-secondary-${theme}))] disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     {loading ? 'Guardando...' : 'Actualizar'}
                   </button>
@@ -395,7 +399,7 @@ const NewAgent = () => {
                 <button
                   disabled={!isFormValid || loading}
                   onClick={handleCreateAgent}
-                  className="w-full py-3 rounded-md disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors duration-300 text-white cursor-pointer rounded-full p-2 bg-naranja-base hover:bg-naranja-medio"
+                  className={`w-full py-3 rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300 text-[rgb(var(--color-text-primary-${theme}))] cursor-pointer bg-[rgb(var(--color-secondary-${theme}))] hover:bg-[rgb(var(--color-primary-${theme}))]`}
                 >
                   {loading ? 'Guardando...' : 'Guardar'}
                 </button>
@@ -407,15 +411,15 @@ const NewAgent = () => {
         {/* Modal de Abilities */}
         {showAbilitiesModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="bg-gray-800 rounded-lg p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto">
+            <div className={`bg-[rgb(var(--color-bg-${theme}-secondary))] rounded-lg p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto`}>
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl text-white font-medium flex items-center">
-                  <CheckSquare size={20} className="text-[#FF9619] mr-2" />
+                <h2 className={`text-xl text-[rgb(var(--color-text-primary-${theme}))] font-medium flex items-center`}>
+                  <CheckSquare size={20} className={`text-[rgb(var(--color-secondary-${theme}))] mr-2`} />
                   Configurar Permisos
                 </h2>
                 <button
                   onClick={() => setShowAbilitiesModal(false)}
-                  className="text-gray-400 hover:text-white"
+                  className={`text-[rgb(var(--color-text-secondary-${theme}))] hover:text-[rgb(var(--color-text-primary-${theme}))]`}
                 >
                   ✕
                 </button>

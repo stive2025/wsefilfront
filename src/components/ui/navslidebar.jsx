@@ -1,8 +1,8 @@
 /* eslint-disable react/prop-types */
 import { User, LogOut, Contact, Bolt, Users, MessageSquare } from "lucide-react";
 import { ChatInterfaceClick } from "/src/contexts/chats.js"
-import { useState, useContext } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useContext, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import Resize from "/src/hooks/responsiveHook.jsx"
 import { logout } from "/src/services/authService.js";
 import { ABILITIES } from '/src/constants/abilities';
@@ -11,10 +11,17 @@ import { useTheme } from "/src/contexts/themeContext.jsx";
 
 const NavSlideBar = () => {
   const [showMenu, setShowMenu] = useState(false);
+  const [activePath, setActivePath] = useState('');
   const isMobile = Resize();
   const navigate = useNavigate();
+  const location = useLocation();
   const { setSelectedChatId } = useContext(ChatInterfaceClick);
   const { theme } = useTheme();
+
+  // Update active path when location changes
+  useEffect(() => {
+    setActivePath(location.pathname);
+  }, [location]);
 
   const menuOptions = [
     {
@@ -32,7 +39,7 @@ const NavSlideBar = () => {
     {
       icon: <Bolt />,
       label: "Configuración",
-      path: "/utilities/tags",
+      path: "/utilities",
       abilities: [ABILITIES.UTILITIES.VIEW, ABILITIES.UTILITIES.CREATE, ABILITIES.UTILITIES.UPDATE, ABILITIES.UTILITIES.DELETE]
     },
     {
@@ -49,37 +56,57 @@ const NavSlideBar = () => {
     }
   ];
 
-  const MenuItem = ({ item, isMobileView }) => (
-    <AbilityGuard abilities={item.abilities}>
-      <li
-        className={`
-          cursor-pointer transition-colors duration-200
-          ${isMobileView
-            ? `flex items-center gap-2 p-2
-               ${theme === 'light' 
-                 ? 'text-[rgb(var(--color-text-primary-light))] hover:text-[rgb(var(--color-primary-light))]' 
-                 : 'text-[rgb(var(--color-text-primary-dark))] hover:text-[rgb(var(--color-primary-dark))]'}`
-            : `rounded-full p-2
-               ${theme === 'light'
-                 ? 'text-[rgb(var(--color-text-secondary-light))] hover:text-[rgb(var(--color-primary-light))]'
-                 : 'text-[rgb(var(--color-text-secondary-dark))] hover:text-[rgb(var(--color-primary-dark))]'}`
-          }
-          active:bg-opacity-20
-          ${theme === 'light' 
-            ? 'active:bg-[rgb(var(--color-primary-light))]' 
-            : 'active:bg-[rgb(var(--color-primary-dark))]'}
-        `}
-        onClick={() => {
-          setSelectedChatId(null);
-          navigate(item.path);
-          if (isMobileView) setShowMenu(false);
-        }}
-      >
-        {item.icon}
-        {isMobileView && <span>{item.label}</span>}
-      </li>
-    </AbilityGuard>
-  );
+  const isActive = (path) => {
+    // Check if current path starts with menu item path
+    // This handles sub-paths like /utilities/tags showing utilities as active
+    return activePath === path || (path !== '/' && activePath.startsWith(path));
+  };
+
+  const MenuItem = ({ item, isMobileView }) => {
+    const active = isActive(item.path);
+    
+    return (
+      <AbilityGuard abilities={item.abilities}>
+        <li
+          className={`
+            cursor-pointer transition-colors duration-200
+            ${isMobileView
+              ? `flex items-center gap-2 p-2 rounded-md
+                 ${active 
+                   ? theme === 'light'
+                     ? 'text-[rgb(var(--color-primary-light))] font-medium' 
+                     : 'text-[rgb(var(--color-primary-dark))] font-medium'
+                   : theme === 'light' 
+                     ? 'text-[rgb(var(--color-text-primary-light))] hover:text-[rgb(var(--color-primary-light))]' 
+                     : 'text-[rgb(var(--color-text-primary-dark))] hover:text-[rgb(var(--color-primary-dark))]'
+                 }`
+              : `rounded-full p-2
+                 ${active
+                   ? theme === 'light'
+                     ? 'text-[rgb(var(--color-primary-light))]'
+                     : 'text-[rgb(var(--color-primary-dark))]'
+                   : theme === 'light'
+                     ? 'text-[rgb(var(--color-text-secondary-light))] hover:text-[rgb(var(--color-primary-light))]'
+                     : 'text-[rgb(var(--color-text-secondary-dark))] hover:text-[rgb(var(--color-primary-dark))]'
+                 }`
+            }
+            active:bg-opacity-20
+            ${theme === 'light' 
+              ? 'active:bg-[rgb(var(--color-primary-light))]' 
+              : 'active:bg-[rgb(var(--color-primary-dark))]'}
+          `}
+          onClick={() => {
+            setSelectedChatId(null);
+            navigate(item.path);
+            if (isMobileView) setShowMenu(false);
+          }}
+        >
+          {item.icon}
+          {isMobileView && <span>{item.label}</span>}
+        </li>
+      </AbilityGuard>
+    );
+  };
 
   return isMobile ? (
     <header className={`

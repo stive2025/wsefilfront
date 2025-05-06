@@ -7,45 +7,61 @@ import { AutoCreateForm, UpdateAutoForm, AutoHandle } from "/src/contexts/chats.
 import { getAutoMessages, deleteAutoMessage, getAutoMessage } from "/src/services/AutoMessages.js";
 import { ABILITIES } from '/src/constants/abilities.js';
 import AbilityGuard from '/src/components/common/AbilityGuard.jsx';
+import { useTheme } from "/src/contexts/themeContext";
 
 // Reusable Search Input Component
-const SearchInput = ({ searchTerm, onSearchChange }) => (
-  <AbilityGuard abilities={[ABILITIES.UTILITIES.SEARCH]} fallback={<div className="p-2 bg-gray-900"></div>}>
-    <div className="p-2 bg-gray-900">
-      <div className="relative flex items-center">
-        <input
-          type="text"
-          placeholder="Search..."
-          className="w-full bg-gray-800 rounded-lg pl-8 pr-2 py-1 text-white placeholder-gray-400"
-          value={searchTerm}
-          onChange={(e) => onSearchChange(e.target.value)}
-        />
-        <Search className="absolute left-1 text-gray-400" size={18} />
+const SearchInput = ({ searchTerm, onSearchChange }) => {
+  const { theme } = useTheme();
+  
+  return (
+    <AbilityGuard abilities={[ABILITIES.UTILITIES.SEARCH]} fallback={
+      <div className={`p-2 bg-[rgb(var(--color-bg-${theme}-secondary))]`}></div>
+    }>
+      <div className={`p-2 bg-[rgb(var(--color-bg-${theme}-secondary))]`}>
+        <div className="relative flex items-center">
+          <input
+            type="text"
+            placeholder="Search..."
+            className={`w-full bg-[rgb(var(--color-bg-${theme}))] rounded-lg pl-8 pr-2 py-1 
+              text-[rgb(var(--color-text-primary-${theme}))] placeholder-[rgb(var(--color-text-secondary-${theme}))]`}
+            value={searchTerm}
+            onChange={(e) => onSearchChange(e.target.value)}
+          />
+          <Search className={`absolute left-1 text-[rgb(var(--color-text-secondary-${theme}))]`} size={18} />
+        </div>
       </div>
-    </div>
-  </AbilityGuard>
-);
+    </AbilityGuard>
+  );
+};
 
 // Auto Items Component
 const AutoItems = ({ AutoMessages, onDeleteAuto, isDeleting, onFindAuto, loadingMore, lastAutoRef }) => {
-  // Check if AutoMessages exist and contain an array before mapping
+  const { theme } = useTheme();
+
   if (!AutoMessages || !AutoMessages.length) {
-    return <div className="p-4 text-gray-400">No hay Mensajes Automáticos disponibles</div>;
+    return (
+      <div className={`p-4 text-[rgb(var(--color-text-secondary-${theme}))]`}>
+        No hay Mensajes Automáticos disponibles
+      </div>
+    );
   }
 
   return (
-    <div>
+    <div className={`bg-[rgb(var(--color-bg-${theme}-secondary))]`}>
       {AutoMessages.map((Auto, index) => (
         <div
           key={Auto.id}
           className="w-full flex items-center p-4"
           ref={index === AutoMessages.length - 1 ? lastAutoRef : null}
         >
-          <div className="w-full flex items-center space-x-3 hover:bg-gray-700 cursor-pointer active:bg-gray-600">
-            {/* Tag Details */}
+          <div className={`w-full flex items-center space-x-3 hover:bg-[rgb(var(--color-bg-${theme}))] 
+            cursor-pointer active:bg-[rgb(var(--color-primary-${theme}))]`}>
             <div className="flex-1">
-              <div className="font-medium text-sm md:text-base">{Auto.name}</div>
-              <div className="text-xs md:text-sm text-gray-400 overflow-hidden text-ellipsis whitespace-nowrap max-w-[200px]">
+              <div className={`font-medium text-sm md:text-base text-[rgb(var(--color-text-primary-${theme}))]`}>
+                {Auto.name}
+              </div>
+              <div className={`text-xs md:text-sm text-[rgb(var(--color-text-secondary-${theme}))] 
+                overflow-hidden text-ellipsis whitespace-nowrap max-w-[200px]`}>
                 {Auto.description || "Sin descripción"}
               </div>
             </div>
@@ -53,7 +69,8 @@ const AutoItems = ({ AutoMessages, onDeleteAuto, isDeleting, onFindAuto, loading
           <div className="flex">
             <AbilityGuard abilities={[ABILITIES.UTILITIES.EDIT]}>
               <button
-                className="mr-2 text-gray-400 hover:text-white"
+                className={`mr-2 text-[rgb(var(--color-text-secondary-${theme}))] 
+                  hover:text-[rgb(var(--color-primary-${theme}))]`}
                 onClick={() => onFindAuto(Auto.id)}
               >
                 <Pencil size={16} />
@@ -61,7 +78,8 @@ const AutoItems = ({ AutoMessages, onDeleteAuto, isDeleting, onFindAuto, loading
             </AbilityGuard>
             <AbilityGuard abilities={[ABILITIES.UTILITIES.DELETE]}>
               <button
-                className="text-gray-400 hover:text-white"
+                className={`text-[rgb(var(--color-text-secondary-${theme}))] 
+                  hover:text-[rgb(var(--color-primary-${theme}))]`}
                 onClick={() => onDeleteAuto(Auto.id)}
                 disabled={isDeleting}
               >
@@ -72,13 +90,16 @@ const AutoItems = ({ AutoMessages, onDeleteAuto, isDeleting, onFindAuto, loading
         </div>
       ))}
       {loadingMore && (
-        <div className="p-4 text-gray-400 text-center">Cargando más mensajes...</div>
+        <div className={`p-4 text-[rgb(var(--color-text-secondary-${theme}))] text-center`}>
+          Cargando más mensajes...
+        </div>
       )}
     </div>
   );
 };
 
 const TagsList = () => {
+  const { theme } = useTheme();
   const { setAutoClick } = useContext(AutoCreateForm);
   const { setAutoFind } = useContext(UpdateAutoForm);
   const { autoHandle, setAutoHandle } = useContext(AutoHandle);
@@ -285,12 +306,13 @@ const TagsList = () => {
 
   return (
     <AbilityGuard abilities={[ABILITIES.UTILITIES.VIEW]} fallback={
-      <div className="w-full flex items-center justify-center h-full text-gray-400">
+      <div className={`w-full flex items-center justify-center h-full text-[rgb(var(--color-text-secondary-${theme}))]`}>
         No tienes permisos para ver la lista de mensajes automáticos
       </div>
     }>
       {isMobile ? (
-        <div className="w-full sm:w-80 mt-10 flex flex-col text-white">
+        <div className={`w-full sm:w-80 mt-10 flex flex-col bg-[rgb(var(--color-bg-${theme}-secondary))] 
+          text-[rgb(var(--color-text-primary-${theme}))]`}>
           <div className="flex flex-row flex-shrink-0">
             <label className="p-1">Mensajes Automáticos</label>
           </div>
@@ -298,10 +320,11 @@ const TagsList = () => {
             <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
           </div>
 
-          {/* Messages list with scroll */}
           <div className="flex-1 overflow-y-auto">
             {loading && messages.length === 0 ? (
-              <div className="p-4 text-gray-400">Cargando Mensajes Automáticos...</div>
+              <div className={`p-4 text-[rgb(var(--color-text-secondary-${theme}))]`}>
+                Cargando Mensajes Automáticos...
+              </div>
             ) : error ? (
               <div className="p-4 text-red-400">{error}</div>
             ) : (
@@ -316,10 +339,11 @@ const TagsList = () => {
             )}
           </div>
 
-          {/* Button to add new auto message in mobile */}
           <AbilityGuard abilities={[ABILITIES.UTILITIES.CREATE]}>
             <button
-              className="absolute bottom-4 right-4 mb-15 rounded-full p-3 shadow-lg text-white cursor-pointer bg-naranja-base hover:bg-naranja-medio"
+              className={`absolute bottom-4 right-4 mb-15 rounded-full p-3 shadow-lg 
+                text-[rgb(var(--color-text-primary-${theme}))] cursor-pointer 
+                bg-[rgb(var(--color-secondary-${theme}))] hover:bg-[rgb(var(--color-primary-${theme}))]`}
               onClick={() => setAutoClick((prev) => !prev)}
             >
               <Plus size={18} />
@@ -327,7 +351,9 @@ const TagsList = () => {
           </AbilityGuard>
         </div>
       ) : (
-        <div className="flex-1 border-r border-gray-700 flex flex-col text-white pt-10 ml-10 overflow-y-auto">
+        <div className={`flex-1 border-r border-[rgb(var(--color-text-secondary-${theme}))] flex flex-col 
+          bg-[rgb(var(--color-bg-${theme}-secondary))] text-[rgb(var(--color-text-primary-${theme}))] 
+          pt-2 ml-10 overflow-y-auto`}>
           {/* Fixed header and search */}
           <div className="flex flex-row flex-shrink-0">
             <label className="p-1">Mensajes Automáticos</label>
@@ -339,7 +365,9 @@ const TagsList = () => {
           {/* Messages list with scroll */}
           <div className="flex-1 overflow-y-auto scrollbar-hide">
             {loading && messages.length === 0 ? (
-              <div className="p-4 text-gray-400">Cargando Mensajes Automáticos...</div>
+              <div className={`p-4 text-[rgb(var(--color-text-secondary-${theme}))]`}>
+                Cargando Mensajes Automáticos...
+              </div>
             ) : error ? (
               <div className="p-4 text-red-400">{error}</div>
             ) : (

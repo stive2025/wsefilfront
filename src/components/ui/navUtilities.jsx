@@ -1,37 +1,64 @@
 /* eslint-disable react/prop-types */
 import Resize from "/src/hooks/responsiveHook.jsx"
 import { Tag, MailPlus, BotMessageSquare } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useTheme } from "/src/contexts/themeContext.jsx";
+import { useState, useEffect } from "react";
 
 const NavUtilities = () => {
     const isMobile = Resize();
     const navigate = useNavigate();
+    const location = useLocation();
     const { theme } = useTheme();
+    const [activePath, setActivePath] = useState('');
+
+    // Update active path when location changes
+    useEffect(() => {
+        setActivePath(location.pathname);
+    }, [location]);
 
     const menuOptions = [
-        { icon: <Tag size={18}/>, label: "Etiquetas", path: "/utilities/tags" },
-        { icon: <MailPlus size={18}/>, label: "Mensajes Personalizados", path: "/utilities/customMessages" },
-        { icon: <BotMessageSquare size={18}/>, label: "Mensajes Automáticos", path: "/utilities/autoMessages" },
+        { icon: <Tag size={18} />, label: "Etiquetas", path: "/utilities/tags" },
+        { icon: <MailPlus size={18} />, label: "Mensajes Personalizados", path: "/utilities/customMessages" },
+        { icon: <BotMessageSquare size={18} />, label: "Mensajes Automáticos", path: "/utilities/autoMessages" },
     ];
 
-    const MenuItem = ({ item }) => (
-        <li 
-            className={`
-                flex items-center gap-2 cursor-pointer rounded-full p-2 transition-colors duration-200
-                ${theme === 'light' 
-                    ? 'text-[rgb(var(--color-text-secondary-light))] hover:text-[rgb(var(--color-primary-light))]' 
-                    : 'text-[rgb(var(--color-text-secondary-dark))] hover:text-[rgb(var(--color-primary-dark))]'}
-                ${theme === 'light' 
-                    ? 'active:bg-[rgb(var(--color-primary-light))] active:bg-opacity-20' 
-                    : 'active:bg-[rgb(var(--color-primary-dark))] active:bg-opacity-20'}
-            `}
-            onClick={() => navigate(item.path)}
-        >
-            {item.icon}
-            {!isMobile && item.label}
-        </li>
-    );
+    const isActive = (path) => {
+        // Check if current path starts with menu item path
+        // This handles sub-paths like /utilities/tags showing utilities as active
+        if (path === '/utilities/') {
+            // Special case for utilities path - match any utilities path
+            return activePath.startsWith('/utilities');
+        }
+        return activePath === path || (path !== '/' && activePath.startsWith(path));
+    };
+
+    const MenuItem = ({ item }) => {
+        const active = isActive(item.path);
+
+        return (
+            <li
+                className={`
+                    flex items-center gap-2 cursor-pointer rounded-full p-2 transition-colors duration-200
+                    ${active
+                        ? theme === 'light'
+                            ? 'text-[rgb(var(--color-primary-light))]'
+                            : 'text-[rgb(var(--color-primary-dark))]'
+                        : theme === 'light'
+                            ? 'text-[rgb(var(--color-text-secondary-light))] hover:text-[rgb(var(--color-primary-light))]'
+                            : 'text-[rgb(var(--color-text-secondary-dark))] hover:text-[rgb(var(--color-primary-dark))]'
+                    }
+                    ${theme === 'light'
+                        ? 'active:bg-[rgb(var(--color-primary-light))] active:bg-opacity-20'
+                        : 'active:bg-[rgb(var(--color-primary-dark))] active:bg-opacity-20'}
+                `}
+                onClick={() => navigate(item.path)}
+            >
+                {item.icon}
+                {!isMobile && item.label}
+            </li>
+        );
+    };
 
     return isMobile ? (
         <footer className={`

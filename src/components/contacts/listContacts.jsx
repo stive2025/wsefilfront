@@ -8,45 +8,53 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { getContacts, deleteContact, getContact } from "/src/services/contacts.js";
 import { ABILITIES } from '/src/constants/abilities';
 import AbilityGuard from '/src/components/common/AbilityGuard.jsx';
-//import toast from "react-hot-toast";
+import { useTheme } from "/src/contexts/themeContext";
 
 // Componentes reutilizables
-const SearchInput = ({ searchTerm, onSearchChange }) => (
-  <AbilityGuard abilities={[ABILITIES.CONTACTS.SEARCH]} fallback={<div className="p-2 bg-gray-900"></div>}>
-    <div className="p-2 bg-gray-900">
-      <div className="relative flex items-center">
-        <input
-          type="text"
-          placeholder="Search..."
-          className="w-full bg-gray-800 rounded-lg pl-8 pr-2 py-1 text-white placeholder-gray-400"
-          value={searchTerm}
-          onChange={(e) => onSearchChange(e.target.value)}
-        />
-        <Search className="absolute left-1 text-gray-400" size={18} />
+const SearchInput = ({ searchTerm, onSearchChange }) => {
+  const { theme } = useTheme();
+  
+  return (
+    <AbilityGuard abilities={[ABILITIES.CONTACTS.SEARCH]} fallback={
+      <div className={`p-2 bg-[rgb(var(--color-bg-${theme}-secondary))]`}></div>
+    }>
+      <div className={`p-2 bg-[rgb(var(--color-bg-${theme}-secondary))]`}>
+        <div className="relative flex items-center">
+          <input
+            type="text"
+            placeholder="Search..."
+            className={`w-full bg-[rgb(var(--color-bg-${theme}))] rounded-lg pl-8 pr-2 py-1 
+            text-[rgb(var(--color-text-primary-${theme}))] placeholder-[rgb(var(--color-text-secondary-${theme}))]`}
+            value={searchTerm}
+            onChange={(e) => onSearchChange(e.target.value)}
+          />
+          <Search className={`absolute left-1 text-[rgb(var(--color-text-secondary-${theme}))]`} size={18} />
+        </div>
       </div>
-    </div>
-  </AbilityGuard>
-);    
+    </AbilityGuard>
+  );
+};    
 
 const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, loadingMore, lastContactRef, setSelectedChatId, setNewMessage }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  // Verificar si contacts existe y contiene un array antes de mapear
+  const { theme } = useTheme();
+
   if (!contacts || !contacts.length) {
-    return <div className="p-4 text-gray-400">No hay contactos disponibles</div>;
+    return <div className={`p-4 text-[rgb(var(--color-text-secondary-${theme}))]`}>No hay contactos disponibles</div>;
   }
 
   return (
-    <div className="bg-gray-900">
+    <div className={`bg-[rgb(var(--color-bg-${theme}-secondary))]`}>
       {contacts.map((item, index) => (
         <div
           key={item.id}
           className="w-full flex items-center p-4"
-          // Solo aplicar la referencia al último elemento
           ref={index === contacts.length - 1 ? lastContactRef : null}
         >
           <div
-            className="w-full flex items-center space-x-3 hover:bg-gray-800 cursor-pointer active:bg-gray-700"
+            className={`w-full flex items-center space-x-3 hover:bg-[rgb(var(--color-bg-${theme}))] 
+            cursor-pointer active:bg-[rgb(var(--color-primary-${theme}))]`}
             onClick={() => {
               if (location.pathname === "/contacts") {
                 navigate("/chatList");
@@ -73,13 +81,17 @@ const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, lo
             }}
           >
             {/* Aquí puedes poner un avatar si tu API devuelve uno, si no, usar una imagen por defecto */}
-            <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-white">
+            <div className={`w-10 h-10 rounded-full bg-[rgb(var(--color-bg-${theme}))] 
+            flex items-center justify-center text-[rgb(var(--color-text-primary-${theme}))]`}>
               {item.name ? item.name.charAt(0).toUpperCase() : '?'}
             </div>
 
             <div className="flex-1">
-              <div className="font-medium text-sm md:text-base">{item.name || 'Sin nombre'}</div>
-              <div className="text-xs md:text-sm text-gray-400 overflow-hidden text-ellipsis whitespace-nowrap max-w-[150px] sm:max-w-[200px]">
+              <div className={`font-medium text-sm md:text-base text-[rgb(var(--color-text-primary-${theme}))]`}>
+                {item.name || 'Sin nombre'}
+              </div>
+              <div className={`text-xs md:text-sm text-[rgb(var(--color-text-secondary-${theme}))] 
+              overflow-hidden text-ellipsis whitespace-nowrap max-w-[150px] sm:max-w-[200px]`}>
                 {item.phone_number || 'Sin número'}
               </div>
             </div>
@@ -88,7 +100,8 @@ const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, lo
             <div className="flex">
               <AbilityGuard abilities={[ABILITIES.CONTACTS.EDIT]}>
                 <button
-                  className="mr-2 text-gray-400 hover:text-white"
+                  className={`mr-2 text-[rgb(var(--color-text-secondary-${theme}))] 
+                  hover:text-[rgb(var(--color-primary-${theme}))]`}
                   onClick={() => onFindContact(item.id)}
                 >
                   <Pencil size={16} />
@@ -96,7 +109,8 @@ const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, lo
               </AbilityGuard>
               <AbilityGuard abilities={[ABILITIES.CONTACTS.DELETE]}>
                 <button
-                  className="text-gray-400 hover:text-white"
+                  className={`text-[rgb(var(--color-text-secondary-${theme}))] 
+                  hover:text-[rgb(var(--color-primary-${theme}))]`}
                   onClick={() => onDeleteContact(item.id)}
                   disabled={isDeleting}
                 >
@@ -108,7 +122,9 @@ const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, lo
         </div>
       ))}
       {loadingMore && (
-        <div className="p-4 text-gray-400 text-center">Cargando más contactos...</div>
+        <div className={`p-4 text-[rgb(var(--color-text-secondary-${theme}))] text-center`}>
+          Cargando más contactos...
+        </div>
       )}
     </div>
   );
@@ -120,6 +136,7 @@ const ListContacts = () => {
   const { setContactFind } = useContext(UpdateContactForm);
   const { contactHandle, setContactHandle } = useContext(ContactHandle);
   const { setSelectedChatId } = useContext(ChatInterfaceClick);
+  const { theme } = useTheme();
 
   const isMobile = Resize();
   const location = useLocation();
@@ -325,17 +342,20 @@ const ListContacts = () => {
 
   return (
     <AbilityGuard abilities={[ABILITIES.CONTACTS.VIEW]} fallback={
-      <div className="w-full flex items-center justify-center h-full text-gray-400">
+      <div className={`w-full flex items-center justify-center h-full 
+      text-[rgb(var(--color-text-secondary-${theme}))]`}>
         No tienes permisos para ver la lista de contactos
       </div>
     }>
       {isMobile ? (
-        <div className="w-full sm:w-80 flex flex-col bg-gray-900 text-white">
+        <div className={`w-full sm:w-80 flex flex-col bg-[rgb(var(--color-bg-${theme}-secondary))] 
+        text-[rgb(var(--color-text-primary-${theme}))]`}>
           <div className="flex flex-col flex-shrink-0 mt-14">
             {location.pathname === "/chatList" && (
               <div className="flex items-center p-2">
                 <button 
-                  className="text-white rounded-full cursor-pointer hover:bg-gray-700 active:bg-gray-700 active:text-black p-1"
+                  className={`text-[rgb(var(--color-text-primary-${theme}))] rounded-full cursor-pointer 
+                  hover:bg-[rgb(var(--color-bg-${theme}))] active:bg-[rgb(var(--color-primary-${theme}))] p-1`}
                   onClick={() => setNewMessage(null)}
                 >
                   <ArrowLeft size={15} />
@@ -373,7 +393,10 @@ const ListContacts = () => {
           {location.pathname === "/contacts" && (
             <AbilityGuard abilities={[ABILITIES.CONTACTS.CREATE]}>
               <button
-                className="absolute bottom-4 right-4 mb-15 rounded-full p-3 shadow-lg text-white cursor-pointer bg-naranja-base hover:bg-naranja-medio"
+                className={`absolute bottom-4 right-4 mb-15 rounded-full p-3 shadow-lg 
+                text-[rgb(var(--color-text-primary-${theme}))] cursor-pointer 
+                bg-[rgb(var(--color-secondary-${theme}))] 
+                hover:bg-[rgb(var(--color-primary-${theme}))]`}
                 onClick={() => setContactNew((prev) => !prev)}
               >
                 <Plus size={18} />
@@ -382,12 +405,15 @@ const ListContacts = () => {
           )}
         </div>
       ) : (
-        <div className="flex-1 border-r border-gray-700 flex flex-col bg-gray-900 text-white pt-10 ml-10 overflow-y-auto">
+        <div className={`flex-1 border-r border-[rgb(var(--color-text-secondary-${theme}))] flex flex-col 
+        bg-[rgb(var(--color-bg-${theme}-secondary))] text-[rgb(var(--color-text-primary-${theme}))] 
+        pt-2   ml-10 overflow-y-auto`}>
           <div className="flex flex-col flex-shrink-0">
             {location.pathname === "/chatList" && (
               <div className="flex items-center p-2">
                 <button 
-                  className="text-white rounded-full cursor-pointer hover:bg-gray-700 active:bg-gray-700 active:text-black p-1"
+                  className={`text-[rgb(var(--color-text-primary-${theme}))] rounded-full cursor-pointer 
+                  hover:bg-[rgb(var(--color-bg-${theme}))] active:bg-[rgb(var(--color-primary-${theme}))] p-1`}
                   onClick={() => setNewMessage(null)}
                 >
                   <ArrowLeft size={15} />
@@ -425,7 +451,10 @@ const ListContacts = () => {
           {location.pathname === "/contacts" && (
             <AbilityGuard abilities={[ABILITIES.CONTACTS.CREATE]}>
               <button
-                className="fixed bottom-4 right-4 mb-4 rounded-full p-3 shadow-lg text-white cursor-pointer bg-naranja-base hover:bg-naranja-medio"
+                className={`fixed bottom-4 right-4 mb-4 rounded-full p-3 shadow-lg 
+                text-[rgb(var(--color-text-primary-${theme}))] cursor-pointer 
+                bg-[rgb(var(--color-secondary-${theme}))] 
+                hover:bg-[rgb(var(--color-primary-${theme}))]`}
                 onClick={() => setContactNew((prev) => !prev)}
               >
                 <Plus size={18} />
