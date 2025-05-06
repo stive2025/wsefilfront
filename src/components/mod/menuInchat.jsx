@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Info, StickyNote, SquareCheck } from "lucide-react";
 import { useContext } from "react";
 import { ContactInfoClick, TagClick, ResolveClick } from "/src/contexts/chats.js"
-
+import { useTheme } from "/src/contexts/themeContext.jsx";
 
 const MenuInchat = ({ onClose, isOpen }) => {
     const variants = {
@@ -15,8 +15,27 @@ const MenuInchat = ({ onClose, isOpen }) => {
     const { setInfoOpen } = useContext(ContactInfoClick);
     const { setTagClick } = useContext(TagClick);
     const { setResolveClick } = useContext(ResolveClick);
+    const { theme } = useTheme();
 
     if (!isOpen) return null; 
+
+    const MenuButton = ({ icon: Icon, onClick }) => (
+        <li 
+            className={`
+                cursor-pointer rounded-full p-2 transition-colors duration-200
+                ${theme === 'light' 
+                    ? 'bg-[rgb(var(--color-secondary-light))]' 
+                    : 'bg-[rgb(var(--color-secondary-dark))]'}
+                hover:opacity-80
+                ${theme === 'light' 
+                    ? 'text-[rgb(var(--color-text-primary-light))]' 
+                    : 'text-[rgb(var(--color-text-primary-dark))]'}
+            `}
+            onClick={onClick}
+        >
+            <Icon size={20} />
+        </li>
+    );
 
     return (
         <>
@@ -27,26 +46,27 @@ const MenuInchat = ({ onClose, isOpen }) => {
                     animate="visible"
                     exit="exit"
                     variants={variants}
-                    className="fixed w-16 bg-transparent flex flex-col items-center py-4 shadow-lg mt-10"
+                    className={`
+                        fixed w-16 flex flex-col items-center py-4 shadow-lg mt-10
+                        ${theme === 'light' 
+                            ? 'bg-[rgb(var(--color-bg-light))]' 
+                            : 'bg-[rgb(var(--color-bg-dark))]'}
+                    `}
                     onClick={onClose}
                 >
                     <ul className="flex flex-col gap-6 flex-1 mr-10">
-                        <li key="Info" className="text-white cursor-pointer rounded-full p-2 bg-naranja-base hover:bg-naranja-medio"
-                            onClick={() => { setInfoOpen(prev => !prev) }
-                            }
-                        >
-                            <Info size={20} />
-                        </li>
-                        <li key="target" className="text-white cursor-pointer rounded-full p-2 bg-naranja-base hover:bg-naranja-medio"
-                         onClick={() => { setTagClick(prev => !prev) }}
-                         >
-                            <StickyNote size={20} />
-                        </li>
-                        <li key="Finish" className="text-white cursor-pointer rounded-full p-2 bg-naranja-base hover:bg-naranja-medio">
-                            <SquareCheck size={20} 
-                            onClick={() => { setResolveClick(prev => !prev) }}
-                            />
-                        </li>
+                        <MenuButton 
+                            icon={Info} 
+                            onClick={() => setInfoOpen(prev => !prev)} 
+                        />
+                        <MenuButton 
+                            icon={StickyNote} 
+                            onClick={() => setTagClick(prev => !prev)} 
+                        />
+                        <MenuButton 
+                            icon={SquareCheck} 
+                            onClick={() => setResolveClick(prev => !prev)} 
+                        />
                     </ul>
                 </motion.div>
             </div>

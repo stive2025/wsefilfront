@@ -4,11 +4,13 @@ import { useContext } from "react";
 import { ChatInterfaceClick } from "/src/contexts/chats.js";
 import { updateChat } from "/src/services/chats.js";
 import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
+import { useTheme } from "/src/contexts/themeContext.jsx";
 import toast from "react-hot-toast";
 
 const ChatTag = ({ isOpen, onClose }) => {
   const { selectedChatId, setSelectedChatId } = useContext(ChatInterfaceClick);
   const { callEndpoint } = useFetchAndLoad();
+  const { theme } = useTheme();
 
   const variants = {
     hidden: { opacity: 0, y: -50 },
@@ -38,7 +40,8 @@ const ChatTag = ({ isOpen, onClose }) => {
   };
 
   return (
-    <form className="fixed inset-0 flex items-center justify-center z-20" style={{ backgroundColor: "rgba(55, 65, 81, 0.5)" }}>
+    <form className="fixed inset-0 flex items-center justify-center z-20" 
+          style={{ backgroundColor: "rgba(55, 65, 81, 0.5)" }}>
       <div className="absolute inset-0" onClick={onClose}></div>
 
       <motion.div
@@ -46,26 +49,62 @@ const ChatTag = ({ isOpen, onClose }) => {
         animate="visible"
         exit="exit"
         variants={variants}
-        className="bg-gray-900 p-5 rounded-lg shadow-lg w-96 relative z-10"
+        className={`
+          p-5 rounded-lg shadow-lg w-96 relative z-10
+          ${theme === 'light' ? 'bg-[rgb(var(--color-bg-light))]' : 'bg-[rgb(var(--color-bg-dark))]'}
+        `}
         onClick={(e) => e.stopPropagation()}
       >
-        <h1 className="text-white text-lg mb-2">Finalizar Chat</h1>
-        <label className="text-white text-sm">El chat que va a finalizar es: {selectedChatId.name}</label>
+        <h1 className={`
+          text-lg mb-2
+          ${theme === 'light' ? 'text-[rgb(var(--color-text-primary-light))]' : 'text-[rgb(var(--color-text-primary-dark))]'}
+        `}>
+          Finalizar Chat
+        </h1>
+        <label className={`
+          text-sm block mb-2
+          ${theme === 'light' ? 'text-[rgb(var(--color-text-secondary-light))]' : 'text-[rgb(var(--color-text-secondary-dark))]'}
+        `}>
+          El chat que va a finalizar es: {selectedChatId.name}
+        </label>
         <div className="mb-2">
-          <label className="text-white text-sm">¿Desea dar el chat por resuelto?</label>
+          <label className={`
+            text-sm
+            ${theme === 'light' ? 'text-[rgb(var(--color-text-secondary-light))]' : 'text-[rgb(var(--color-text-secondary-dark))]'}
+          `}>
+            ¿Desea dar el chat por resuelto?
+          </label>
         </div>
 
         <div className="flex justify-end gap-2">
           <button
             type="button"
-            className="px-4 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+            className={`
+              px-4 py-1 rounded transition-colors duration-200
+              ${theme === 'light' 
+                ? 'bg-[rgb(var(--color-secondary-light))]' 
+                : 'bg-[rgb(var(--color-secondary-dark))]'}
+              ${theme === 'light' 
+                ? 'text-[rgb(var(--color-text-primary-light))]' 
+                : 'text-[rgb(var(--color-text-primary-dark))]'}
+              hover:opacity-80
+            `}
             onClick={onClose}
           >
             Cancelar
           </button>
           <button
             type="button"
-            className="px-4 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+            className={`
+              px-4 py-1 rounded transition-colors duration-200
+              ${theme === 'light' 
+                ? 'bg-[rgb(var(--color-primary-light))]' 
+                : 'bg-[rgb(var(--color-primary-dark))]'}
+              ${theme === 'light' 
+                ? 'text-[rgb(var(--color-text-primary-light))]' 
+                : 'text-[rgb(var(--color-text-primary-dark))]'}
+              hover:opacity-80
+            `}
             onClick={handleClose}
           >
             Finalizar Chat

@@ -7,12 +7,14 @@ import Resize from "/src/hooks/responsiveHook.jsx"
 import { logout } from "/src/services/authService.js";
 import { ABILITIES } from '/src/constants/abilities';
 import AbilityGuard from '/src/components/common/AbilityGuard.jsx';
+import { useTheme } from "/src/contexts/themeContext.jsx";
 
 const NavSlideBar = () => {
   const [showMenu, setShowMenu] = useState(false);
   const isMobile = Resize();
   const navigate = useNavigate();
   const { setSelectedChatId } = useContext(ChatInterfaceClick);
+  const { theme } = useTheme();
 
   const menuOptions = [
     {
@@ -50,10 +52,23 @@ const NavSlideBar = () => {
   const MenuItem = ({ item, isMobileView }) => (
     <AbilityGuard abilities={item.abilities}>
       <li
-        className={`${isMobileView
-            ? "flex items-center gap-2 cursor-pointer hover:text-gray-300 active:bg-gray-700 p-2"
-            : "text-gray-400 hover:text-white cursor-pointer active:bg-gray-700 rounded-full p-2"
-          }`}
+        className={`
+          cursor-pointer transition-colors duration-200
+          ${isMobileView
+            ? `flex items-center gap-2 p-2
+               ${theme === 'light' 
+                 ? 'text-[rgb(var(--color-text-primary-light))] hover:text-[rgb(var(--color-primary-light))]' 
+                 : 'text-[rgb(var(--color-text-primary-dark))] hover:text-[rgb(var(--color-primary-dark))]'}`
+            : `rounded-full p-2
+               ${theme === 'light'
+                 ? 'text-[rgb(var(--color-text-secondary-light))] hover:text-[rgb(var(--color-primary-light))]'
+                 : 'text-[rgb(var(--color-text-secondary-dark))] hover:text-[rgb(var(--color-primary-dark))]'}`
+          }
+          active:bg-opacity-20
+          ${theme === 'light' 
+            ? 'active:bg-[rgb(var(--color-primary-light))]' 
+            : 'active:bg-[rgb(var(--color-primary-dark))]'}
+        `}
         onClick={() => {
           setSelectedChatId(null);
           navigate(item.path);
@@ -61,37 +76,73 @@ const NavSlideBar = () => {
         }}
       >
         {item.icon}
-        {isMobileView && item.label}
+        {isMobileView && <span>{item.label}</span>}
       </li>
     </AbilityGuard>
   );
 
   return isMobile ? (
-    <header className="bg-gray-800 text-white fixed w-full top-0 z-20 h-10">
-      {/* ...existing code for header... */}
-      <div className={`
-          transform transition-transform duration-300 text-xl cursor-pointer 
-          ${!showMenu ? "-translate-x-full" : "translate-x-0"}
-        `}>
-        <nav className="bg-gray-800 text-white h-screen w-full p-2 shadow-md absolute top-full left-0">
-          <ul className="flex flex-col gap-4">
-            {menuOptions.map((item, index) => (
-              <MenuItem key={index} item={item} isMobileView={true} />
-            ))}
-          </ul>
-        </nav>
+    <header className={`
+      fixed w-full top-0 z-20 h-10
+      ${theme === 'light' 
+        ? 'bg-[rgb(var(--color-bg-light-secondary))]' 
+        : 'bg-[rgb(var(--color-bg-dark-secondary))]'}
+    `}>
+      <div className="flex items-center justify-between h-full px-4">
+        <button
+          onClick={() => setShowMenu(!showMenu)}
+          className={`
+            p-2 rounded-full transition-colors duration-200
+            ${theme === 'light'
+              ? 'text-[rgb(var(--color-text-secondary-light))] hover:text-[rgb(var(--color-primary-light))]'
+              : 'text-[rgb(var(--color-text-secondary-dark))] hover:text-[rgb(var(--color-primary-dark))]'}
+          `}
+        >
+          {/* Hamburger icon */}
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
       </div>
+
+      {/* Mobile Menu */}
+      <nav className={`
+        fixed top-10 left-0 w-full h-[calc(100vh-2.5rem)] transition-transform duration-300 ease-in-out
+        ${showMenu ? 'translate-x-0' : '-translate-x-full'}
+        ${theme === 'light' 
+          ? 'bg-[rgb(var(--color-bg-light-secondary))]' 
+          : 'bg-[rgb(var(--color-bg-dark-secondary))]'}
+      `}>
+        <ul className="flex flex-col gap-4 p-4">
+          {menuOptions.map((item, index) => (
+            <MenuItem key={index} item={item} isMobileView={true} />
+          ))}
+        </ul>
+      </nav>
     </header>
   ) : (
-    <div className="fixed h-screen w-10 bg-gray-800 flex flex-col items-center py-4">
+    <div className={`
+      fixed h-screen w-10 flex flex-col items-center py-4
+      ${theme === 'light' 
+        ? 'bg-[rgb(var(--color-bg-light-secondary))]' 
+        : 'bg-[rgb(var(--color-bg-dark-secondary))]'}
+    `}>
       <ul className="flex flex-col gap-6 flex-1">
         {menuOptions.map((item, index) => (
           <MenuItem key={index} item={item} isMobileView={false} />
         ))}
       </ul>
-      <div className="text-gray-400 hover:text-white text-xl mt-auto mb-4 cursor-pointer p-2 rotate-180 active:bg-gray-700 rounded-full" onClick={logout}>
+      <button 
+        onClick={logout}
+        className={`
+          p-2 rounded-full transition-colors duration-200 rotate-180
+          ${theme === 'light'
+            ? 'text-[rgb(var(--color-text-secondary-light))] hover:text-[rgb(var(--color-primary-light))]'
+            : 'text-[rgb(var(--color-text-secondary-dark))] hover:text-[rgb(var(--color-primary-dark))]'}
+        `}
+      >
         <LogOut />
-      </div>
+      </button>
     </div>
   );
 };

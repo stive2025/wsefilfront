@@ -6,12 +6,14 @@ import { getTags, getTag } from "/src/services/tags.js";
 import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
 import { updateChat } from "/src/services/chats.js";
 import Select from 'react-select';
+import { useTheme } from "/src/contexts/themeContext.jsx";
 
 const ChatTag = ({ isOpen, onClose }) => {
     const [tags, setTags] = useState([]);
     const [selectedTag, setSelectedTag] = useState(null);
     const { selectedChatId } = useContext(ChatInterfaceClick);
     const { callEndpoint } = useFetchAndLoad();
+    const { theme } = useTheme();
 
     const variants = {
         hidden: { opacity: 0, y: -50 },
@@ -91,34 +93,58 @@ const ChatTag = ({ isOpen, onClose }) => {
     const customStyles = {
         control: (provided) => ({
             ...provided,
-            backgroundColor: '#1F2937', // bg-gray-800
-            borderColor: '#374151', // border-gray-700
-            color: 'white',
+            backgroundColor: theme === 'light' 
+                ? 'rgb(var(--color-bg-light))' 
+                : 'rgb(var(--color-bg-dark))',
+            borderColor: theme === 'light'
+                ? 'rgb(var(--color-primary-light))'
+                : 'rgb(var(--color-primary-dark))',
+            color: theme === 'light'
+                ? 'rgb(var(--color-text-primary-light))'
+                : 'rgb(var(--color-text-primary-dark))',
             boxShadow: 'none',
             '&:hover': {
-                borderColor: '#4B5563', // border-gray-600
+                borderColor: theme === 'light'
+                    ? 'rgb(var(--color-secondary-light))'
+                    : 'rgb(var(--color-secondary-dark))',
             },
         }),
         menu: (provided) => ({
             ...provided,
-            backgroundColor: '#1F2937', // bg-gray-800
-            color: 'white',
+            backgroundColor: theme === 'light'
+                ? 'rgb(var(--color-bg-light-secondary))'
+                : 'rgb(var(--color-bg-dark-secondary))',
+            color: theme === 'light'
+                ? 'rgb(var(--color-text-primary-light))'
+                : 'rgb(var(--color-text-primary-dark))',
         }),
         option: (provided, state) => ({
             ...provided,
-            backgroundColor: state.isSelected ? '#374151' : '#1F2937', // selected: bg-gray-700, default: bg-gray-800
+            backgroundColor: state.isSelected 
+                ? (theme === 'light' 
+                    ? 'rgb(var(--color-primary-light))' 
+                    : 'rgb(var(--color-primary-dark))')
+                : 'transparent',
             '&:hover': {
-                backgroundColor: '#374151', // bg-gray-700
+                backgroundColor: theme === 'light'
+                    ? 'rgba(var(--color-primary-light), 0.2)'
+                    : 'rgba(var(--color-primary-dark), 0.2)',
             },
-            color: 'white',
+            color: theme === 'light'
+                ? 'rgb(var(--color-text-primary-light))'
+                : 'rgb(var(--color-text-primary-dark))',
         }),
         singleValue: (provided) => ({
             ...provided,
-            color: 'white',
+            color: theme === 'light'
+                ? 'rgb(var(--color-text-primary-light))'
+                : 'rgb(var(--color-text-primary-dark))',
         }),
         input: (provided) => ({
             ...provided,
-            color: 'white',
+            color: theme === 'light'
+                ? 'rgb(var(--color-text-primary-light))'
+                : 'rgb(var(--color-text-primary-dark))',
         }),
     };
 
@@ -134,13 +160,31 @@ const ChatTag = ({ isOpen, onClose }) => {
                 animate="visible"
                 exit="exit"
                 variants={variants}
-                className="bg-gray-900 p-5 rounded-lg shadow-lg w-96 relative z-10"
+                className={`
+                    p-5 rounded-lg shadow-lg w-96 relative z-10
+                    ${theme === 'light' ? 'bg-[rgb(var(--color-bg-light))]' : 'bg-[rgb(var(--color-bg-dark))]'}
+                `}
                 onClick={(e) => e.stopPropagation()}
             >
-                <h1 className="text-white text-lg mb-2">Etiquetar Chat</h1>
-                <label className="text-white text-sm mb-3 block">{selectedChatId.name}</label>
+                <h1 className={`
+                    text-lg mb-2
+                    ${theme === 'light' ? 'text-[rgb(var(--color-text-primary-light))]' : 'text-[rgb(var(--color-text-primary-dark))]'}
+                `}>
+                    Etiquetar Chat
+                </h1>
+                <label className={`
+                    text-sm mb-3 block
+                    ${theme === 'light' ? 'text-[rgb(var(--color-text-secondary-light))]' : 'text-[rgb(var(--color-text-secondary-dark))]'}
+                `}>
+                    {selectedChatId.name}
+                </label>
                 <div className="mb-4">
-                    <label className="text-white text-sm block mb-2">Selecciona una Etiqueta</label>
+                    <label className={`
+                        text-sm block mb-2
+                        ${theme === 'light' ? 'text-[rgb(var(--color-text-secondary-light))]' : 'text-[rgb(var(--color-text-secondary-dark))]'}
+                    `}>
+                        Selecciona una Etiqueta
+                    </label>
                     <Select
                         options={tagOptions}
                         onChange={(option) => {
@@ -159,14 +203,33 @@ const ChatTag = ({ isOpen, onClose }) => {
                 <div className="flex justify-end gap-2">
                     <button
                         type="button"
-                        className="px-4 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+                        className={`
+                            px-4 py-1 rounded transition-colors duration-200
+                            ${theme === 'light' 
+                                ? 'bg-[rgb(var(--color-secondary-light))]' 
+                                : 'bg-[rgb(var(--color-secondary-dark))]'}
+                            ${theme === 'light' 
+                                ? 'text-[rgb(var(--color-text-primary-light))]' 
+                                : 'text-[rgb(var(--color-text-primary-dark))]'}
+                            hover:opacity-80
+                        `}
                         onClick={onClose}
                     >
                         Cancelar
                     </button>
                     <button
                         type="button"
-                        className="px-4 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                        className={`
+                            px-4 py-1 rounded transition-colors duration-200
+                            ${theme === 'light' 
+                                ? 'bg-[rgb(var(--color-primary-light))]' 
+                                : 'bg-[rgb(var(--color-primary-dark))]'}
+                            ${theme === 'light' 
+                                ? 'text-[rgb(var(--color-text-primary-light))]' 
+                                : 'text-[rgb(var(--color-text-primary-dark))]'}
+                            hover:opacity-80
+                            disabled:opacity-50
+                        `}
                         onClick={(e) => {
                             e.preventDefault(); // Evita el comportamiento por defecto del formulario
                             if (selectedTag) {
