@@ -234,28 +234,102 @@ const NewAgent = () => {
     [firstName, lastName, email, role, selectedAbilities, isFormValidForUpdate, callEndpoint, idAgent, setAgentFind, setAgentHandle]
   );
 
-  // Renderiza cada sección de habilidades
+  // Objeto de traducción para las secciones
+  const SECTION_TRANSLATIONS = {
+    'Listado de Chats': {
+      title: 'Gestión de Conversaciones',
+      abilities: {
+        'VIEW': 'Ver lista de conversaciones',
+        'SEARCH': 'Filtrar y buscar conversaciones',
+        'FILTER_BY_AGENT': 'Filtrar por agente',
+        'FILTER_BY_STATUS': 'Filtrar por estado',
+        'FILTER_BY_TAG': 'Filtrar por etiqueta',
+      }
+    },
+    'Panel de Chat': {
+      title: 'Interacción con Chats',
+      abilities: {
+        'VIEW': 'Ver conversaciones en tiempo real',
+        'SEND_TEXT': 'Enviar mensajes',
+        'SEND_MEDIA': 'Enviar archivos multimedia',
+        'SEARCH_MESSAGES': 'Buscar mensajes',
+        'DOWNLOAD_HISTORY': 'Descargar historial de mensajes',
+        'TRANSFER': 'Transferir conversaciones',
+        'VIEW_CONTACT_INFO': 'Ver información de agente',
+        'TAG_CHAT': 'Etiquetar conversaciones',
+        'MARK_AS_FINISHED': 'Marcar como finalizado',
+      }
+    },
+    'Utilidades': {
+      title: 'Herramientas y Utilidades',
+      abilities: {
+        'VIEW': 'Ver herramientas',
+        'CREATE': 'Crear nuevas herramientas',
+        'EDIT': 'Modificar herramientas existentes',
+        'DELETE': 'Eliminar herramientas',
+        'SEARCH': 'Buscar herramientas',
+      }
+    },
+    'Contactos': {
+      title: 'Gestión de Contactos',
+      abilities: {
+        'CREATE': 'Crear nuevos contactos',
+        'EDIT': 'Editar contactos existentes',
+        'DELETE': 'Eliminar contactos',
+        'SEARCH': 'Buscar contactos',
+        'VIEW': 'Ver lista de contactos'
+      }
+    },
+    'Agentes': {
+      title: 'Gestión de Agentes',
+      abilities: {
+        'CREATE': 'Crear nuevos agentes',
+        'EDIT': 'Modificar agentes existentes',
+        'DELETE': 'Eliminar agentes',
+        'SEARCH': 'Buscar agentes',
+        'VIEW': 'Ver lista de agentes'
+      }
+    },
+    'Perfil': {
+      title: 'Configuración de Perfil',
+      abilities: {
+        'VIEW': 'Ver perfil propio',
+        'SCAN_QR': 'Escanear QR',
+        'CHANGE_PASSWORD': 'Cambiar contraseña',
+      }
+    }
+  };
+
+  // Modificar la función renderAbilitySection
   const renderAbilitySection = (sectionName, abilities) => {
+    const sectionTranslation = SECTION_TRANSLATIONS[sectionName];
+
     return (
-      <div key={sectionName} className="mb-4">
-        <h3 className="text-[#FF9619] font-medium mb-2">{sectionName}</h3>
-        <div className="space-y-2">
+      <div key={sectionName} className="mb-6">
+        <h3 className="text-[#FF9619] font-medium mb-3 text-lg">
+          {sectionTranslation.title}
+        </h3>
+        <div className="space-y-3 pl-2">
           {Object.entries(abilities).map(([abilityKey, abilityValue]) => {
-            // Verificamos si la habilidad está seleccionada
             const isChecked = Array.isArray(selectedAbilities) &&
               selectedAbilities.includes(abilityValue);
 
+            const description = sectionTranslation.abilities[abilityKey] || abilityKey;
+
             return (
-              <div key={abilityValue} className="flex items-center">
+              <div key={abilityValue} className="flex items-center hover:bg-black/10 p-2 rounded-md">
                 <input
                   type="checkbox"
-                  id={`${abilityValue}-${forceUpdate}`} // Añadimos forceUpdate al id para forzar re-render
+                  id={`${abilityValue}-${forceUpdate}`}
                   checked={isChecked}
                   onChange={() => toggleAbilitySelection(abilityValue)}
-                  className="mr-2 h-4 w-4 accent-[#FF9619]"
+                  className="mr-3 h-4 w-4 accent-[#FF9619]"
                 />
-                <label htmlFor={`${abilityValue}-${forceUpdate}`} className="text-sm text-gray-300">
-                  {abilityKey}
+                <label
+                  htmlFor={`${abilityValue}-${forceUpdate}`}
+                  className={`text-sm text-[rgb(var(--color-text-primary-${theme}))]`}
+                >
+                  {description}
                 </label>
               </div>
             );

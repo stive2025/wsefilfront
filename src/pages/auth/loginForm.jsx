@@ -54,7 +54,7 @@ const LoginForm = () => {
             <div>
               <img
                 className='justify-center'
-                src="/images/divLine.png"
+                src="./images/divLine.png"
                 alt="-:-"
               />
             </div>
@@ -103,7 +103,7 @@ const LoginForm = () => {
           {/* Imagen */}
           <div className="ml-8 flex drop-shadow-[-7px_15px_5px_rgba(0,0,0,0.3)] hidden md:block">
             <img
-              src="/images/log_in.png"
+              src="./images/log_in.png"
               alt="CRM SEFIL"
               className="h-64 object-cover hidden md:block rounded-lg"
             />

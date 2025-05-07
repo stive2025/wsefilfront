@@ -66,7 +66,7 @@ const ChatComplete = () => {
 
     return (
         <WebSocketMessage.Provider value={{ messageData, setMessageData }}>
-            <div className={`flex flex-col h-screen w-full mx-auto p-4 
+            <div className={`flex flex-col h-screen w-full mx-auto 
                 bg-[rgb(var(--color-bg-${theme}))] 
                 text-[rgb(var(--color-text-primary-${theme}))]`}>
                 {/* WebSocketHook siempre debe estar presente para manejar la conexión */}

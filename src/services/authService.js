@@ -110,7 +110,7 @@ export const isAuthenticated = () => {
 export const logout = () => {
   RemoveCookieItem(AUTH_TOKEN_KEY);
   RemoveCookieItem(USER_DATA_KEY);
-  window.location.href = "/login";
+  window.location.href = "#/login";
 };
 
 // Función para añadir el token a las peticiones fetch

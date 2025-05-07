@@ -5,21 +5,21 @@ import {
     Volume2, PlayCircle, Download, EyeOff, Loader, Clock, Check, AlertTriangle,
     RefreshCcw
 } from "lucide-react";
-import { ABILITIES } from '@/constants/abilities';
-import AbilityGuard from '@/components/common/AbilityGuard';
-import Resize from "@/hooks/responsiveHook.jsx";
-import MenuInchat from "@/components/mod/menuInchat.jsx";
-import ChatTransfer from "@/components/mod/chatTransfer.jsx";
-import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
-import ChatTag from "@/components/mod/chatTag.jsx";
-import ChatResolved from "@/components/mod/chatResolved.jsx";
-import { TagClick, ResolveClick, SearchInChatClick, ChatInterfaceClick, WebSocketMessage } from "@/contexts/chats.js";
+import { ABILITIES } from '/src/constants/abilities';
+import AbilityGuard from '/src/components/common/AbilityGuard';
+import Resize from "/src/hooks/responsiveHook.jsx";
+import MenuInchat from "/src/components/mod/menuInchat.jsx";
+import ChatTransfer from "/src/components/mod/chatTransfer.jsx";
+import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
+import ChatTag from "/src/components/mod/chatTag.jsx";
+import ChatResolved from "/src/components/mod/chatResolved.jsx";
+import { TagClick, ResolveClick, SearchInChatClick, ChatInterfaceClick, WebSocketMessage } from "/src/contexts/chats.js";
 import { useContext } from "react";
 import { useLocation } from "react-router-dom";
-import { getChat, updateChat } from "@/services/chats.js";
-import { sendMessage } from "@/services/messages.js";
+import { getChat, updateChat } from "/src/services/chats.js";
+import { sendMessage } from "/src/services/messages.js";
 import toast from "react-hot-toast";
-import { useTheme } from "@/contexts/themeContext";
+import { useTheme } from "/src/contexts/themeContext";
 
 const ChatInterface = () => {
     const isMobile = Resize();
@@ -647,6 +647,14 @@ const ChatInterface = () => {
             });
             const response = await callEndpoint({ call, abortController });
 
+            // Agregar console.log para ver la respuesta cuando no hay chatId
+            if (!selectedChatId.id) {
+                console.log('Respuesta del servidor al enviar mensaje sin chatId:', {
+                    response,
+                    messagePayload
+                });
+            }
+
             if (response) {
                 // Actualizar mensaje temporal con datos del servidor
                 setChatMessages(prev => {
@@ -744,9 +752,10 @@ const ChatInterface = () => {
     }
 
     return (
-        <div className={`flex flex-col h-screen w-full 
+        <div className={`flex flex-col h-screen w-full
             bg-[rgb(var(--color-bg-${theme}))] 
-            text-[rgb(var(--color-text-primary-${theme}))]`}>
+            text-[rgb(var(--color-text-primary-${theme}))]
+            ${isMobile ? 'mb-10' : ''}`}>
             {shouldShowChat ? (
                 <>
                     {/* Chat Header */}

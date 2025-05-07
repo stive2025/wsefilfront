@@ -20,7 +20,7 @@ const ChatHeader = () => {
   return (
     <div className={`p-1 flex items-center justify-between bg-[rgb(var(--color-bg-${theme}-secondary))]`}>
       <div className="flex items-center space-x-2">
-        <img src="/images/logoCRM.png" alt="Logo" className="w-22 h-9" />
+        <img src="./images/logoCRM.png" alt="Logo" className="w-22 h-9" />
       </div>
     </div>
   );
@@ -540,7 +540,7 @@ const ChatList = ({ role = "admin" }) => {
         if (document.hidden && "Notification" in window && Notification.permission === "granted") {
           new Notification("Nuevo mensaje", {
             body: messageData.body,
-            icon: "/images/logoCRM.png"
+            icon: "./images/logoCRM.png"
           });
         }
       }
@@ -730,7 +730,7 @@ const ChatList = ({ role = "admin" }) => {
   }
 
   return isMobile ? (
-    <div className="w-full sm:w-80 border-r border-gray-700 flex flex-col text-white h-screen">
+    <div className="w-full  sm:w-80 border-r border-gray-700 flex flex-col text-white h-screen">
       <div className="flex flex-col flex-shrink-0 mt-14">
         <ChatHeader />
         <SearchInput searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
