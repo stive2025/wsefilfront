@@ -1,12 +1,12 @@
 /* eslint-disable react/prop-types */
 import { motion } from "framer-motion";
-import TagForm from "/src/components/utilities/tagForm.jsx";
-import CustomForm from "/src/components/utilities/customForm.jsx";
-import AutoForm from "/src/components/utilities/autoMForm.jsx";
-import NewContact from "/src/components/contacts/newContact.jsx";
-import NewAgent from "/src/components/agents/newAgent.jsx";
-import ProfileQR from "/src/components/profile/profileQR.jsx";
-import { useTheme } from "/src/contexts/themeContext.jsx";
+import TagForm from "@/components/utilities/tagForm.jsx";
+import CustomForm from "@/components/utilities/customForm.jsx";
+import AutoForm from "@/components/utilities/autoMForm.jsx";
+import NewContact from "@/components/contacts/newContact.jsx";
+import NewAgent from "@/components/agents/newAgent.jsx";
+import ProfileQR from "@/components/profile/profileQR.jsx";
+import { useTheme } from "@/contexts/themeContext.jsx";
 
 const Tagmod = ({ onClose, isOpen, option }) => {
     const { theme } = useTheme();

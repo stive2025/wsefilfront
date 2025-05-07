@@ -1,10 +1,10 @@
-import Resize from "/src/hooks/responsiveHook.jsx";
-import ListContacts from "/src/components/contacts/listContacts.jsx";
-import NewContact from "/src/components/contacts/newContact.jsx";
-import Tagmod from "/src/components/mod/newUtilitieMod.jsx";
-import { NewContactForm } from "/src/contexts/chats.js"
+import Resize from "@/hooks/responsiveHook.jsx";
+import ListContacts from "@/components/contacts/listContacts.jsx";
+import NewContact from "@/components/contacts/newContact.jsx";
+import Tagmod from "@/components/mod/newUtilitieMod.jsx";
+import { NewContactForm } from "@/contexts/chats.js"
 import { useContext } from "react";
-import { useTheme } from "/src/contexts/themeContext";
+import { useTheme } from "@/contexts/themeContext";
 
 const ContactsComplete = () => {
   const { contactNew, setContactNew } = useContext(NewContactForm);

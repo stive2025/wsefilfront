@@ -1,13 +1,13 @@
 /* eslint-disable react/prop-types */
 import { Pencil, Trash2, Plus, Search } from 'lucide-react';
-import Resize from "/src/hooks/responsiveHook.jsx";
-import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
+import Resize from "@/hooks/responsiveHook.jsx";
+import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
 import { useContext, useEffect, useState, useRef, useCallback } from "react";
-import { TagsCreateForm, UpdateTagForm, TagHandle } from "/src/contexts/chats.js";
-import { getTags, deleteTag, getTag } from "/src/services/tags.js";
-import { ABILITIES } from '/src/constants/abilities';
-import AbilityGuard from '/src/components/common/AbilityGuard.jsx';
-import { useTheme } from "/src/contexts/themeContext";
+import { TagsCreateForm, UpdateTagForm, TagHandle } from "@/contexts/chats.js";
+import { getTags, deleteTag, getTag } from "@/services/tags.js";
+import { ABILITIES } from '@/constants/abilities';
+import AbilityGuard from '@/components/common/AbilityGuard.jsx';
+import { useTheme } from "@/contexts/themeContext";
 import toast from "react-hot-toast";
 
 // Reusable Search Input Component

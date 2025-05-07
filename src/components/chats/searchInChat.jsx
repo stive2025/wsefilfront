@@ -1,17 +1,17 @@
 /* eslint-disable react/prop-types */
 import { X, Search, Calendar, Download, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
-import { SearchInChatClick, ChatInterfaceClick } from "/src/contexts/chats.js";
+import { SearchInChatClick, ChatInterfaceClick } from "@/contexts/chats.js";
 import { useContext, useState } from "react";
-import Resize from "/src/hooks/responsiveHook.jsx";
+import Resize from "@/hooks/responsiveHook.jsx";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import Cookies from "js-cookie";
-import { searchChat, downloadChat } from "/src/services/chats.js";
-import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
-import { ABILITIES } from '/src/constants/abilities';
-import AbilityGuard from '/src/components/common/AbilityGuard.jsx';
-import { useTheme } from "/src/contexts/themeContext";
+import { searchChat, downloadChat } from "@/services/chats.js";
+import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
+import { ABILITIES } from '@/constants/abilities';
+import AbilityGuard from '@/components/common/AbilityGuard.jsx';
+import { useTheme } from "@/contexts/themeContext";
 
 const SearchInChat = () => {
     const { setSearchInChat } = useContext(SearchInChatClick);

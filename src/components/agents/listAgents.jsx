@@ -1,13 +1,13 @@
 /* eslint-disable react/prop-types */
-import Resize from "/src/hooks/responsiveHook.jsx";
-import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
+import Resize from "@/hooks/responsiveHook.jsx";
+import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
 import { Search, Plus, Pencil, Trash2 } from "lucide-react";
 import { useContext, useEffect, useState, useRef, useCallback } from "react";
-import { NewAgentForm, UpdateAgentForm, AgentHandle } from "/src/contexts/chats.js";
-import { getAgents, deleteAgents, getAgent } from "/src/services/agents.js";
-import { ABILITIES } from '/src/constants/abilities';
-import AbilityGuard from '/src/components/common/AbilityGuard.jsx';
-import { useTheme } from "/src/contexts/themeContext";
+import { NewAgentForm, UpdateAgentForm, AgentHandle } from "@/contexts/chats.js";
+import { getAgents, deleteAgents, getAgent } from "@/services/agents.js";
+import { ABILITIES } from '@/constants/abilities';
+import AbilityGuard from '@/components/common/AbilityGuard.jsx';
+import { useTheme } from "@/contexts/themeContext";
 
 // Componentes reutilizables
 const SearchInput = ({ searchTerm, onSearchChange }) => {

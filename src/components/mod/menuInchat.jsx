@@ -2,8 +2,8 @@
 import { motion } from "framer-motion";
 import { Info, StickyNote, SquareCheck } from "lucide-react";
 import { useContext } from "react";
-import { ContactInfoClick, TagClick, ResolveClick } from "/src/contexts/chats.js"
-import { useTheme } from "/src/contexts/themeContext.jsx";
+import { ContactInfoClick, TagClick, ResolveClick } from "@/contexts/chats.js"
+import { useTheme } from "@/contexts/themeContext.jsx";
 
 const MenuInchat = ({ onClose, isOpen }) => {
     const variants = {

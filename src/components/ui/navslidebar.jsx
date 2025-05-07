@@ -1,13 +1,13 @@
 /* eslint-disable react/prop-types */
 import { User, LogOut, Contact, Bolt, Users, MessageSquare } from "lucide-react";
-import { ChatInterfaceClick } from "/src/contexts/chats.js"
+import { ChatInterfaceClick } from "@/contexts/chats.js"
 import { useState, useContext, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import Resize from "/src/hooks/responsiveHook.jsx"
-import { logout } from "/src/services/authService.js";
-import { ABILITIES } from '/src/constants/abilities';
-import AbilityGuard from '/src/components/common/AbilityGuard.jsx';
-import { useTheme } from "/src/contexts/themeContext.jsx";
+import Resize from "@/hooks/responsiveHook.jsx"
+import { logout } from "@/services/authService.js";
+import { ABILITIES } from '@/constants/abilities';
+import AbilityGuard from '@/components/common/AbilityGuard.jsx';
+import { useTheme } from "@/contexts/themeContext.jsx";
 
 const NavSlideBar = () => {
   const [showMenu, setShowMenu] = useState(false);

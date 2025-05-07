@@ -1,10 +1,10 @@
-import Resize from "/src/hooks/responsiveHook.jsx";
-import CustomList from "/src/components/utilities/customMList.jsx";
-import CustomForm from "/src/components/utilities/customForm.jsx";
-import Tagmod from "/src/components/mod/newUtilitieMod.jsx";
-import { CustomCreateForm } from "/src/contexts/chats.js"
+import Resize from "@/hooks/responsiveHook.jsx";
+import CustomList from "@/components/utilities/customMList.jsx";
+import CustomForm from "@/components/utilities/customForm.jsx";
+import Tagmod from "@/components/mod/newUtilitieMod.jsx";
+import { CustomCreateForm } from "@/contexts/chats.js"
 import { useContext } from "react";
-import { useTheme } from "/src/contexts/themeContext";
+import { useTheme } from "@/contexts/themeContext";
 
 const CustomComplete = () => {
     const {customClick, setCustomClick} = useContext(CustomCreateForm);

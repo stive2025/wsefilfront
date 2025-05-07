@@ -1,20 +1,20 @@
 import { useState, useCallback, useContext, useEffect } from 'react';
 import { User } from 'lucide-react';
-import Resize from "/src/hooks/responsiveHook.jsx";
-import { useFetchAndLoad } from "/src/hooks/fechAndLoad.jsx";
+import Resize from "@/hooks/responsiveHook.jsx";
+import { useFetchAndLoad } from "@/hooks/fechAndLoad.jsx";
 import {
   createContact,
   updateContact,
   formatPhoneNumber,
   splitPhoneNumber,
   countryPrefixes
-} from "/src/services/contacts.js";
-import { UpdateContactForm, ContactHandle, NewContactForm } from "/src/contexts/chats.js";
+} from "@/services/contacts.js";
+import { UpdateContactForm, ContactHandle, NewContactForm } from "@/contexts/chats.js";
 import Select from 'react-select';
 import toast from "react-hot-toast";
-import { ABILITIES } from '/src/constants/abilities';
-import AbilityGuard from '/src/components/common/AbilityGuard.jsx';
-import { useTheme } from "/src/contexts/themeContext";
+import { ABILITIES } from '@/constants/abilities';
+import AbilityGuard from '@/components/common/AbilityGuard.jsx';
+import { useTheme } from "@/contexts/themeContext";
 
 const NewContact = () => {
   const isMobile = Resize();

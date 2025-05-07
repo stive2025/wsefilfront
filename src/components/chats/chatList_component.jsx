@@ -1,18 +1,18 @@
 /* eslint-disable react/prop-types */
 import { useState, useEffect, useRef, useCallback, useContext } from "react";
 import { Search, ChevronLeftCircle, ChevronRightCircle, Loader, Check, Clock, AlertTriangle } from "lucide-react";
-import { ChatInterfaceClick, StateFilter, TagFilter, AgentFilter, WebSocketMessage } from "/src/contexts/chats.js";
-import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
-import { getChatList, updateChat } from "/src/services/chats.js";
-import { getContact, getContactChatsByName, getContactChatsByPhone } from "/src/services/contacts.js";
-import { getAgents } from "/src/services/agents.js";
-import { getTags } from "/src/services/tags.js";
-import Resize from "/src/hooks/responsiveHook.jsx";
-import { GetCookieItem } from "/src/utilities/cookies.js";
-import { ABILITIES } from '/src/constants/abilities';
-import AbilityGuard from '/src/components/common/AbilityGuard';
-import { useAuth } from '/src/contexts/authContext';
-import { useTheme } from "/src/contexts/themeContext";
+import { ChatInterfaceClick, StateFilter, TagFilter, AgentFilter, WebSocketMessage } from "@/contexts/chats.js";
+import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
+import { getChatList, updateChat } from "@/services/chats.js";
+import { getContact, getContactChatsByName, getContactChatsByPhone } from "@/services/contacts.js";
+import { getAgents } from "@/services/agents.js";
+import { getTags } from "@/services/tags.js";
+import Resize from "@/hooks/responsiveHook.jsx";
+import { getUserData } from "@/services/authService.js";
+import { ABILITIES } from '@/constants/abilities';
+import AbilityGuard from '@/components/common/AbilityGuard';
+import { useAuth } from '@/contexts/authContext';
+import { useTheme } from "@/contexts/themeContext";
 
 const ChatHeader = () => {
   const { theme } = useTheme();
@@ -20,7 +20,7 @@ const ChatHeader = () => {
   return (
     <div className={`p-1 flex items-center justify-between bg-[rgb(var(--color-bg-${theme}-secondary))]`}>
       <div className="flex items-center space-x-2">
-        <img src="/src/assets/images/logoCRM.png" alt="Logo" className="w-22 h-9" />
+        <img src="/images/logoCRM.png" alt="Logo" className="w-22 h-9" />
       </div>
     </div>
   );
@@ -370,7 +370,7 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
           >
             <div className="relative">
               <img
-                src={item.avatar || "/src/assets/images/default-avatar.jpg"}
+                src={item.avatar || "@/assets/images/default-avatar.jpg"}
                 alt="Avatar"
                 className="w-10 h-10 rounded-full"
               />
@@ -449,35 +449,100 @@ const ChatList = ({ role = "admin" }) => {
 
   useEffect(() => {
     if (messageData && messageData.body) {
-      // Obtener user_data de las cookies
-      const userData = GetCookieItem("user_data");
-      const currentUserId = userData ? JSON.parse(userData).id : null;
-
-      // Verificar coincidencia de user_id
+      console.log("Mensaje recibido:", messageData);
+      const userData = getUserData();
+      const currentUserId = userData?.id;
+  
       if (!currentUserId || messageData.user_id !== currentUserId) {
-        console.log("Mensaje ignorado - user_id no coincide:",
-          `Cookie: ${currentUserId}`,
-          `Mensaje: ${messageData.user_id}`);
+        console.log("Mensaje ignorado - user_id no coincide:", 
+          console.log("id en mensaje:", messageData.user_id),
+          console.log("id en localStorage:", currentUserId),
+          `Usuario actual: ${currentUserId}`, 
+          `Mensaje: ${messageData.body}`);
         return;
       }
 
       console.log("Procesando mensaje para el usuario actual:", currentUserId);
 
-      // Resto del código para procesar el mensaje...
       const existingChatIndex = chats.findIndex(chat =>
         chat.id === messageData.chat_id ||
         (chat.number && chat.number === messageData.number)
       );
 
       if (existingChatIndex >= 0) {
-        // ... (código existente para actualizar chat)
+        // Actualizar chat existente
+        const updatedChats = [...chats];
+        const chatToUpdate = { ...updatedChats[existingChatIndex] };
+
+        // Actualizar último mensaje y contador
+        chatToUpdate.last_message = messageData.body;
+        chatToUpdate.timestamp = new Date().toLocaleString();
+        
+        // Incrementar contador solo si no es el chat seleccionado actualmente
+        if (!selectedChatId || selectedChatId.id !== chatToUpdate.id) {
+          chatToUpdate.unread_message = (chatToUpdate.unread_message || 0) + 1;
+        }
+
+        // Si hay archivos adjuntos
+        if (messageData.media_path) {
+          chatToUpdate.last_message = messageData.media_type === 'image' 
+            ? '📷 Imagen' 
+            : messageData.media_type === 'video' 
+              ? '🎥 Video'
+              : messageData.media_type === 'audio'
+                ? '🎵 Audio'
+                : '📎 Archivo';
+        }
+
+        // Mover el chat actualizado al principio de la lista
+        updatedChats.splice(existingChatIndex, 1);
+        updatedChats.unshift(chatToUpdate);
+
+        setChats(updatedChats);
       } else {
-        // ... (código existente para nuevo chat)
+        // Crear nuevo chat
+        const newChat = {
+          id: messageData.chat_id,
+          number: messageData.number,
+          name: messageData.sender_name || messageData.number,
+          last_message: messageData.body,
+          timestamp: new Date().toLocaleString(),
+          unread_message: 1,
+          state: "PENDING",
+          avatar: "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain"
+        };
+
+        // Si hay archivos adjuntos
+        if (messageData.media_path) {
+          newChat.last_message = messageData.media_type === 'image' 
+            ? '📷 Imagen' 
+            : messageData.media_type === 'video' 
+              ? '🎥 Video'
+              : messageData.media_type === 'audio'
+                ? '🎵 Audio'
+                : '📎 Archivo';
+        }
+
+        // Agregar nuevo chat al principio de la lista
+        setChats(prevChats => [newChat, ...prevChats]);
       }
 
+      // Notificar al componente padre sobre el nuevo mensaje
       if (messageData != null) {
         setMessageDataLocal(messageData);
         setMessageData(null);
+
+        // Opcional: Reproducir sonido de notificación
+        const audio = new Audio('@/assets/sounds/notification.mp3');
+        audio.play().catch(e => console.log('Error playing notification sound:', e));
+
+        // Opcional: Mostrar notificación del navegador si la ventana no está activa
+        if (document.hidden && "Notification" in window && Notification.permission === "granted") {
+          new Notification("Nuevo mensaje", {
+            body: messageData.body,
+            icon: "/images/logoCRM.png"
+          });
+        }
       }
     }
   }, [messageData, chats, selectedChatId]);
@@ -564,7 +629,7 @@ const ChatList = ({ role = "admin" }) => {
                 return {
                   ...chat,
                   name: "Unknown Contact",
-                  avatar: "/src/assets/images/default-avatar.jpg",
+                  avatar: "@/assets/images/default-avatar.jpg",
                   isContact: chatIsContact  // Añadir la bandera aquí
                 };
               } else {

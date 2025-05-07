@@ -1,10 +1,10 @@
-import Resize from "/src/hooks/responsiveHook.jsx";
-import ListAgents from "/src/components/agents/listAgents.jsx";
-import NewAgent from "/src/components/agents/newAgent.jsx";
-import Tagmod from "/src/components/mod/newUtilitieMod.jsx";
-import { NewAgentForm } from "/src/contexts/chats.js"
+import Resize from "@/hooks/responsiveHook.jsx";
+import ListAgents from "@/components/agents/listAgents.jsx";
+import NewAgent from "@/components/agents/newAgent.jsx";
+import Tagmod from "@/components/mod/newUtilitieMod.jsx";
+import { NewAgentForm } from "@/contexts/chats.js"
 import { useContext } from "react";
-import { useTheme } from "/src/contexts/themeContext";
+import { useTheme } from "@/contexts/themeContext";
 
 const AgentsComplete = () => {
   const { agentNew, setAgentNew } = useContext(NewAgentForm);

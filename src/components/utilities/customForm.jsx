@@ -1,12 +1,12 @@
 import { useState, useCallback, useContext, useEffect } from 'react';
-import Resize from "/src/hooks/responsiveHook.jsx";
-import { useFetchAndLoad } from "/src/hooks/fechAndLoad.jsx";
-import { createCustomMessage, updateCustomMessage } from "/src/services/customMessages.js";
-import { UpdateCustomForm, CustomHandle, CustomCreateForm } from "/src/contexts/chats.js";
+import Resize from "@/hooks/responsiveHook.jsx";
+import { useFetchAndLoad } from "@/hooks/fechAndLoad.jsx";
+import { createCustomMessage, updateCustomMessage } from "@/services/customMessages.js";
+import { UpdateCustomForm, CustomHandle, CustomCreateForm } from "@/contexts/chats.js";
 import { MailPlus } from 'lucide-react';
-import AbilityGuard from '/src/components/common/AbilityGuard.jsx';
-import { ABILITIES } from "/src/constants/abilities.js";
-import { useTheme } from "/src/contexts/themeContext";
+import AbilityGuard from '@/components/common/AbilityGuard.jsx';
+import { ABILITIES } from "@/constants/abilities.js";
+import { useTheme } from "@/contexts/themeContext";
 
 const CustomMessageForm = () => {
   const isMobile = Resize();

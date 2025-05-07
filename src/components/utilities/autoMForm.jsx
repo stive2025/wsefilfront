@@ -1,12 +1,12 @@
 import { useState, useCallback, useContext, useEffect } from 'react';
-import Resize from "/src/hooks/responsiveHook.jsx";
-import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
-import { createAutoMessage, updateAutoMessage } from "/src/services/AutoMessages.js";
-import { UpdateAutoForm, AutoHandle, AutoCreateForm } from "/src/contexts/chats.js";
+import Resize from "@/hooks/responsiveHook.jsx";
+import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
+import { createAutoMessage, updateAutoMessage } from "@/services/AutoMessages.js";
+import { UpdateAutoForm, AutoHandle, AutoCreateForm } from "@/contexts/chats.js";
 import { BotMessageSquare } from 'lucide-react';
-import { ABILITIES } from '/src/constants/abilities.js';
-import AbilityGuard from '/src/components/common/AbilityGuard.jsx';
-import { useTheme } from "/src/contexts/themeContext";
+import { ABILITIES } from '@/constants/abilities.js';
+import AbilityGuard from '@/components/common/AbilityGuard.jsx';
+import { useTheme } from "@/contexts/themeContext";
 
 const TagCreationModal = () => {
   const isMobile = Resize();

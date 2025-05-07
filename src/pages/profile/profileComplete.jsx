@@ -1,8 +1,8 @@
-import ProfileInfo from "/src/components/profile/profileInfo.jsx";
-import Tagmod from "/src/components/mod/newUtilitieMod.jsx";
-import { ProfileInfoPanel } from "/src/contexts/chats.js"
+import ProfileInfo from "@/components/profile/profileInfo.jsx";
+import Tagmod from "@/components/mod/newUtilitieMod.jsx";
+import { ProfileInfoPanel } from "@/contexts/chats.js"
 import { useContext } from "react";
-import { useTheme } from "/src/contexts/themeContext.jsx";
+import { useTheme } from "@/contexts/themeContext.jsx";
 
 const ProfileComplete = () => {
     const { profileInfoOpen, SetProfileInfoOpen } = useContext(ProfileInfoPanel);

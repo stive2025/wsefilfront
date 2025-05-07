@@ -2,7 +2,7 @@
 import { motion } from "framer-motion";
 import { QrCode } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useTheme } from "/src/contexts/themeContext.jsx";
+import { useTheme } from "@/contexts/themeContext.jsx";
 
 const ConectionMod = () => {
     const navigate = useNavigate();

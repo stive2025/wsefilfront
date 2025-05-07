@@ -1,12 +1,12 @@
 /* eslint-disable react/prop-types */
 import { motion } from "framer-motion";
 import { useState, useEffect, useContext } from "react";
-import { ChatInterfaceClick } from "/src/contexts/chats.js";
-import { getTags, getTag } from "/src/services/tags.js";
-import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
-import { updateChat } from "/src/services/chats.js";
+import { ChatInterfaceClick } from "@/contexts/chats.js";
+import { getTags, getTag } from "@/services/tags.js";
+import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
+import { updateChat } from "@/services/chats.js";
 import Select from 'react-select';
-import { useTheme } from "/src/contexts/themeContext.jsx";
+import { useTheme } from "@/contexts/themeContext.jsx";
 
 const ChatTag = ({ isOpen, onClose }) => {
     const [tags, setTags] = useState([]);

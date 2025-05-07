@@ -1,11 +1,11 @@
 /* eslint-disable react/prop-types */ 
 import { motion } from "framer-motion";
 import { useState, useEffect, useContext } from "react";
-import { ChatInterfaceClick } from "/src/contexts/chats.js";
-import { getAgents } from "/src/services/agents.js";
-import { transferChat, updateChat } from "/src/services/chats.js";
-import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
-import { useTheme } from "/src/contexts/themeContext.jsx";
+import { ChatInterfaceClick } from "@/contexts/chats.js";
+import { getAgents } from "@/services/agents.js";
+import { transferChat, updateChat } from "@/services/chats.js";
+import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
+import { useTheme } from "@/contexts/themeContext.jsx";
 import toast from "react-hot-toast";
 
 const ChatTransfer = ({ isOpen, onClose }) => {

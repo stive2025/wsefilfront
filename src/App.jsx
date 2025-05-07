@@ -7,13 +7,13 @@ const LoginForm = lazy(() => import('./pages/auth/loginForm'));
 //const LoginDebug = lazy(() => import('./pages/auth/LoginDebug'));
 const Navs = lazy(() => import("./pages/Layout/generalLayout"));
 const UtilNavs = lazy(() => import("./pages/Layout/utilitiesLayout"));
-const ChatComplete = lazy(() => import("/src/pages/chats/chatComplete.jsx"));
-const TagsComplete = lazy(() => import("/src/pages/util/tagsComplete.jsx"));
-const AutoComplete = lazy(() => import("/src/pages/util/autoMComplete.jsx"));
-const CustomComplete = lazy(() => import("/src/pages/util/customMComplete.jsx"));
-const ContactsComplete = lazy(() => import("/src/pages/contacts/contactsComplete.jsx"));
-const AgentsComplete = lazy(() => import("/src/pages/agents/agentsComplete.jsx"));
-const ProfileComplete = lazy(() => import("/src/pages/profile/profileComplete.jsx"));
+const ChatComplete = lazy(() => import("@/pages/chats/chatComplete.jsx"));
+const TagsComplete = lazy(() => import("@/pages/util/tagsComplete.jsx"));
+const AutoComplete = lazy(() => import("@/pages/util/autoMComplete.jsx"));
+const CustomComplete = lazy(() => import("@/pages/util/customMComplete.jsx"));
+const ContactsComplete = lazy(() => import("@/pages/contacts/contactsComplete.jsx"));
+const AgentsComplete = lazy(() => import("@/pages/agents/agentsComplete.jsx"));
+const ProfileComplete = lazy(() => import("@/pages/profile/profileComplete.jsx"));
 
 import {
   // 📌 Contextos de interfaz del chat

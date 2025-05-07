@@ -3,8 +3,8 @@ import {
   GetCookieItem,
   setCookieItem,
   RemoveCookieItem,
-} from "/src/utilities/cookies.js";
-import CustomFetch from "/src/services/apiService.js";
+} from "@/utilities/cookies.js";
+import CustomFetch from "@/services/apiService.js";
 import { loadAbort } from "../hooks/fechAndload.jsx";
 
 const AUTH_TOKEN_KEY = "authToken";
@@ -12,8 +12,7 @@ const USER_DATA_KEY = "userData";
 
 export const loginService = (loginData) => {
   const abortController = loadAbort();
-  console.log("Ejecutando loginService con datos:", loginData);
-  
+
   return {
     call: CustomFetch("login", {
       method: "POST",
@@ -23,37 +22,46 @@ export const loginService = (loginData) => {
       body: JSON.stringify(loginData),
       signal: abortController.controller.signal,
     })
-    .then((response) => {
-      console.log("Respuesta raw:", response);
-      
-      // CORRECCIÓN: Solo verificar si response.ok es false
-      if (!response.ok && response.status !== 200) {
-        console.error("Error en la respuesta de login:", response.status);
-        throw new Error(`Error de autenticación (${response.status})`);
-      }
-      
-      return response;
-    })
-    .then(data => {
-      console.log("Datos recibidos en loginService:", data);
-      return data;
-    })
-    .catch(error => {
-      console.error("Error en loginService:", error);
-      throw error;
-    }),
+      .then((response) => {
+        // Manejar tanto Response como objeto directo
+        const responseData =
+          response instanceof Response ? response.json() : response;
+        return responseData;
+      })
+      .then((data) => {
+        if (!data.token?.accessToken || !data.user) {
+          throw new Error("Respuesta de autenticación incompleta");
+        }
+
+        // Extraer el token real del objeto anidado
+        const authToken = data.token.plainTextToken;
+        const userData = data.user;
+
+        // Guardar datos
+        setAuthToken(authToken);
+        setUserData(userData);
+
+        return {
+          token: authToken,
+          user: userData,
+        };
+      }),
     abortController,
   };
 };
-
 // Guardar token de autenticación
 export const setAuthToken = (token, days = 1) => {
-  console.log("Guardando token:", token);
   if (!token) {
     console.error("Intento de guardar un token vacío");
-    return;
+    throw new Error("Token de autenticación inválido");
   }
-  setCookieItem(AUTH_TOKEN_KEY, token, days);
+
+  // Asegurar que el token sea una cadena
+  const tokenToStore =
+    typeof token === "string" ? token : JSON.stringify(token);
+
+  setCookieItem(AUTH_TOKEN_KEY, tokenToStore, days);
+  localStorage.setItem(AUTH_TOKEN_KEY, tokenToStore);
 };
 
 // Obtener el token de autenticación
@@ -68,16 +76,29 @@ export const setUserData = (userData, days = 1) => {
 
 // Obtener datos del usuario
 export const getUserData = () => {
-  const userData = GetCookieItem(USER_DATA_KEY);
-  if (userData) {
-    try {
-      return JSON.parse(userData);
-    } catch (error) {
-      console.error("Error parsing user data:", error);
-      return null;
+  try {
+    // Primero intentar con localStorage
+    const localStorageData = localStorage.getItem(USER_DATA_KEY);
+    if (localStorageData) {
+      return JSON.parse(localStorageData);
     }
+
+    // Luego con cookies
+    const cookieValue = GetCookieItem(USER_DATA_KEY);
+    if (!cookieValue) return null;
+
+    // Intentar parsear directamente
+    try {
+      return JSON.parse(cookieValue);
+    } catch (e) {
+      // Si falla, intentar con decodeURIComponent
+      console.error("Error al parsear datos de usuario desde cookie:", e);
+      return JSON.parse(decodeURIComponent(cookieValue));
+    }
+  } catch (error) {
+    console.error("Error al obtener datos de usuario:", error);
+    return null;
   }
-  return null;
 };
 
 // Comprobar si el usuario está autenticado

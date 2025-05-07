@@ -1,10 +1,10 @@
 /* eslint-disable react/prop-types */
 import { QrCode, Sun, Moon } from "lucide-react";
-import Resize from "/src/hooks/responsiveHook.jsx";
-import { ProfileInfoPanel } from "/src/contexts/chats.js";
+import Resize from "@/hooks/responsiveHook.jsx";
+import { ProfileInfoPanel } from "@/contexts/chats.js";
 import { useContext, useEffect, useState } from "react";
-import { GetCookieItem } from "/src/utilities/cookies.js";
-import { useTheme } from "/src/contexts/themeContext.jsx";
+import { GetCookieItem } from "@/utilities/cookies.js";
+import { useTheme } from "@/contexts/themeContext.jsx";
 
 const ProfileInfo = () => {
     const { SetProfileInfoOpen } = useContext(ProfileInfoPanel);

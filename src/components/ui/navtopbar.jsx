@@ -1,9 +1,9 @@
 /* eslint-disable react/prop-types */
-import Resize from "/src/hooks/responsiveHook.jsx"
-import { StateFilter } from "/src/contexts/chats.js";
+import Resize from "@/hooks/responsiveHook.jsx"
+import { StateFilter } from "@/contexts/chats.js";
 import { useContext, useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { useTheme } from "/src/contexts/themeContext.jsx";
+import { useTheme } from "@/contexts/themeContext.jsx";
 
 const Navtopbar = () => {
   const isMobile = Resize();

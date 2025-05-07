@@ -1,12 +1,12 @@
 import { useState, useCallback, useContext, useEffect } from 'react';
 import { User, CheckSquare, Settings } from 'lucide-react';
-import Resize from "/src/hooks/responsiveHook.jsx";
-import { useFetchAndLoad } from "/src/hooks/fechAndLoad.jsx";
-import { createAgent, updateAgent } from "/src/services/agents.js";
-import { UpdateAgentForm, AgentHandle, NewAgentForm } from "/src/contexts/chats.js";
-import { ABILITIES, ROLES, ROLE_DEFAULT_ABILITIES } from "/src/constants/abilities.js";
-import AbilityGuard from '/src/components/common/AbilityGuard.jsx';
-import { useTheme } from "/src/contexts/themeContext";
+import Resize from "@/hooks/responsiveHook.jsx";
+import { useFetchAndLoad } from "@/hooks/fechAndLoad.jsx";
+import { createAgent, updateAgent } from "@/services/agents.js";
+import { UpdateAgentForm, AgentHandle, NewAgentForm } from "@/contexts/chats.js";
+import { ABILITIES, ROLES, ROLE_DEFAULT_ABILITIES } from "@/constants/abilities.js";
+import AbilityGuard from '@/components/common/AbilityGuard.jsx';
+import { useTheme } from "@/contexts/themeContext";
 
 const NewAgent = () => {
   const isMobile = Resize();

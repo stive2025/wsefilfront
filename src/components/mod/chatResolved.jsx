@@ -1,10 +1,10 @@
 /* eslint-disable react/prop-types */
 import { motion } from "framer-motion";
 import { useContext } from "react";
-import { ChatInterfaceClick } from "/src/contexts/chats.js";
-import { updateChat } from "/src/services/chats.js";
-import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
-import { useTheme } from "/src/contexts/themeContext.jsx";
+import { ChatInterfaceClick } from "@/contexts/chats.js";
+import { updateChat } from "@/services/chats.js";
+import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
+import { useTheme } from "@/contexts/themeContext.jsx";
 import toast from "react-hot-toast";
 
 const ChatTag = ({ isOpen, onClose }) => {

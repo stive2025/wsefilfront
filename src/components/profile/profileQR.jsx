@@ -1,10 +1,10 @@
 import { useState, useEffect, useContext, useRef } from 'react';
-import Resize from "/src/hooks/responsiveHook.jsx";
+import Resize from "@/hooks/responsiveHook.jsx";
 import { QRCodeCanvas } from 'qrcode.react';
-import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
-import { ProfileInfoPanel, ConnectionInfo, ConnectionQR } from "/src/contexts/chats.js";
-import { getCodigoQR } from "/src/services/conections.js";
-import { useTheme } from "/src/contexts/themeContext.jsx";
+import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
+import { ProfileInfoPanel, ConnectionInfo, ConnectionQR } from "@/contexts/chats.js";
+import { getCodigoQR } from "@/services/conections.js";
+import { useTheme } from "@/contexts/themeContext.jsx";
 
 const ProfileQR = () => {
   const { theme } = useTheme();

@@ -1,4 +1,4 @@
-import AutoFetch from "/src/services/apiService.js";
+import AutoFetch from "@/services/apiService.js";
 import { loadAbort } from "../hooks/fechAndload.jsx";
 
 const getAutoMessages = (params = {}) => {

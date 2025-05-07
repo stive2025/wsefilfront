@@ -1,8 +1,8 @@
 /* eslint-disable react/prop-types */
-import Resize from "/src/hooks/responsiveHook.jsx"
+import Resize from "@/hooks/responsiveHook.jsx"
 import { Tag, MailPlus, BotMessageSquare } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useTheme } from "/src/contexts/themeContext.jsx";
+import { useTheme } from "@/contexts/themeContext.jsx";
 import { useState, useEffect } from "react";
 
 const NavUtilities = () => {

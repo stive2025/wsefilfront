@@ -1,13 +1,13 @@
 /* eslint-disable react/prop-types */
 import { Pencil, Trash2, Plus, Search } from 'lucide-react';
-import Resize from "/src/hooks/responsiveHook.jsx";
-import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
+import Resize from "@/hooks/responsiveHook.jsx";
+import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
 import { useContext, useEffect, useState, useRef, useCallback } from "react";
-import { CustomCreateForm, UpdateCustomForm, CustomHandle } from "/src/contexts/chats.js";
-import { getCustomMessages, deleteCustomMessage, getCustomMessage } from "/src/services/customMessages.js";
-import { ABILITIES } from '/src/constants/abilities';
-import AbilityGuard from '/src/components/common/AbilityGuard.jsx';
-import { useTheme } from "/src/contexts/themeContext";
+import { CustomCreateForm, UpdateCustomForm, CustomHandle } from "@/contexts/chats.js";
+import { getCustomMessages, deleteCustomMessage, getCustomMessage } from "@/services/customMessages.js";
+import { ABILITIES } from '@/constants/abilities';
+import AbilityGuard from '@/components/common/AbilityGuard.jsx';
+import { useTheme } from "@/contexts/themeContext";
 
 // Reusable Search Input Component
 const SearchInput = ({ searchTerm, onSearchChange }) => {

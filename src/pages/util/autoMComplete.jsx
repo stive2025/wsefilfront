@@ -1,10 +1,10 @@
-import Resize from "/src/hooks/responsiveHook.jsx";
-import AutoList from "/src/components/utilities/autoMList.jsx";
-import AutoForm from "/src/components/utilities/autoMForm.jsx";
-import Tagmod from "/src/components/mod/newUtilitieMod.jsx";
-import { AutoCreateForm } from "/src/contexts/chats.js"
+import Resize from "@/hooks/responsiveHook.jsx";
+import AutoList from "@/components/utilities/autoMList.jsx";
+import AutoForm from "@/components/utilities/autoMForm.jsx";
+import Tagmod from "@/components/mod/newUtilitieMod.jsx";
+import { AutoCreateForm } from "@/contexts/chats.js"
 import { useContext } from "react";
-import { useTheme } from "/src/contexts/themeContext";
+import { useTheme } from "@/contexts/themeContext";
 
 const AutoComplete = () => {
   const { autoClick, setAutoClick } = useContext(AutoCreateForm);
