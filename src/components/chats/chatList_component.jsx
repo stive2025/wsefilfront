@@ -85,10 +85,10 @@ const TagsBar = ({ tags }) => {
     <AbilityGuard abilities={[ABILITIES.CHATS.FILTER_BY_TAG, ABILITIES.CHATS.FILTER_BY_STATUS]} fallback={null}>
       <div className={`relative flex items-center bg-[rgb(var(--color-bg-${theme}-secondary))] p-2`}>
         <button
-          onClick={scrollLeft}
+          onClick={scrollLeft}  
           className={`absolute left-0 h-5 w-5 ml-2 flex items-center justify-center 
             bg-transparent hover:bg-[rgb(var(--input-hover-bg-${theme}))] 
-            active:bg-[rgb(var(--color-primary-${theme}))] rounded-full z-10
+            active:bg-[rgb(var(--color-primary-${theme}))] rounded-full
             text-[rgb(var(--color-text-secondary-${theme}))]
             hover:text-[rgb(var(--color-primary-${theme}))]`}
         >
@@ -129,7 +129,7 @@ const TagsBar = ({ tags }) => {
           onClick={scrollRight}
           className={`absolute right-0 h-5 w-5 mr-2 flex items-center justify-center 
             bg-transparent hover:bg-[rgb(var(--input-hover-bg-${theme}))] 
-            active:bg-[rgb(var(--color-primary-${theme}))] rounded-full z-10
+            active:bg-[rgb(var(--color-primary-${theme}))] rounded-full
             text-[rgb(var(--color-text-secondary-${theme}))]
             hover:text-[rgb(var(--color-primary-${theme}))]`}
         >
@@ -334,9 +334,15 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
             key={item.id}
             ref={index === chats.length - 1 ? lastChatRef : null}
             className={`w-full flex items-center space-x-3 p-4 
-              hover:bg-[rgb(var(--input-hover-bg-${theme}))] cursor-pointer
-              ${selectedChatId && selectedChatId.id == item.id ? 
-                `bg-[rgb(var(--color-primary-${theme}))]` : ""}`}
+              ${theme === 'light'
+                ? selectedChatId && selectedChatId.id == item.id
+                  ? 'bg-[#e9e6e6]'  // seleccionado claro
+                  : 'bg-[#f9f9f9]'  // no seleccionado claro
+                : selectedChatId && selectedChatId.id == item.id
+                  ? 'bg-[#2e2f2f]'  // seleccionado oscuro
+                  : 'bg-[#161717]'  // no seleccionado oscuro
+              }
+              hover:bg-[rgb(var(--input-hover-bg-${theme}))] cursor-pointer`}
             onClick={() => {
               if (item.state === "PENDING" && item.state !== "CLOSED") {
                 handleUpdateChat(item.id, { unread_message: 0, state: "OPEN" });
@@ -368,11 +374,11 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
               }
             }}
           >
-            <div className="relative">
+            <div className="relative w-10 h-10 flex-shrink-0"> {/* Añadido flex-shrink-0 y dimensiones fijas */}
               <img
                 src={item.avatar || "@/assets/images/default-avatar.jpg"}
                 alt="Avatar"
-                className="w-10 h-10 rounded-full"
+                className="w-full h-full rounded-full object-cover object-center"
               />
               {item.online && (
                 <div className={`absolute bottom-0 right-0 w-3 h-3 bg-green-500 

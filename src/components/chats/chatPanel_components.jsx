@@ -389,7 +389,9 @@ const ChatInterface = () => {
                             className={`${isPrivate === 1
                                 ? `bg-[rgb(var(--color-primary-${theme}))] mx-auto rounded-lg`
                                 : isSelf
-                                    ? `bg-[rgb(var(--color-secondary-${theme}))] rounded-l-lg rounded-br-lg ml-auto`
+                                    ? `${theme === 'light' 
+                                        ? 'bg-[#d9fdd3]' 
+                                        : 'bg-[#144d37]'} rounded-l-lg rounded-br-lg ml-auto`
                                     : `bg-[rgb(var(--color-bg-${theme}-secondary))] rounded-r-lg rounded-bl-lg mr-auto`
                                 } p-3 w-full max-w-full break-words whitespace-pre-wrap flex flex-col`}
                         >
@@ -785,32 +787,48 @@ const ChatInterface = () => {
                         </div>
                         <div className="flex space-x-2">
                             <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.SEARCH_MESSAGES]}>
-                                <button
-                                    className={`p-2 
-                                        hover:bg-[rgb(var(--input-hover-bg-${theme}))]
-                                        active:bg-[rgb(var(--color-primary-${theme}))] rounded-full
-                                        text-[rgb(var(--color-text-secondary-${theme}))]
-                                        hover:text-[rgb(var(--color-primary-${theme}))]`}
-                                    onClick={() => setSearchInChat(prev => !prev)}
-                                    disabled={isChatClosed}
-                                    style={isChatClosed ? { opacity: 0.5 } : {}}
-                                >
-                                    <Search size={20} />
-                                </button>
+                                <div className="relative group">
+                                    <button
+                                        className={`p-2 
+                                            hover:bg-[rgb(var(--input-hover-bg-${theme}))]
+                                            active:bg-[rgb(var(--color-primary-${theme}))] rounded-full
+                                            text-[rgb(var(--color-text-secondary-${theme}))]
+                                            hover:text-[rgb(var(--color-primary-${theme}))]`}
+                                        onClick={() => setSearchInChat(prev => !prev)}
+                                        disabled={isChatClosed}
+                                        style={isChatClosed ? { opacity: 0.5 } : {}}
+                                    >
+                                        <Search size={20} />
+                                    </button>
+                                    <div className={`absolute -bottom-8 left-1/2 transform -translate-x-1/2 
+                                        bg-[rgb(var(--color-bg-${theme}-secondary))] px-2 py-1 rounded
+                                        text-xs whitespace-nowrap opacity-0 group-hover:opacity-100
+                                        transition-opacity duration-200 z-50`}>
+                                        Buscar en el chat
+                                    </div>
+                                </div>
                             </AbilityGuard>
                             <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.TRANSFER]}>
-                                <button
-                                    className={`p-2 
-                                        hover:bg-[rgb(var(--input-hover-bg-${theme}))]
-                                        active:bg-[rgb(var(--color-primary-${theme}))] rounded-full
-                                        text-[rgb(var(--color-text-secondary-${theme}))]
-                                        hover:text-[rgb(var(--color-primary-${theme}))]`}
-                                    onClick={() => isChatClosed ? null : setTransferOpen(prev => !prev)}
-                                    disabled={isChatClosed}
-                                    style={isChatClosed ? { opacity: 0.5 } : {}}
-                                >
-                                    <MessageSquareShare size={20} />
-                                </button>
+                                <div className="relative group">
+                                    <button
+                                        className={`p-2 
+                                            hover:bg-[rgb(var(--input-hover-bg-${theme}))]
+                                            active:bg-[rgb(var(--color-primary-${theme}))] rounded-full
+                                            text-[rgb(var(--color-text-secondary-${theme}))]
+                                            hover:text-[rgb(var(--color-primary-${theme}))]`}
+                                        onClick={() => isChatClosed ? null : setTransferOpen(prev => !prev)}
+                                        disabled={isChatClosed}
+                                        style={isChatClosed ? { opacity: 0.5 } : {}}
+                                    >
+                                        <MessageSquareShare size={20} />
+                                    </button>
+                                    <div className={`absolute -bottom-8 left-1/2 transform -translate-x-1/2 
+                                        bg-[rgb(var(--color-bg-${theme}-secondary))] px-2 py-1 rounded
+                                        text-xs whitespace-nowrap opacity-0 group-hover:opacity-100
+                                        transition-opacity duration-200 z-50`}>
+                                        Transferir chat
+                                    </div>
+                                </div>
                             </AbilityGuard>
                             <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.TAG_CHAT, ABILITIES.CHAT_PANEL.MARK_AS_FINISHED]} requireAll={false}>
                                 <button
@@ -992,16 +1010,26 @@ const ChatInterface = () => {
                             <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.SEND_TEXT]}>
                                 <textarea
                                     value={messageText}
-                                    onChange={(e) => setMessageText(e.target.value)}
+                                    onChange={(e) => {
+                                        setMessageText(e.target.value);
+                                        // Ajuste automático de altura
+                                        e.target.style.height = '40px'; // Altura inicial de una línea
+                                        const scrollHeight = e.target.scrollHeight;
+                                        const maxHeight = 120; // 5 líneas aproximadamente (24px por línea)
+                                        e.target.style.height = `${Math.min(scrollHeight, maxHeight)}px`;
+                                    }}
                                     placeholder={isChatClosed ? "Chat cerrado" : "Escribe un mensaje..."}
                                     className={`flex-1 bg-[rgb(var(--color-bg-${theme}))] 
                                         text-[rgb(var(--color-text-primary-${theme}))]
                                         placeholder-[rgb(var(--color-text-secondary-${theme}))]
                                         rounded-lg p-3 resize-none outline-none
                                         hover:bg-[rgb(var(--input-hover-bg-${theme}))]
-                                        focus:border-[rgb(var(--input-focus-border-${theme}))]`}
-                                    rows={1}
-                                    style={{ minHeight: '40px' }}
+                                        focus:border-[rgb(var(--input-focus-border-${theme}))]
+                                        scrollbar-hide h-[40px] min-h-[40px] max-h-[120px]
+                                        leading-[20px]`}
+                                    style={{
+                                        overflow: messageText ? 'auto' : 'hidden'
+                                    }}
                                     disabled={isChatClosed}
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter' && !e.shiftKey) {

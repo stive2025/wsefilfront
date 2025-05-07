@@ -47,9 +47,8 @@ const MenuInchat = ({ onClose, isOpen }) => {
                 whitespace-nowrap px-2 py-1 rounded
                 opacity-0 group-hover:opacity-100 
                 transition-opacity duration-200
-                ${theme === 'light'
-                    ? 'bg-[rgb(var(--color-secondary-light))] text-[rgb(var(--color-text-primary-light))]'
-                    : 'bg-[rgb(var(--color-secondary-dark))] text-[rgb(var(--color-text-primary-dark))]'}
+                bg-[rgb(var(--color-bg-${theme}-secondary))] 
+                text-[rgb(var(--color-text-primary-${theme}))]
                 shadow-lg text-sm z-30
             `}>
                 {BUTTON_LABELS[Icon.displayName || Icon.name]}
