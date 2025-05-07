@@ -70,7 +70,7 @@ const NavSlideBar = () => {
       <AbilityGuard abilities={item.abilities}>
         <li
           className={`
-            cursor-pointer transition-colors duration-200
+            cursor-pointer transition-colors duration-200 relative group
             ${isMobileView
               ? `flex items-center gap-2 p-2 rounded-md
                  ${active 
@@ -104,6 +104,20 @@ const NavSlideBar = () => {
         >
           {item.icon}
           {isMobileView && <span>{item.label}</span>}
+          
+          {/* Tooltip */}
+          {!isMobileView && (
+            <div className={`
+              absolute left-12 whitespace-nowrap px-2 py-1 rounded
+              opacity-0 group-hover:opacity-100 transition-opacity duration-200
+              ${theme === 'light'
+                ? 'bg-[rgb(var(--color-bg-light-secondary))] text-[rgb(var(--color-text-primary-light))]'
+                : 'bg-[rgb(var(--color-bg-dark-secondary))] text-[rgb(var(--color-text-primary-dark))]'}
+              shadow-lg text-sm
+            `}>
+              {item.label}
+            </div>
+          )}
         </li>
       </AbilityGuard>
     );

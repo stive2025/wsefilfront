@@ -5,6 +5,12 @@ import { useContext } from "react";
 import { ContactInfoClick, TagClick, ResolveClick } from "@/contexts/chats.js"
 import { useTheme } from "@/contexts/themeContext.jsx";
 
+const BUTTON_LABELS = {
+    'Info': "Información",
+    'StickyNote': "Etiquetar",
+    'SquareCheck': "Finalizar"
+};
+
 const MenuInchat = ({ onClose, isOpen }) => {
     const variants = {
         hidden: { opacity: 0, y: -50 },
@@ -23,6 +29,7 @@ const MenuInchat = ({ onClose, isOpen }) => {
         <li 
             className={`
                 cursor-pointer rounded-full p-2 transition-colors duration-200
+                relative group
                 ${theme === 'light' 
                     ? 'bg-[rgb(var(--color-secondary-light))]' 
                     : 'bg-[rgb(var(--color-secondary-dark))]'}
@@ -34,6 +41,19 @@ const MenuInchat = ({ onClose, isOpen }) => {
             onClick={onClick}
         >
             <Icon size={20} />
+            {/* Tooltip */}
+            <div className={`
+                absolute right-12 top-1/2 -translate-y-1/2 
+                whitespace-nowrap px-2 py-1 rounded
+                opacity-0 group-hover:opacity-100 
+                transition-opacity duration-200
+                ${theme === 'light'
+                    ? 'bg-[rgb(var(--color-secondary-light))] text-[rgb(var(--color-text-primary-light))]'
+                    : 'bg-[rgb(var(--color-secondary-dark))] text-[rgb(var(--color-text-primary-dark))]'}
+                shadow-lg text-sm z-30
+            `}>
+                {BUTTON_LABELS[Icon.displayName || Icon.name]}
+            </div>
         </li>
     );
 
