@@ -10,13 +10,18 @@ const Navtopbar = () => {
   const { stateSelected, setStateSelected } = useContext(StateFilter);
   const location = useLocation();
   const { theme } = useTheme();
-  const [activeItem, setActiveItem] = useState("PENDING"); // Default active item
+  const [activeItem, setActiveItem] = useState(stateSelected || "PENDING");
+
+  useEffect(() => {
+    if (!stateSelected) {
+      setStateSelected("PENDING");
+    }
+    setActiveItem(stateSelected || "PENDING");
+  }, []);
 
   if (location.pathname !== '/chatList') {
     return null;
   }
-
-
 
   const menuOptions = [
     /*{ key: "ALL", label: "TODO" },*/

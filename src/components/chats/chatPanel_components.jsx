@@ -562,7 +562,8 @@ const ChatInterface = () => {
                 created_at: new Date().toISOString(),
                 ack: 0,
                 is_temp: true,
-                tempSignature: tempSignature // Firma para identificar duplicados
+                tempSignature: tempSignature,
+             // Firma para identificar duplicados
             };
 
             // Agregar información multimedia si existe
@@ -757,7 +758,7 @@ const ChatInterface = () => {
         <div className={`flex flex-col h-screen w-full
             bg-[rgb(var(--color-bg-${theme}))] 
             text-[rgb(var(--color-text-primary-${theme}))]
-            ${isMobile ? 'mb-10' : ''}`}>
+            ${isMobile ? 'pb-10' : ''}`}>
             {shouldShowChat ? (
                 <>
                     {/* Chat Header */}

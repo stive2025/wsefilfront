@@ -74,6 +74,21 @@
   @apply bg-[rgb(var(--input-selected-bg-dark))];
 }
 
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+}
+
+/* Clase de utilidad para aplicar la animación */
+.fade-out {
+    animation: fadeOut 0.3s ease-out forwards;
+}
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;

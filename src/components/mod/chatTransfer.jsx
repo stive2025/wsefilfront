@@ -62,6 +62,11 @@ const ChatTransfer = ({ isOpen, onClose }) => {
                 is_private: isPrivate
             };
 
+            // Guardamos el estado anterior
+            const previousState = selectedChatId.status;
+            const chatElement = document.querySelector(`[data-chat-id="${selectedChatId.id}"]`);
+
+            // Actualizamos el estado a PENDING
             const newStateChat = {state: "PENDING"};
             await handleUpdateChat(selectedChatId.id, newStateChat);
 
@@ -70,8 +75,31 @@ const ChatTransfer = ({ isOpen, onClose }) => {
             }
 
             await callEndpoint(transferChat(selectedChatId.id, transferData));
-            toast.success("Chat transferido exitosamente.");
+            
+            // Aplicar la animación y remover el chat
+            if (chatElement) {
+                chatElement.classList.add('fade-out');
+                
+                // Esperar a que termine la animación
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                // Disparar evento de cambio de estado
+                const event = new CustomEvent('chatStateChanged', {
+                    detail: {
+                        chatId: selectedChatId.id,
+                        newState: "PENDING",
+                        previousState: previousState,
+                        shouldRemove: true
+                    }
+                });
+                window.dispatchEvent(event);
+                
+                // Ocultar el elemento
+                chatElement.style.display = 'none';
+            }
+
             setSelectedChatId(null);
+            toast.success("Chat transferido exitosamente.");
             onClose();
         } catch (error) {
             console.error("Error al transferir el chat:", error);

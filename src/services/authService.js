@@ -108,8 +108,15 @@ export const isAuthenticated = () => {
 
 // Cerrar sesión
 export const logout = () => {
+  // Remove auth cookies
   RemoveCookieItem(AUTH_TOKEN_KEY);
   RemoveCookieItem(USER_DATA_KEY);
+  
+  // Remove local storage items
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+  localStorage.removeItem(USER_DATA_KEY);
+
+  // Redirect to login page
   window.location.href = "#/login";
 };
 

@@ -332,6 +332,7 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
         {chats.map((item, index) => (
           <div
             key={item.id}
+            data-chat-id={item.id}
             ref={index === chats.length - 1 ? lastChatRef : null}
             className={`w-full flex items-center space-x-3 p-4 
               ${theme === 'light'
@@ -452,6 +453,14 @@ const ChatList = ({ role = "admin" }) => {
   const [tags, setTags] = useState([]);
   const { hasAbility } = useAuth();
 
+  useEffect(() => {
+    const initialParams = {
+      page: 1,
+      state: stateSelected || "PENDING"
+    };
+    
+    loadChats(initialParams, false);
+  }, [stateSelected]);
 
   useEffect(() => {
     if (messageData && messageData.body) {
@@ -538,10 +547,6 @@ const ChatList = ({ role = "admin" }) => {
         setMessageDataLocal(messageData);
         setMessageData(null);
 
-        // Opcional: Reproducir sonido de notificación
-        const audio = new Audio('@/assets/sounds/notification.mp3');
-        audio.play().catch(e => console.log('Error playing notification sound:', e));
-
         // Opcional: Mostrar notificación del navegador si la ventana no está activa
         if (document.hidden && "Notification" in window && Notification.permission === "granted") {
           new Notification("Nuevo mensaje", {
@@ -586,8 +591,6 @@ const ChatList = ({ role = "admin" }) => {
         }
       } else {
         setIsSearching(false);
-
-        endpoint = getChatList(params);
 
         const filterParams = { ...params };
         console.log(filterParams)
@@ -715,6 +718,28 @@ const ChatList = ({ role = "admin" }) => {
     }
   }, [stateSelected, tagSelected, agentSelected]);
 
+  useEffect(() => {
+    const handleChatStateChange = async (event) => {
+      const { chatId, newState, previousState } = event.detail;
+      
+      if (stateSelected === previousState) {
+        // Remover el chat de la lista actual con animación
+        setChats(prevChats => prevChats.filter(chat => chat.id !== chatId));
+      } 
+      
+      // Si el nuevo estado coincide con el filtro actual, recargar la lista
+      if (stateSelected === newState) {
+        const params = {
+          page: 1,
+          state: stateSelected
+        };
+        await loadChats(params, false);
+      }
+    };
+
+    window.addEventListener('chatStateChanged', handleChatStateChange);
+    return () => window.removeEventListener('chatStateChanged', handleChatStateChange);
+  }, [stateSelected]);
 
   // Efecto para manejar el debounce de la búsqueda
   useEffect(() => {

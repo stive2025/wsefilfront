@@ -8,8 +8,10 @@ import { logout } from "@/services/authService.js";
 import { ABILITIES } from '@/constants/abilities';
 import AbilityGuard from '@/components/common/AbilityGuard.jsx';
 import { useTheme } from "@/contexts/themeContext.jsx";
+import { useResetContexts } from '@/hooks/useResetContexts';
 
 const NavSlideBar = () => {
+  const resetContexts = useResetContexts();
   const [showMenu, setShowMenu] = useState(false);
   const [activePath, setActivePath] = useState('');
   const isMobile = Resize();
@@ -123,6 +125,11 @@ const NavSlideBar = () => {
     );
   };
 
+  const handleLogout = () => {
+    resetContexts();
+    logout();
+  };
+
   return isMobile ? (
     <header className={`
       fixed w-full top-0 z-20 h-10
@@ -175,7 +182,7 @@ const NavSlideBar = () => {
         ))}
       </ul>
       <button 
-        onClick={logout}
+        onClick={handleLogout}
         className={`
           p-2 rounded-full transition-colors duration-200 rotate-180
           ${theme === 'light'
