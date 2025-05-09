@@ -1,86 +1,103 @@
 /* eslint-disable react/prop-types */
-import Resize from "/src/hooks/responsiveHook.jsx";
-import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
+import Resize from "@/hooks/responsiveHook.jsx";
+import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
 import { Search, Plus, Pencil, Trash2 } from "lucide-react";
 import { useContext, useEffect, useState, useRef, useCallback } from "react";
-import { NewAgentForm, UpdateAgentForm, AgentHandle } from "/src/contexts/chats.js";
-import { getAgents, deleteAgents, getAgent } from "/src/services/agents.js";
-import { ABILITIES } from '/src/constants/abilities';
-import AbilityGuard from '/src/components/common/AbilityGuard.jsx';
-//import toast from "react-hot-toast";
-
+import { NewAgentForm, UpdateAgentForm, AgentHandle } from "@/contexts/chats.js";
+import { getAgents, deleteAgents, getAgent } from "@/services/agents.js";
+import { ABILITIES } from '@/constants/abilities';
+import AbilityGuard from '@/components/common/AbilityGuard.jsx';
+import { useTheme } from "@/contexts/themeContext";
 
 // Componentes reutilizables
-const SearchInput = ({ searchTerm, onSearchChange }) => (
-  <AbilityGuard abilities={[ABILITIES.AGENTS.SEARCH]} fallback={<div className="p-2 bg-gray-900"></div>}>
-    <div className="p-2 bg-gray-900">
-      <div className="relative flex items-center">
-        <input
-          type="text"
-          placeholder="Search..."
-          className="w-full bg-gray-800 rounded-lg pl-8 pr-2 py-1 text-white placeholder-gray-400"
-          value={searchTerm}
-          onChange={(e) => onSearchChange(e.target.value)}
-        />
-        <Search className="absolute left-1 text-gray-400" size={18} />
+const SearchInput = ({ searchTerm, onSearchChange }) => {
+  const { theme } = useTheme();
+  
+  return (
+    <AbilityGuard abilities={[ABILITIES.AGENTS.SEARCH]} fallback={
+      <div className={`p-2 bg-[rgb(var(--color-bg-${theme}-secondary))]`}></div>
+    }>
+      <div className={`p-2 bg-[rgb(var(--color-bg-${theme}-secondary))]`}>
+        <div className="relative flex items-center">
+          <input
+            type="text"
+            placeholder="Search..."
+            className={`w-full bg-[rgb(var(--color-bg-${theme}))] rounded-lg pl-8 pr-2 py-1 
+              text-[rgb(var(--color-text-primary-${theme}))] placeholder-[rgb(var(--color-text-secondary-${theme}))]`}
+            value={searchTerm}
+            onChange={(e) => onSearchChange(e.target.value)}
+          />
+          <Search className={`absolute left-1 text-[rgb(var(--color-text-secondary-${theme}))]`} size={18} />
+        </div>
       </div>
-    </div>
-  </AbilityGuard>
-);
+    </AbilityGuard>
+  );
+};
 
 const AgentsItems = ({ agents, onDeleteAgent, isDeleting, onFindAgent, loadingMore, lastAgentRef }) => {
-  // Verificar si agents existe y contiene un array antes de mapear
+  const { theme } = useTheme();
+
   if (!agents || !agents.length) {
-    return <div className="p-4 text-gray-400">No hay agentes disponibles</div>;
-  } else {
-    return (
-      <div className="bg-gray-900">
-        {agents.map((item, index) => (
-          <div
-            key={item.id}
-            className="w-full flex items-center p-4"
-            ref={index === agents.length - 1 ? lastAgentRef : null}
-          >
-            <div className="w-full flex items-center space-x-3 hover:bg-gray-800 cursor-pointer active:bg-gray-700">
-              <div className="flex-1">
-                <div className="font-medium text-sm md:text-base">{item.name}</div>
-                <div className="text-xs md:text-sm text-gray-400 overflow-hidden text-ellipsis whitespace-nowrap max-w-[150px] sm:max-w-[200px]">
-                  {item.email || "No email"}
-                </div>
+    return <div className={`p-4 text-[rgb(var(--color-text-secondary-${theme}))]`}>No hay agentes disponibles</div>;
+  }
+
+  return (
+    <div className={`bg-[rgb(var(--color-bg-${theme}-secondary))]`}>
+      {agents.map((item, index) => (
+        <div
+          key={item.id}
+          className="w-full flex items-center p-4"
+          ref={index === agents.length - 1 ? lastAgentRef : null}
+        >
+          <div className={`w-full flex items-center space-x-3 hover:bg-[rgb(var(--color-bg-${theme}))] 
+            cursor-pointer active:bg-[rgb(var(--color-primary-${theme}))]`}>
+            <div className="flex-1">
+              <div className={`font-medium text-sm md:text-base text-[rgb(var(--color-text-primary-${theme}))]`}>
+                {item.name}
+              </div>
+              <div className={`text-xs md:text-sm text-[rgb(var(--color-text-secondary-${theme}))] 
+                overflow-hidden text-ellipsis whitespace-nowrap max-w-[150px] sm:max-w-[200px]`}>
+                {item.email || "No email"}
               </div>
             </div>
-            <div className="flex">
-              <AbilityGuard abilities={[ABILITIES.AGENTS.EDIT]}>
-                <button className="mr-2 text-gray-400 hover:text-white"
-                  onClick={() => onFindAgent(item.id)}
-                >
-                  <Pencil size={16} />
-                </button>
-              </AbilityGuard>
-              <AbilityGuard abilities={[ABILITIES.AGENTS.DELETE]}>
-                <button
-                  className="text-gray-400 hover:text-white"
-                  onClick={() => onDeleteAgent(item.id)}
-                  disabled={isDeleting}
-                >
-                  <Trash2 size={16} />
-                </button>
-              </AbilityGuard>
-            </div>
           </div>
-        ))}
-        {loadingMore && (
-          <div className="p-4 text-gray-400 text-center">Cargando más agentes...</div>
-        )}
-      </div>
-    );
-  }
+          <div className="flex">
+            <AbilityGuard abilities={[ABILITIES.AGENTS.EDIT]}>
+              <button 
+                className={`mr-2 text-[rgb(var(--color-text-secondary-${theme}))] 
+                  hover:text-[rgb(var(--color-primary-${theme}))]`}
+                onClick={() => onFindAgent(item.id)}
+              >
+                <Pencil size={16} />
+              </button>
+            </AbilityGuard>
+            <AbilityGuard abilities={[ABILITIES.AGENTS.DELETE]}>
+              <button
+                className={`text-[rgb(var(--color-text-secondary-${theme}))] 
+                  hover:text-[rgb(var(--color-primary-${theme}))]`}
+                onClick={() => onDeleteAgent(item.id)}
+                disabled={isDeleting}
+              >
+                <Trash2 size={16} />
+              </button>
+            </AbilityGuard>
+          </div>
+        </div>
+      ))}
+      {loadingMore && (
+        <div className={`p-4 text-[rgb(var(--color-text-secondary-${theme}))] text-center`}>
+          Cargando más agentes...
+        </div>
+      )}
+    </div>
+  );
 };
 
 const ListAgents = () => {
   const { setAgentNew } = useContext(NewAgentForm);
   const { setAgentFind } = useContext(UpdateAgentForm);
   const { agentHandle, setAgentHandle } = useContext(AgentHandle);
+  const { theme } = useTheme();
 
   const isMobile = Resize();
   const [agents, setAgents] = useState([]);
@@ -283,20 +300,21 @@ const ListAgents = () => {
 
   return (
     <AbilityGuard abilities={[ABILITIES.AGENTS.VIEW]} fallback={
-      <div className="w-full flex items-center justify-center h-full text-gray-400">
+      <div className={`w-full flex items-center justify-center h-full text-[rgb(var(--color-text-secondary-${theme}))]`}>
         No tienes permisos para ver la lista de agentes
       </div>
     }>
       {isMobile ? (
 
-        <div className="w-full sm:w-80 flex flex-col bg-gray-900 text-white">
+        <div className={`w-full sm:w-80 flex flex-col bg-[rgb(var(--color-bg-${theme}-secondary))] 
+          text-[rgb(var(--color-text-primary-${theme}))]`}>
           <div className="flex flex-col flex-shrink-0 mt-14">
             <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
           </div>
 
           <div className="flex-1 overflow-y-auto">
             {loading && agents.length === 0 ? (
-              <div className="p-4 text-gray-400">Cargando agentes...</div>
+              <div className={`p-4 text-[rgb(var(--color-text-secondary-${theme}))]`}>Cargando agentes...</div>
             ) : error ? (
               <div className="p-4 text-red-400">{error}</div>
             ) : (
@@ -313,7 +331,9 @@ const ListAgents = () => {
 
           <AbilityGuard abilities={[ABILITIES.AGENTS.CREATE]}>
             <button
-              className="absolute bottom-4 right-4 mb-15 rounded-full p-3 shadow-lg text-white cursor-pointer bg-naranja-base hover:bg-naranja-medio"
+              className={`absolute bottom-4 right-4 mb-15 rounded-full p-3 shadow-lg 
+                text-[rgb(var(--color-text-primary-${theme}))] cursor-pointer 
+                bg-[rgb(var(--color-secondary-${theme}))] hover:bg-[rgb(var(--color-primary-${theme}))]`}
               onClick={() => setAgentNew((prev) => !prev)}
             >
               <Plus size={18} />
@@ -321,14 +341,16 @@ const ListAgents = () => {
           </AbilityGuard>
         </div>
       ) : (
-        <div className="flex-1 border-r border-gray-700 flex flex-col bg-gray-900 text-white pt-10 ml-10 overflow-y-auto">
+        <div className={`flex-1 border-r border-[rgb(var(--color-text-secondary-${theme}))] flex flex-col 
+          bg-[rgb(var(--color-bg-${theme}-secondary))] text-[rgb(var(--color-text-primary-${theme}))] 
+          pt-10 ml-10 overflow-y-auto`}>
           <div className="flex flex-col flex-shrink-0">
             <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
           </div>
 
           <div className="flex-1 overflow-y-auto scrollbar-hide">
             {loading && agents.length === 0 ? (
-              <div className="p-4 text-gray-400">Cargando agentes...</div>
+              <div className={`p-4 text-[rgb(var(--color-text-secondary-${theme}))]`}>Cargando agentes...</div>
             ) : error ? (
               <div className="p-4 text-red-400">{error}</div>
             ) : (
@@ -345,7 +367,9 @@ const ListAgents = () => {
 
           <AbilityGuard abilities={[ABILITIES.AGENTS.CREATE]}>
             <button
-              className="fixed bottom-4 right-4 mb-4 rounded-full p-3 shadow-lg text-white cursor-pointer bg-naranja-base hover:bg-naranja-medio"
+              className={`fixed bottom-4 right-4 mb-4 rounded-full p-3 shadow-lg 
+                text-[rgb(var(--color-text-primary-${theme}))] cursor-pointer 
+                bg-[rgb(var(--color-secondary-${theme}))] hover:bg-[rgb(var(--color-primary-${theme}))]`}
               onClick={() => setAgentNew((prev) => !prev)}
             >
               <Plus size={18} />

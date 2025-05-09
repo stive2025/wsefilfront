@@ -19,6 +19,7 @@ import { useLocation } from "react-router-dom";
 import { getChat, updateChat } from "/src/services/chats.js";
 import { sendMessage } from "/src/services/messages.js";
 import toast from "react-hot-toast";
+import { useTheme } from "/src/contexts/themeContext";
 
 const ChatInterface = () => {
     const isMobile = Resize();
@@ -32,6 +33,7 @@ const ChatInterface = () => {
     const { selectedChatId, setSelectedChatId } = useContext(ChatInterfaceClick);
     const { callEndpoint } = useFetchAndLoad();
     const { messageData } = useContext(WebSocketMessage);
+    const { theme } = useTheme();
 
     // File size limit in bytes (2MB = 2 * 1024 * 1024)
     const FILE_SIZE_LIMIT = 2 * 1024 * 1024;
@@ -385,10 +387,12 @@ const ChatInterface = () => {
                     <div className={`flex ${isSelf && !isPrivate ? "flex-row-reverse" : "flex-row"} items-start space-x-2 ${isPrivate === 1 ? "max-w-[70%]" : "max-w-[60%]"} w-auto`}>
                         <div
                             className={`${isPrivate === 1
-                                ? "bg-indigo-900 mx-auto rounded-lg"
+                                ? `bg-[rgb(var(--color-primary-${theme}))] mx-auto rounded-lg`
                                 : isSelf
-                                    ? "bg-teal-700 rounded-l-lg rounded-br-lg ml-auto"
-                                    : "bg-gray-700 rounded-r-lg rounded-bl-lg mr-auto"
+                                    ? `${theme === 'light' 
+                                        ? 'bg-[#d9fdd3]' 
+                                        : 'bg-[#144d37]'} rounded-l-lg rounded-br-lg ml-auto`
+                                    : `bg-[rgb(var(--color-bg-${theme}-secondary))] rounded-r-lg rounded-bl-lg mr-auto`
                                 } p-3 w-full max-w-full break-words whitespace-pre-wrap flex flex-col`}
                         >
                             {isPrivate === 1 && (
@@ -558,7 +562,8 @@ const ChatInterface = () => {
                 created_at: new Date().toISOString(),
                 ack: 0,
                 is_temp: true,
-                tempSignature: tempSignature // Firma para identificar duplicados
+                tempSignature: tempSignature,
+             // Firma para identificar duplicados
             };
 
             // Agregar información multimedia si existe
@@ -645,6 +650,14 @@ const ChatInterface = () => {
             });
             const response = await callEndpoint({ call, abortController });
 
+            // Agregar console.log para ver la respuesta cuando no hay chatId
+            if (!selectedChatId.id) {
+                console.log('Respuesta del servidor al enviar mensaje sin chatId:', {
+                    response,
+                    messagePayload
+                });
+            }
+
             if (response) {
                 // Actualizar mensaje temporal con datos del servidor
                 setChatMessages(prev => {
@@ -703,44 +716,86 @@ const ChatInterface = () => {
             setUploadProgress(0);
         }
     };
-    const handleReopenChat = async () => {
-        if (!selectedChatId || !selectedChatId.id) {
-            console.error("No chat selected");
-            return;
-        }
-
+    const handleUpdateChat = async (idChat, dataChat) => {
         try {
-            setReopeningChat(true);
-            const { call, abortController } = updateChat(selectedChatId.id, { state: "OPEN" });
-            await callEndpoint({ call, abortController });
-            setSelectedChatId(prev => ({
-                ...prev,
-                status: "OPEN"
-            }));
-            toast.success("Chat reabierto con éxito");
+          const response = await callEndpoint(updateChat(idChat, dataChat), `update_chat_${idChat}`);
+          console.log("Chat actualizado ", response);
+          return response;
         } catch (error) {
-            toast.error("Ocurrió un error al reabrir el chat");
-            console.error("Error al reabrir el chat:", error);
+          console.error("Error actualizando chat ", error);
+          throw error;
+        }
+    };
+    
+    const handleReopenChat = async () => {
+        if (!selectedChatId?.id) return;
+        
+        try {
+          setReopeningChat(true);
+          const previousState = selectedChatId.status;
+          const chatElement = document.querySelector(`[data-chat-id="${selectedChatId.id}"]`);
+      
+          // Actualizar estado en el servidor
+          await handleUpdateChat(selectedChatId.id, { state: "OPEN" });
+      
+          // Aplicar animación si el elemento existe
+          if (chatElement) {
+            chatElement.classList.add('fade-out');
+            await new Promise(resolve => setTimeout(resolve, 300));
+          }
+      
+          // Disparar evento de cambio de estado
+          const event = new CustomEvent('chatStateChanged', {
+            detail: {
+              chatId: selectedChatId.id,
+              newState: "OPEN",
+              previousState: previousState,
+              shouldRemove: true
+            }
+          });
+          window.dispatchEvent(event);
+      
+          // Actualizar el estado local del chat
+          setSelectedChatId(prev => ({
+            ...prev,
+            status: "OPEN"
+          }));
+      
+          toast.success("Chat reabierto exitosamente");
+        } catch (error) {
+          console.error("Error al reabrir el chat:", error);
+          toast.error("Error al reabrir el chat");
         } finally {
-            setReopeningChat(false);
+          setReopeningChat(false);
         }
     };
 
     if (shouldShowChat && isLoading) {
         return (
-            <div className="flex flex-col h-screen w-full bg-gray-900 text-white justify-center items-center">
-                <Loader size={40} className="animate-spin text-teal-500" />
-                <p className="mt-4 text-gray-400">Cargando chat...</p>
+            <div className={`flex flex-col h-screen w-full 
+                bg-[rgb(var(--color-bg-${theme}))] 
+                text-[rgb(var(--color-text-primary-${theme}))] 
+                justify-center items-center`}
+            >
+                <Loader size={40} className={`animate-spin text-[rgb(var(--color-primary-${theme}))]`} />
+                <p className={`mt-4 text-[rgb(var(--color-text-secondary-${theme}))]`}>
+                    Cargando chat...
+                </p>
             </div>
         );
     }
 
     return (
-        <div className="flex flex-col h-screen w-full bg-gray-900 text-white">
+        <div className={`flex flex-col h-screen w-full
+            bg-[rgb(var(--color-bg-${theme}))] 
+            text-[rgb(var(--color-text-primary-${theme}))]
+            ${isMobile ? 'pb-10' : ''}`}>
             {shouldShowChat ? (
                 <>
                     {/* Chat Header */}
-                    <div className="flex p-2 border-b border-gray-700 bg-gray-800 sticky mt-10 z-10 justify-between items-center">
+                    <div className={`flex p-2 border-b border-[rgb(var(--color-text-secondary-${theme}))] 
+                        bg-[rgb(var(--color-bg-${theme}-secondary))] sticky mt-10 z-10 
+                        justify-between items-center`}>
                         <div className="flex items-center space-x-3">
                             {location.pathname === "/chatList" && isMobile && (
                                 <button
@@ -764,28 +819,56 @@ const ChatInterface = () => {
                         </div>
                         <div className="flex space-x-2">
                             <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.SEARCH_MESSAGES]}>
-                                <button
-                                    className="p-2 hover:bg-gray-700 active:bg-gray-700 rounded-full"
-                                    onClick={() => setSearchInChat(prev => !prev)}
-                                    disabled={isChatClosed}
-                                    style={isChatClosed ? { opacity: 0.5 } : {}}
-                                >
-                                    <Search size={20} />
-                                </button>
+                                <div className="relative group">
+                                    <button
+                                        className={`p-2 
+                                            hover:bg-[rgb(var(--input-hover-bg-${theme}))]
+                                            active:bg-[rgb(var(--color-primary-${theme}))] rounded-full
+                                            text-[rgb(var(--color-text-secondary-${theme}))]
+                                            hover:text-[rgb(var(--color-primary-${theme}))]`}
+                                        onClick={() => setSearchInChat(prev => !prev)}
+                                        disabled={isChatClosed}
+                                        style={isChatClosed ? { opacity: 0.5 } : {}}
+                                    >
+                                        <Search size={20} />
+                                    </button>
+                                    <div className={`absolute -bottom-8 left-1/2 transform -translate-x-1/2 
+                                        bg-[rgb(var(--color-bg-${theme}-secondary))] px-2 py-1 rounded
+                                        text-xs whitespace-nowrap opacity-0 group-hover:opacity-100
+                                        transition-opacity duration-200 z-50`}>
+                                        Buscar en el chat
+                                    </div>
+                                </div>
                             </AbilityGuard>
                             <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.TRANSFER]}>
-                                <button
-                                    className="p-2 hover:bg-gray-700 active:bg-gray-700 rounded-full"
-                                    onClick={() => isChatClosed ? null : setTransferOpen(prev => !prev)}
-                                    disabled={isChatClosed}
-                                    style={isChatClosed ? { opacity: 0.5 } : {}}
-                                >
-                                    <MessageSquareShare size={20} />
-                                </button>
+                                <div className="relative group">
+                                    <button
+                                        className={`p-2 
+                                            hover:bg-[rgb(var(--input-hover-bg-${theme}))]
+                                            active:bg-[rgb(var(--color-primary-${theme}))] rounded-full
+                                            text-[rgb(var(--color-text-secondary-${theme}))]
+                                            hover:text-[rgb(var(--color-primary-${theme}))]`}
+                                        onClick={() => isChatClosed ? null : setTransferOpen(prev => !prev)}
+                                        disabled={isChatClosed}
+                                        style={isChatClosed ? { opacity: 0.5 } : {}}
+                                    >
+                                        <MessageSquareShare size={20} />
+                                    </button>
+                                    <div className={`absolute -bottom-8 left-1/2 transform -translate-x-1/2 
+                                        bg-[rgb(var(--color-bg-${theme}-secondary))] px-2 py-1 rounded
+                                        text-xs whitespace-nowrap opacity-0 group-hover:opacity-100
+                                        transition-opacity duration-200 z-50`}>
+                                        Transferir chat
+                                    </div>
+                                </div>
                             </AbilityGuard>
                             <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.TAG_CHAT, ABILITIES.CHAT_PANEL.MARK_AS_FINISHED]} requireAll={false}>
                                 <button
-                                    className="p-2 hover:bg-gray-700 active:bg-gray-700 rounded-full relative"
+                                    className={`p-2 
+                                        hover:bg-[rgb(var(--input-hover-bg-${theme}))]
+                                        active:bg-[rgb(var(--color-primary-${theme}))] rounded-full
+                                        text-[rgb(var(--color-text-secondary-${theme}))]
+                                        hover:text-[rgb(var(--color-primary-${theme}))] relative`}
                                     onClick={() => isChatClosed ? null : setMenuOpen(prev => !prev)}
                                     disabled={isChatClosed}
                                     style={isChatClosed ? { opacity: 0.5 } : {}}
@@ -804,9 +887,12 @@ const ChatInterface = () => {
 
                     {/* Reopen chat button - Show only when chat is closed */}
                     {isChatClosed && (
-                        <div className="bg-gray-800 p-2 text-center">
+                        <div className={`bg-[rgb(var(--color-bg-${theme}-secondary))] p-2 text-center`}>
                             <button
-                                className="bg-teal-600 hover:bg-teal-700 px-4 py-2 rounded-lg flex items-center justify-center mx-auto"
+                                className={`bg-[rgb(var(--color-primary-${theme}))] 
+                                    hover:bg-[rgb(var(--color-secondary-${theme}))] 
+                                    px-4 py-2 rounded-lg flex items-center justify-center mx-auto
+                                    text-[rgb(var(--color-text-primary-${theme}))]`}
                                 onClick={handleReopenChat}
                                 disabled={reopeningChat}
                             >
@@ -835,10 +921,14 @@ const ChatInterface = () => {
                     {/* Messages Area */}
                     <div
                         ref={messagesContainerRef}
-                        className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-hide"
+                        className={`flex-1 overflow-y-auto p-4 space-y-2 scrollbar-hide`}
                         style={{
-                            backgroundImage: "url('https://i.pinimg.com/474x/66/33/b0/6633b0f983f094bef115082c63302554.jpg')",
-                            backgroundSize: "cover"
+                            backgroundImage: theme === 'dark' 
+                                ? "url('https://i.pinimg.com/736x/cd/3d/62/cd3d628f57875af792c07d6ad262391c.jpg')"
+                                : "url('https://i.pinimg.com/originals/2b/45/cf/2b45cfec4c0d3c56aed4ccd30b61bd3a.jpg')",
+                            backgroundSize: "cover",
+                            backgroundPosition: "center",
+                            backgroundRepeat: "no-repeat"
                         }}
                     >
                         {isNewChat && !hasMessages ? (
@@ -940,7 +1030,10 @@ const ChatInterface = () => {
 
                     {/* Input Area - Disable when chat is closed */}
                     <div
-                        className={`p-4 bg-gray-800 border-t border-gray-700 ${isChatClosed ? "opacity-60" : ""} ${isDragging ? "border-2 border-dashed border-teal-500" : ""}`}
+                        className={`p-4 bg-[rgb(var(--color-bg-${theme}-secondary))] 
+                            border-t border-[rgb(var(--color-text-secondary-${theme}))]
+                            ${isChatClosed ? "opacity-60" : ""} 
+                            ${isDragging ? "border-2 border-dashed border-[rgb(var(--color-primary-${theme}))]" : ""}`}
                         onDragOver={handleDragOver}
                         onDragLeave={handleDragLeave}
                         onDrop={handleDrop}
@@ -949,11 +1042,26 @@ const ChatInterface = () => {
                             <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.SEND_TEXT]}>
                                 <textarea
                                     value={messageText}
-                                    onChange={(e) => setMessageText(e.target.value)}
+                                    onChange={(e) => {
+                                        setMessageText(e.target.value);
+                                        // Ajuste automático de altura
+                                        e.target.style.height = '40px'; // Altura inicial de una línea
+                                        const scrollHeight = e.target.scrollHeight;
+                                        const maxHeight = 120; // 5 líneas aproximadamente (24px por línea)
+                                        e.target.style.height = `${Math.min(scrollHeight, maxHeight)}px`;
+                                    }}
                                     placeholder={isChatClosed ? "Chat cerrado" : "Escribe un mensaje..."}
-                                    className="flex-1 bg-gray-700 text-white rounded-lg p-3 resize-none outline-none"
-                                    rows={1}
-                                    style={{ minHeight: '40px' }}
+                                    className={`flex-1 bg-[rgb(var(--color-bg-${theme}))] 
+                                        text-[rgb(var(--color-text-primary-${theme}))]
+                                        placeholder-[rgb(var(--color-text-secondary-${theme}))]
+                                        rounded-lg p-3 resize-none outline-none
+                                        hover:bg-[rgb(var(--input-hover-bg-${theme}))]
+                                        focus:border-[rgb(var(--input-focus-border-${theme}))]
+                                        scrollbar-hide h-[40px] min-h-[40px] max-h-[120px]
+                                        leading-[20px]`}
+                                    style={{
+                                        overflow: messageText ? 'auto' : 'hidden'
+                                    }}
                                     disabled={isChatClosed}
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter' && !e.shiftKey) {
@@ -976,7 +1084,12 @@ const ChatInterface = () => {
                                             key={selectedFiles.length}
                                         />
                                         <button
-                                            className="p-2 bg-gray-700 rounded-full relative"
+                                            className={`p-2 rounded-full
+                                                bg-[rgb(var(--color-bg-${theme}-secondary))]
+                                                hover:bg-[rgb(var(--input-hover-bg-${theme}))]
+                                                active:bg-[rgb(var(--color-primary-${theme}))]
+                                                text-[rgb(var(--color-text-secondary-${theme}))]
+                                                hover:text-[rgb(var(--color-primary-${theme}))]`}
                                             onClick={handlePaperclipClick}
                                             disabled={isChatClosed}
                                         >
@@ -991,7 +1104,11 @@ const ChatInterface = () => {
                                 </AbilityGuard>
                                 <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.SEND_MEDIA]}>
                                     <button
-                                        className={`p-2 rounded-full ${isRecording ? 'bg-red-500' : 'bg-gray-700'}`}
+                                        className={`p-2 rounded-full ${isRecording ? 'bg-red-500' : `bg-[rgb(var(--color-bg-${theme}-secondary))]`}
+                                            hover:bg-[rgb(var(--input-hover-bg-${theme}))]
+                                            active:bg-[rgb(var(--color-primary-${theme}))]
+                                            text-[rgb(var(--color-text-secondary-${theme}))]
+                                            hover:text-[rgb(var(--color-primary-${theme}))]`}
                                         onClick={handleMicClick}
                                         disabled={isChatClosed}
                                     >
@@ -999,7 +1116,11 @@ const ChatInterface = () => {
                                     </button>
                                 </AbilityGuard>
                                 <button
-                                    className="p-2 bg-teal-600 rounded-full"
+                                    className={`p-2 rounded-full
+                                        bg-[rgb(var(--color-primary-${theme}))]
+                                        hover:bg-[rgb(var(--color-secondary-${theme}))]
+                                        text-[rgb(var(--color-text-primary-${theme}))]
+                                        disabled:opacity-50`}
                                     onClick={handleSendMessage}
                                     disabled={
                                         isChatClosed ||
@@ -1029,11 +1150,17 @@ const ChatInterface = () => {
                 </>
             ) : (
                 // Empty state when no chat is selected
-                <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                    <div className="p-6 bg-gray-800 rounded-xl flex flex-col items-center">
-                        <MessageSquareShare size={64} className="mb-4 text-teal-500" />
-                        <h3 className="text-xl font-medium text-white mb-2">Ningún chat seleccionado</h3>
-                        <p className="text-center mb-2">Selecciona un chat de la lista o inicia una nueva conversación</p>
+                <div className={`flex flex-col items-center justify-center h-full 
+                    text-[rgb(var(--color-text-secondary-${theme}))]`}>
+                    <div className={`p-6 bg-[rgb(var(--color-bg-${theme}-secondary))] 
+                        rounded-xl flex flex-col items-center`}>
+                        <MessageSquareShare size={64} className={`mb-4 text-[rgb(var(--color-primary-${theme}))]`} />
+                        <h3 className={`text-xl font-medium text-[rgb(var(--color-text-primary-${theme}))] mb-2`}>
+                            Ningún chat seleccionado
+                        </h3>
+                        <p className="text-center mb-2">
+                            Selecciona un chat de la lista o inicia una nueva conversación
+                        </p>
                     </div>
                 </div>
             )}

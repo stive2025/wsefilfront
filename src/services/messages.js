@@ -1,4 +1,4 @@
-import CustomFetch from "/src/services/apiService.js";
+import CustomFetch from "@/services/apiService.js";
 import { loadAbort } from "../hooks/fechAndload.jsx";
 
 

@@ -1,5 +1,5 @@
 import { useEffect, useContext } from 'react';
-import { ConnectionInfo, ConnectionQR, WebSocketMessage } from "/src/contexts/chats.js";
+import { ConnectionInfo, ConnectionQR, WebSocketMessage } from "@/contexts/chats.js";
 
 const WebSocketHook = () => {
     const { setCodigoQR } = useContext(ConnectionQR);
@@ -65,7 +65,8 @@ const WebSocketHook = () => {
                             created_at: data.created_at || new Date().toISOString(),
                             media_type: data.media_type || 'chat',
                             media_url: data.media_url || '',
-                            is_private: data.is_private || 0
+                            is_private: data.is_private || 0,
+                            user_id: data.user_id || null,
                         };
                         setMessageData(normalizedMessage);
                     }

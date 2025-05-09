@@ -1,10 +1,11 @@
 /* eslint-disable react/prop-types */ 
 import { motion } from "framer-motion";
 import { useState, useEffect, useContext } from "react";
-import { ChatInterfaceClick } from "/src/contexts/chats.js";
-import { getAgents } from "/src/services/agents.js";
-import { transferChat, updateChat } from "/src/services/chats.js";
-import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
+import { ChatInterfaceClick } from "@/contexts/chats.js";
+import { getAgents } from "@/services/agents.js";
+import { transferChat, updateChat } from "@/services/chats.js";
+import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
+import { useTheme } from "@/contexts/themeContext.jsx";
 import toast from "react-hot-toast";
 
 const ChatTransfer = ({ isOpen, onClose }) => {
@@ -14,6 +15,7 @@ const ChatTransfer = ({ isOpen, onClose }) => {
     const [isPrivate, setIsPrivate] = useState(false);
     const { selectedChatId,setSelectedChatId } = useContext(ChatInterfaceClick);
     const { callEndpoint } = useFetchAndLoad();
+    const { theme } = useTheme();
 
     const variants = {
         hidden: { opacity: 0, y: -50 },
@@ -48,39 +50,52 @@ const ChatTransfer = ({ isOpen, onClose }) => {
 
     const handleTransfer = async (e) => {
         e.preventDefault();
-
-        if (!selectedAgent) {
-            toast.error("Por favor seleccione un agente para transferir el chat.");
-            return;
-        }
-
         try {
-            const transferData = {
-                to: selectedAgent.id,
-                is_private: isPrivate
-            };
-
-            const newStateChat = {state: "PENDING"};
-            await handleUpdateChat(selectedChatId.id, newStateChat);
-
-            if (isPrivate && observations.trim()) {
-                transferData.body = observations;
+          const previousState = selectedChatId.status;
+          const chatElement = document.querySelector(`[data-chat-id="${selectedChatId.id}"]`);
+          
+          // Actualizar estado a PENDING
+          await handleUpdateChat(selectedChatId.id, { state: "PENDING" });
+          
+          // Realizar la transferencia
+          const transferData = {
+            to: selectedAgent.id,
+            is_private: isPrivate,
+            ...(isPrivate && observations.trim() && { body: observations })
+          };
+          await callEndpoint(transferChat(selectedChatId.id, transferData));
+          
+          // Aplicar animación
+          if (chatElement) {
+            chatElement.classList.add('fade-out');
+            await new Promise(resolve => setTimeout(resolve, 300));
+          }
+          
+          // Disparar evento
+          const event = new CustomEvent('chatStateChanged', {
+            detail: {
+              chatId: selectedChatId.id,
+              newState: "PENDING",
+              previousState: previousState,
+              shouldRemove: true
             }
-
-            await callEndpoint(transferChat(selectedChatId.id, transferData));
-            toast.success("Chat transferido exitosamente.");
-            setSelectedChatId(null);
-            onClose();
+          });
+          window.dispatchEvent(event);
+          
+          setSelectedChatId(null);
+          onClose();
+          toast.success("Chat transferido exitosamente");
         } catch (error) {
-            console.error("Error al transferir el chat:", error);
-            toast.error("Error al transferir el chat. Inténtelo nuevamente.");
+          toast.error("Error al transferir el chat");
+          console.error("Error:", error);
         }
     };
 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 flex items-center justify-center z-20" style={{ backgroundColor: "rgba(55, 65, 81, 0.5)" }}>
+        <div className="fixed inset-0 flex items-center justify-center z-20" 
+             style={{ backgroundColor: "rgba(55, 65, 81, 0.5)" }}>
             <div className="absolute inset-0" onClick={onClose}></div>
 
             <motion.div
@@ -88,16 +103,46 @@ const ChatTransfer = ({ isOpen, onClose }) => {
                 animate="visible"
                 exit="exit"
                 variants={variants}
-                className="bg-gray-900 p-5 rounded-lg shadow-lg w-96 relative z-10"
+                className={`
+                    p-5 rounded-lg shadow-lg w-96 relative z-10
+                    ${theme === 'light' ? 'bg-[rgb(var(--color-bg-light))]' : 'bg-[rgb(var(--color-bg-dark))]'}
+                `}
                 onClick={(e) => e.stopPropagation()}
             >
-                <h1 className="text-white text-lg mb-2">Transferir Chat</h1>
-                <label className="text-white text-sm">{selectedChatId.name}</label>
+                <h1 className={`
+                    text-lg mb-2
+                    ${theme === 'light' ? 'text-[rgb(var(--color-text-primary-light))]' : 'text-[rgb(var(--color-text-primary-dark))]'}
+                `}>
+                    Transferir Chat
+                </h1>
+                <label className={`
+                    text-sm
+                    ${theme === 'light' ? 'text-[rgb(var(--color-text-secondary-light))]' : 'text-[rgb(var(--color-text-secondary-dark))]'}
+                `}>
+                    {selectedChatId.name}
+                </label>
 
                 <div className="mb-2">
-                    <label className="text-white text-sm">Transferir a:</label>
+                    <label className={`
+                        text-sm block mb-1
+                        ${theme === 'light' ? 'text-[rgb(var(--color-text-secondary-light))]' : 'text-[rgb(var(--color-text-secondary-dark))]'}
+                    `}>
+                        Transferir a:
+                    </label>
                     <select
-                        className={`w-full bg-gray-900 outline-none ${selectedAgent ? 'text-white' : 'text-gray-400'}`}
+                        className={`
+                            w-full p-2 rounded transition-colors duration-200
+                            ${theme === 'light' 
+                                ? 'bg-[rgb(var(--color-bg-light-secondary))]' 
+                                : 'bg-[rgb(var(--color-bg-dark-secondary))]'}
+                            ${theme === 'light' 
+                                ? 'text-[rgb(var(--color-text-primary-light))]' 
+                                : 'text-[rgb(var(--color-text-primary-dark))]'}
+                            outline-none border
+                            ${theme === 'light'
+                                ? 'border-[rgb(var(--color-primary-light))]'
+                                : 'border-[rgb(var(--color-primary-dark))]'}
+                        `}
                         value={selectedAgent?.id || ""}
                         onChange={(e) => {
                             const agent = agents.find((a) => a.id === parseInt(e.target.value));
@@ -105,15 +150,11 @@ const ChatTransfer = ({ isOpen, onClose }) => {
                         }}
                     >
                         <option value="" disabled>Seleccionar agente</option>
-                        {agents.length > 0 ? (
-                            agents.map((agent) => (
-                                <option key={agent.id} value={agent.id}>
-                                    {agent.name}
-                                </option>
-                            ))
-                        ) : (
-                            <option disabled>No hay agentes</option>
-                        )}
+                        {agents.map((agent) => (
+                            <option key={agent.id} value={agent.id}>
+                                {agent.name}
+                            </option>
+                        ))}
                     </select>
                 </div>
 
@@ -124,16 +165,50 @@ const ChatTransfer = ({ isOpen, onClose }) => {
                             id="isPrivate"
                             checked={isPrivate}
                             onChange={(e) => setIsPrivate(e.target.checked)}
-                            className="mr-2"
+                            className={`
+                                mr-2 rounded transition-colors duration-200
+                                ${theme === 'light'
+                                    ? 'accent-[rgb(var(--color-primary-light))]'
+                                    : 'accent-[rgb(var(--color-primary-dark))]'}
+                            `}
                         />
-                        <label htmlFor="isPrivate" className="text-white text-sm">Incluir mensaje privado</label>
+                        <label 
+                            htmlFor="isPrivate" 
+                            className={`
+                                text-sm
+                                ${theme === 'light' 
+                                    ? 'text-[rgb(var(--color-text-secondary-light))]' 
+                                    : 'text-[rgb(var(--color-text-secondary-dark))]'}
+                            `}
+                        >
+                            Incluir mensaje privado
+                        </label>
                     </div>
 
                     {isPrivate && (
                         <div>
-                            <label className="text-white text-sm">Mensaje:</label>
+                            <label className={`
+                                text-sm block mb-1
+                                ${theme === 'light' 
+                                    ? 'text-[rgb(var(--color-text-secondary-light))]' 
+                                    : 'text-[rgb(var(--color-text-secondary-dark))]'}
+                            `}>
+                                Mensaje:
+                            </label>
                             <textarea 
-                                className="text-xs border p-1 rounded bg-transparent text-white w-full" 
+                                className={`
+                                    w-full p-2 rounded text-sm transition-colors duration-200
+                                    ${theme === 'light' 
+                                        ? 'bg-[rgb(var(--color-bg-light-secondary))]' 
+                                        : 'bg-[rgb(var(--color-bg-dark-secondary))]'}
+                                    ${theme === 'light' 
+                                        ? 'text-[rgb(var(--color-text-primary-light))]' 
+                                        : 'text-[rgb(var(--color-text-primary-dark))]'}
+                                    border
+                                    ${theme === 'light'
+                                        ? 'border-[rgb(var(--color-primary-light))]'
+                                        : 'border-[rgb(var(--color-primary-dark))]'}
+                                `}
                                 value={observations}
                                 onChange={(e) => setObservations(e.target.value)}
                                 placeholder="Escriba un mensaje privado"
@@ -146,14 +221,32 @@ const ChatTransfer = ({ isOpen, onClose }) => {
                 <div className="flex justify-end gap-2">
                     <button
                         type="button"
-                        className="px-4 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+                        className={`
+                            px-4 py-1 rounded transition-colors duration-200
+                            ${theme === 'light' 
+                                ? 'bg-[rgb(var(--color-secondary-light))]' 
+                                : 'bg-[rgb(var(--color-secondary-dark))]'}
+                            ${theme === 'light' 
+                                ? 'text-[rgb(var(--color-text-primary-light))]' 
+                                : 'text-[rgb(var(--color-text-primary-dark))]'}
+                            hover:opacity-80
+                        `}
                         onClick={onClose}
                     >
                         Cancelar
                     </button>
                     <button 
                         type="button"
-                        className="px-4 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                        className={`
+                            px-4 py-1 rounded transition-colors duration-200
+                            ${theme === 'light' 
+                                ? 'bg-[rgb(var(--color-primary-light))]' 
+                                : 'bg-[rgb(var(--color-primary-dark))]'}
+                            ${theme === 'light' 
+                                ? 'text-[rgb(var(--color-text-primary-light))]' 
+                                : 'text-[rgb(var(--color-text-primary-dark))]'}
+                            hover:opacity-80 disabled:opacity-50
+                        `}
                         onClick={handleTransfer}
                         disabled={!selectedAgent}
                     >

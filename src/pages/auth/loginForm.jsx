@@ -4,7 +4,8 @@ import "tailwindcss";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useAuth } from '/src/contexts/authContext'; //
+import { useAuth } from '@/contexts/authContext';
+import { Loader2 } from "lucide-react";
 
 const LoginForm = () => {
   const navigate = useNavigate();
@@ -31,17 +32,18 @@ const LoginForm = () => {
     }
   };
 
-
-  const handleReset = () => {
-    setCredentials({
-      email: '',
-      password: ''
-    });
-    setError('');
-  };
-
   return (
-    <div className="h-screen w-full bg-gradient-to-b from-[#FFCB8E] via-[#FF8C03] to-[#995B11] flex items-center justify-center">
+    <div className="h-screen w-full bg-gradient-to-b from-[#FFCB8E] via-[#FF8C03] to-[#995B11] flex items-center justify-center relative">
+      {/* Overlay de Loading */}
+      {loading && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/60 backdrop-blur-sm">
+          <div className="rounded-full">
+            <Loader2 className="h-12 w-12 animate-spin text-[#FFAA44]" />
+          </div>
+        </div>
+      )}
+
+
       <Card className="w-[90%] max-w-sm md:max-w-md overflow-hidden bg-white rounded-lg shadow-lg drop-shadow-[15px_15px_5px_rgba(0,0,0,0.3)] border-none p-6">
         <CardContent className="bg-white flex flex-col md:flex-row items-center md:items-start">
           {/* Formulario */}
@@ -52,7 +54,7 @@ const LoginForm = () => {
             <div>
               <img
                 className='justify-center'
-                src="/src/assets/images/divLine.png"
+                src="./images/divLine.png"
                 alt="-:-"
               />
             </div>
@@ -87,22 +89,12 @@ const LoginForm = () => {
                 required
               />
 
-              <div className="flex gap-4 mt-6 flex items-center justify-center">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="bg-[#23AAA6] text-white hover:bg-[#009793] rounded-lg py-2"
-                  onClick={handleReset}
-                  disabled={loading}
-                >
-                  Restablecer
-                </Button>
+              <div className="flex justify-center mt-6">
                 <Button
                   type="submit"
-                  className="bg-[#FFAA44] text-white hover:bg-[#FF9619] rounded-lg py-2"
-                  disabled={loading}
+                  className="bg-[#FFAA44] text-white hover:bg-[#FF9619] rounded-lg py-2 w-full"
                 >
-                  {loading ? 'Cargando...' : 'Ingresar'}
+                  Ingresar
                 </Button>
               </div>
             </form>
@@ -111,7 +103,7 @@ const LoginForm = () => {
           {/* Imagen */}
           <div className="ml-8 flex drop-shadow-[-7px_15px_5px_rgba(0,0,0,0.3)] hidden md:block">
             <img
-              src="/src/assets/images/log_in.png"
+              src="./images/log_in.png"
               alt="CRM SEFIL"
               className="h-64 object-cover hidden md:block rounded-lg"
             />

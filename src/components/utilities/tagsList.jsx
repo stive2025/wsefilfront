@@ -1,58 +1,74 @@
 /* eslint-disable react/prop-types */
 import { Pencil, Trash2, Plus, Search } from 'lucide-react';
-import Resize from "/src/hooks/responsiveHook.jsx";
-import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
+import Resize from "@/hooks/responsiveHook.jsx";
+import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
 import { useContext, useEffect, useState, useRef, useCallback } from "react";
-import { TagsCreateForm, UpdateTagForm, TagHandle } from "/src/contexts/chats.js";
-import { getTags, deleteTag, getTag } from "/src/services/tags.js";
-import { ABILITIES } from '/src/constants/abilities';
-import AbilityGuard from '/src/components/common/AbilityGuard.jsx';
+import { TagsCreateForm, UpdateTagForm, TagHandle } from "@/contexts/chats.js";
+import { getTags, deleteTag, getTag } from "@/services/tags.js";
+import { ABILITIES } from '@/constants/abilities';
+import AbilityGuard from '@/components/common/AbilityGuard.jsx';
+import { useTheme } from "@/contexts/themeContext";
 import toast from "react-hot-toast";
 
 // Reusable Search Input Component
-const SearchInput = ({ searchTerm, onSearchChange }) => (
-  <AbilityGuard abilities={[ABILITIES.UTILITIES.SEARCH]} fallback={<div className="p-2 bg-gray-900"></div>}>
-    <div className="p-2 bg-gray-900">
-      <div className="relative flex items-center">
-        <input
-          type="text"
-          placeholder="Search..."
-          className="w-full bg-gray-800 rounded-lg pl-8 pr-2 py-1 text-white placeholder-gray-400"
-          value={searchTerm}
-          onChange={(e) => onSearchChange(e.target.value)}
-        />
-        <Search className="absolute left-1 text-gray-400" size={18} />
+const SearchInput = ({ searchTerm, onSearchChange }) => {
+  const { theme } = useTheme();
+  
+  return (
+    <AbilityGuard abilities={[ABILITIES.UTILITIES.SEARCH]} fallback={
+      <div className={`p-2 bg-[rgb(var(--color-bg-${theme}-secondary))]`}></div>
+    }>
+      <div className={`p-2 bg-[rgb(var(--color-bg-${theme}-secondary))]`}>
+        <div className="relative flex items-center">
+          <input
+            type="text"
+            placeholder="Search..."
+            className={`w-full bg-[rgb(var(--color-bg-${theme}))] rounded-lg pl-8 pr-2 py-1 
+              text-[rgb(var(--color-text-primary-${theme}))] placeholder-[rgb(var(--color-text-secondary-${theme}))]`}
+            value={searchTerm}
+            onChange={(e) => onSearchChange(e.target.value)}
+          />
+          <Search className={`absolute left-1 text-[rgb(var(--color-text-secondary-${theme}))]`} size={18} />
+        </div>
       </div>
-    </div>
-  </AbilityGuard>
-);
+    </AbilityGuard>
+  );
+};
 
 // Tags Items Component
 const TagsItems = ({ tags, onDeleteTag, isDeleting, onFindTag, loadingMore, lastTagRef }) => {
-  // Check if tags exist and contain an array before mapping
+  const { theme } = useTheme();
+
   if (!tags || !tags.length) {
-    return <div className="p-4 text-gray-400">No hay etiquetas disponibles</div>;
+    return (
+      <div className={`p-4 text-[rgb(var(--color-text-secondary-${theme}))]`}>
+        No hay etiquetas disponibles
+      </div>
+    );
   }
 
   return (
-    <div className="bg-gray-900">
+    <div className={`bg-[rgb(var(--color-bg-${theme}-secondary))]`}>
       {tags.map((tag, index) => (
         <div
           key={tag.id}
           className="w-full flex items-center p-4"
           ref={index === tags.length - 1 ? lastTagRef : null}
         >
-          <div className="w-full flex items-center space-x-3 hover:bg-gray-800 cursor-pointer active:bg-gray-700">
-            {/* Tag Details */}
+          <div className={`w-full flex items-center space-x-3 hover:bg-[rgb(var(--color-bg-${theme}))] 
+            cursor-pointer active:bg-[rgb(var(--color-primary-${theme}))]`}>
             <div className="flex-1">
               <div className="flex items-center space-x-2 font-medium text-sm md:text-base">
                 <div
                   className="w-4 h-4 rounded-full"
                   style={{ backgroundColor: tag.color }}
-                ></div>
-                <span>{tag.name}</span>
+                />
+                <span className={`text-[rgb(var(--color-text-primary-${theme}))]`}>
+                  {tag.name}
+                </span>
               </div>
-              <div className="text-xs md:text-sm text-gray-400 overflow-hidden text-ellipsis whitespace-nowrap max-w-[200px]">
+              <div className={`text-xs md:text-sm text-[rgb(var(--color-text-secondary-${theme}))] 
+                overflow-hidden text-ellipsis whitespace-nowrap max-w-[200px]`}>
                 {tag.description || "Sin descripción"}
               </div>
             </div>
@@ -60,7 +76,8 @@ const TagsItems = ({ tags, onDeleteTag, isDeleting, onFindTag, loadingMore, last
           <div className="flex">
             <AbilityGuard abilities={[ABILITIES.UTILITIES.EDIT]}>
               <button
-                className="mr-2 text-gray-400 hover:text-white"
+                className={`mr-2 text-[rgb(var(--color-text-secondary-${theme}))] 
+                  hover:text-[rgb(var(--color-primary-${theme}))]`}
                 onClick={() => onFindTag(tag.id)}
               >
                 <Pencil size={16} />
@@ -68,7 +85,8 @@ const TagsItems = ({ tags, onDeleteTag, isDeleting, onFindTag, loadingMore, last
             </AbilityGuard>
             <AbilityGuard abilities={[ABILITIES.UTILITIES.DELETE]}>
               <button
-                className="text-gray-400 hover:text-white"
+                className={`text-[rgb(var(--color-text-secondary-${theme}))] 
+                  hover:text-[rgb(var(--color-primary-${theme}))]`}
                 onClick={() => onDeleteTag(tag.id)}
                 disabled={isDeleting}
               >
@@ -79,14 +97,16 @@ const TagsItems = ({ tags, onDeleteTag, isDeleting, onFindTag, loadingMore, last
         </div>
       ))}
       {loadingMore && (
-        <div className="p-4 text-gray-400 text-center">Cargando más etiquetas...</div>
+        <div className={`p-4 text-[rgb(var(--color-text-secondary-${theme}))] text-center`}>
+          Cargando más etiquetas...
+        </div>
       )}
     </div>
   );
 };
 
-
 const TagsList = () => {
+  const { theme } = useTheme();
   const { setTagsClick } = useContext(TagsCreateForm);
   const { setTagFind } = useContext(UpdateTagForm);
   const { tagHandle, setTagHandle } = useContext(TagHandle);
@@ -260,12 +280,13 @@ const TagsList = () => {
 
   return (
     <AbilityGuard abilities={[ABILITIES.UTILITIES.VIEW]} fallback={
-      <div className="w-full flex items-center justify-center h-full text-gray-400">
+      <div className={`w-full flex items-center justify-center h-full text-[rgb(var(--color-text-secondary-${theme}))]`}>
         No tienes permisos para ver la lista de etiquetas
       </div>
     }>
       {isMobile ? (
-        <div className="w-full sm:w-80 mt-10 flex flex-col text-white">
+        <div className={`w-full sm:w-80 mt-10 flex flex-col bg-[rgb(var(--color-bg-${theme}-secondary))] 
+          text-[rgb(var(--color-text-primary-${theme}))]`}>
           <div className="flex flex-row flex-shrink-0">
             <label className="p-1">Etiquetas</label>
           </div>
@@ -275,7 +296,9 @@ const TagsList = () => {
 
           <div className="flex-1 overflow-y-auto">
             {loading && tags.length === 0 ? (
-              <div className="p-4 text-gray-400">Cargando etiquetas...</div>
+              <div className={`p-4 text-[rgb(var(--color-text-secondary-${theme}))]`}>
+                Cargando etiquetas...
+              </div>
             ) : error ? (
               <div className="p-4 text-red-400">{error}</div>
             ) : (
@@ -292,7 +315,9 @@ const TagsList = () => {
 
           <AbilityGuard abilities={[ABILITIES.UTILITIES.CREATE]}>
             <button
-              className="absolute bottom-4 right-4 mb-15 rounded-full p-3 shadow-lg text-white cursor-pointer bg-naranja-base hover:bg-naranja-medio"
+              className={`absolute bottom-4 right-4 mb-15 rounded-full p-3 shadow-lg 
+                text-[rgb(var(--color-text-primary-${theme}))] cursor-pointer 
+                bg-[rgb(var(--color-secondary-${theme}))] hover:bg-[rgb(var(--color-primary-${theme}))]`}
               onClick={() => setTagsClick((prev) => !prev)}
             >
               <Plus size={18} />
@@ -300,7 +325,9 @@ const TagsList = () => {
           </AbilityGuard>
         </div>
       ) : (
-        <div className="flex-1 border-r border-gray-700 flex flex-col text-white pt-10 ml-10 overflow-y-auto">
+        <div className={`flex-1 border-r border-[rgb(var(--color-text-secondary-${theme}))] flex flex-col 
+          bg-[rgb(var(--color-bg-${theme}-secondary))] text-[rgb(var(--color-text-primary-${theme}))] 
+          pt-2 ml-10 overflow-y-auto`}>
           <div className="flex flex-row flex-shrink-0">
             <label className="p-1">Etiquetas</label>
           </div>
@@ -310,7 +337,9 @@ const TagsList = () => {
 
           <div className="flex-1 overflow-y-auto scrollbar-hide">
             {loading && tags.length === 0 ? (
-              <div className="p-4 text-gray-400">Cargando etiquetas...</div>
+              <div className={`p-4 text-[rgb(var(--color-text-secondary-${theme}))]`}>
+                Cargando etiquetas...
+              </div>
             ) : error ? (
               <div className="p-4 text-red-400">{error}</div>
             ) : (
@@ -327,7 +356,9 @@ const TagsList = () => {
 
           <AbilityGuard abilities={[ABILITIES.UTILITIES.CREATE]}>
             <button
-              className="fixed bottom-4 right-4 mb-4 rounded-full p-3 shadow-lg text-white cursor-pointer bg-naranja-base hover:bg-naranja-medio"
+              className={`fixed bottom-4 right-4 mb-4 rounded-full p-3 shadow-lg 
+                text-[rgb(var(--color-text-primary-${theme}))] cursor-pointer 
+                bg-[rgb(var(--color-secondary-${theme}))] hover:bg-[rgb(var(--color-primary-${theme}))]`}
               onClick={() => setTagsClick((prev) => !prev)}
             >
               <Plus size={18} />

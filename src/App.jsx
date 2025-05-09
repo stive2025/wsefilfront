@@ -2,18 +2,18 @@ import { HashRouter as Router, Routes, Route } from "react-router-dom";
 import { Suspense, lazy, useState } from "react";
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { AuthProvider } from './contexts/authContext';
-
+import { ThemeProvider } from './contexts/themeContext';
 const LoginForm = lazy(() => import('./pages/auth/loginForm'));
 //const LoginDebug = lazy(() => import('./pages/auth/LoginDebug'));
 const Navs = lazy(() => import("./pages/Layout/generalLayout"));
 const UtilNavs = lazy(() => import("./pages/Layout/utilitiesLayout"));
-const ChatComplete = lazy(() => import("/src/pages/chats/chatComplete.jsx"));
-const TagsComplete = lazy(() => import("/src/pages/util/tagsComplete.jsx"));
-const AutoComplete = lazy(() => import("/src/pages/util/autoMComplete.jsx"));
-const CustomComplete = lazy(() => import("/src/pages/util/customMComplete.jsx"));
-const ContactsComplete = lazy(() => import("/src/pages/contacts/contactsComplete.jsx"));
-const AgentsComplete = lazy(() => import("/src/pages/agents/agentsComplete.jsx"));
-const ProfileComplete = lazy(() => import("/src/pages/profile/profileComplete.jsx"));
+const ChatComplete = lazy(() => import("@/pages/chats/chatComplete.jsx"));
+const TagsComplete = lazy(() => import("@/pages/util/tagsComplete.jsx"));
+const AutoComplete = lazy(() => import("@/pages/util/autoMComplete.jsx"));
+const CustomComplete = lazy(() => import("@/pages/util/customMComplete.jsx"));
+const ContactsComplete = lazy(() => import("@/pages/contacts/contactsComplete.jsx"));
+const AgentsComplete = lazy(() => import("@/pages/agents/agentsComplete.jsx"));
+const ProfileComplete = lazy(() => import("@/pages/profile/profileComplete.jsx"));
 
 import {
   // 📌 Contextos de interfaz del chat
@@ -87,99 +87,101 @@ function App() {
   const [stateSelected, setStateSelected] = useState(0);
   const [tagSelected, setTagSelected] = useState(0);
   return (
-    <AuthProvider>
-      <Router>
-        <ConnectionQR.Provider value={{ codigoQR, setCodigoQR }}>
-          <TagFilter.Provider value={{ tagSelected, setTagSelected }}>
-            <StateFilter.Provider value={{ stateSelected, setStateSelected }}>
-              <AgentFilter.Provider value={{ agentSelected, setAgentSelected }}>
-                <ConnectionInfo.Provider value={{ isConnected, setIsConnected }}>
-                  <NewMessage.Provider value={{ newMessage, setNewMessage }}>
-                    <ChatInterfaceClick.Provider value={{ selectedChatId, setSelectedChatId }}>
-                      <Suspense fallback={<div>Loading...</div>}>
-                        <Routes>
-                          <Route path="/login" element={<LoginForm />} />
-                          <Route element={<ProtectedRoute />}>
-                            <Route path="/utilities" element={<UtilNavs />
-                            }>
-                              <Route path="/utilities/tags" element={
-                                <TagHandle.Provider value={{ tagHandle, setTagHandle }}>
-                                  <UpdateTagForm.Provider value={{ tagFind, setTagFind }}>
-                                    <TagsCreateForm.Provider value={{ tagsClick, setTagsClick }}>
-                                      <TagsComplete />
-                                    </TagsCreateForm.Provider>
-                                  </UpdateTagForm.Provider>
-                                </TagHandle.Provider>
-                              } />
-                              <Route path="/utilities/customMessages" element={
-                                <CustomHandle.Provider value={{ customHandle, setCustomHandle }}>
-                                  <UpdateCustomForm.Provider value={{ customFind, setCustomFind }}>
-                                    <CustomCreateForm.Provider value={{ customClick, setCustomClick }}>
-                                      <CustomComplete />
-                                    </CustomCreateForm.Provider>
-                                  </UpdateCustomForm.Provider>
-                                </CustomHandle.Provider>
-                              } />
-                              <Route path="/utilities/autoMessages" element={
-                                <AutoHandle.Provider value={{ autoHandle, setAutoHandle }}>
-                                  <UpdateAutoForm.Provider value={{ autoFind, setAutoFind }}>
-                                    <AutoCreateForm.Provider value={{ autoClick, setAutoClick }}>
-                                      <AutoComplete />
-                                    </AutoCreateForm.Provider>
-                                  </UpdateAutoForm.Provider>
-                                </AutoHandle.Provider>
-                              } />
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
+          <ConnectionQR.Provider value={{ codigoQR, setCodigoQR }}>
+            <TagFilter.Provider value={{ tagSelected, setTagSelected }}>
+              <StateFilter.Provider value={{ stateSelected, setStateSelected }}>
+                <AgentFilter.Provider value={{ agentSelected, setAgentSelected }}>
+                  <ConnectionInfo.Provider value={{ isConnected, setIsConnected }}>
+                    <NewMessage.Provider value={{ newMessage, setNewMessage }}>
+                      <ChatInterfaceClick.Provider value={{ selectedChatId, setSelectedChatId }}>
+                        <Suspense fallback={<div>Loading...</div>}>
+                          <Routes>
+                            <Route path="/login" element={<LoginForm />} />
+                            <Route element={<ProtectedRoute />}>
+                              <Route path="/utilities" element={<UtilNavs />
+                              }>
+                                <Route path="/utilities/tags" element={
+                                  <TagHandle.Provider value={{ tagHandle, setTagHandle }}>
+                                    <UpdateTagForm.Provider value={{ tagFind, setTagFind }}>
+                                      <TagsCreateForm.Provider value={{ tagsClick, setTagsClick }}>
+                                        <TagsComplete />
+                                      </TagsCreateForm.Provider>
+                                    </UpdateTagForm.Provider>
+                                  </TagHandle.Provider>
+                                } />
+                                <Route path="/utilities/customMessages" element={
+                                  <CustomHandle.Provider value={{ customHandle, setCustomHandle }}>
+                                    <UpdateCustomForm.Provider value={{ customFind, setCustomFind }}>
+                                      <CustomCreateForm.Provider value={{ customClick, setCustomClick }}>
+                                        <CustomComplete />
+                                      </CustomCreateForm.Provider>
+                                    </UpdateCustomForm.Provider>
+                                  </CustomHandle.Provider>
+                                } />
+                                <Route path="/utilities/autoMessages" element={
+                                  <AutoHandle.Provider value={{ autoHandle, setAutoHandle }}>
+                                    <UpdateAutoForm.Provider value={{ autoFind, setAutoFind }}>
+                                      <AutoCreateForm.Provider value={{ autoClick, setAutoClick }}>
+                                        <AutoComplete />
+                                      </AutoCreateForm.Provider>
+                                    </UpdateAutoForm.Provider>
+                                  </AutoHandle.Provider>
+                                } />
+                              </Route>
+                              <Route path="/" element={<Navs />}>
+                                <Route path="/contacts" element={
+                                  <ContactHandle.Provider value={{ contactHandle, setContactHandle }}>
+                                    <UpdateContactForm.Provider value={{ contactFind, setContactFind }}>
+                                      <NewContactForm.Provider value={{ contactNew, setContactNew }}>
+                                        <ContactsComplete />
+                                      </NewContactForm.Provider>
+                                    </UpdateContactForm.Provider>
+                                  </ContactHandle.Provider>
+                                } />
+                                <Route path="/profile" element={
+                                  <ProfileInfoPanel.Provider value={{ profileInfoOpen, SetProfileInfoOpen }}>
+                                    <ProfileComplete />
+                                  </ProfileInfoPanel.Provider>
+                                } />
+                                <Route path="/agents" element={
+                                  <AgentHandle.Provider value={{ agentHandle, setAgentHandle }}>
+                                    <UpdateAgentForm.Provider value={{ agentFind, setAgentFind }}>
+                                      <NewAgentForm.Provider value={{ agentNew, setAgentNew }}>
+                                        <AgentsComplete />
+                                      </NewAgentForm.Provider>
+                                    </UpdateAgentForm.Provider>
+                                  </AgentHandle.Provider>
+                                } />
+                                <Route path="/chatList" element={
+                                  <StateFilter.Provider value={{ stateSelected, setStateSelected }}>
+                                    <ResolveClick.Provider value={{ resolveClick, setResolveClick }}>
+                                      <TagClick.Provider value={{ tagClick, setTagClick }}>
+                                        <ContactInfoClick.Provider value={{ infoOpen, setInfoOpen }}>
+                                          <SearchInChatClick.Provider value={{ searchInChat, setSearchInChat }}>
+                                            <ChatComplete />
+                                          </SearchInChatClick.Provider>
+                                        </ContactInfoClick.Provider>
+                                      </TagClick.Provider>
+                                    </ResolveClick.Provider>
+                                  </StateFilter.Provider>
+                                } />
+                              </Route>
                             </Route>
-                            <Route path="/" element={<Navs />}>
-                              <Route path="/contacts" element={
-                                <ContactHandle.Provider value={{ contactHandle, setContactHandle }}>
-                                  <UpdateContactForm.Provider value={{ contactFind, setContactFind }}>
-                                    <NewContactForm.Provider value={{ contactNew, setContactNew }}>
-                                      <ContactsComplete />
-                                    </NewContactForm.Provider>
-                                  </UpdateContactForm.Provider>
-                                </ContactHandle.Provider>
-                              } />
-                              <Route path="/profile" element={
-                                <ProfileInfoPanel.Provider value={{ profileInfoOpen, SetProfileInfoOpen }}>
-                                  <ProfileComplete />
-                                </ProfileInfoPanel.Provider>
-                              } />
-                              <Route path="/agents" element={
-                                <AgentHandle.Provider value={{ agentHandle, setAgentHandle }}>
-                                  <UpdateAgentForm.Provider value={{ agentFind, setAgentFind }}>
-                                    <NewAgentForm.Provider value={{ agentNew, setAgentNew }}>
-                                      <AgentsComplete />
-                                    </NewAgentForm.Provider>
-                                  </UpdateAgentForm.Provider>
-                                </AgentHandle.Provider>
-                              } />
-                              <Route path="/chatList" element={
-                                <StateFilter.Provider value={{ stateSelected, setStateSelected }}>
-                                  <ResolveClick.Provider value={{ resolveClick, setResolveClick }}>
-                                    <TagClick.Provider value={{ tagClick, setTagClick }}>
-                                      <ContactInfoClick.Provider value={{ infoOpen, setInfoOpen }}>
-                                        <SearchInChatClick.Provider value={{ searchInChat, setSearchInChat }}>
-                                          <ChatComplete />
-                                        </SearchInChatClick.Provider>
-                                      </ContactInfoClick.Provider>
-                                    </TagClick.Provider>
-                                  </ResolveClick.Provider>
-                                </StateFilter.Provider>
-                              } />
-                            </Route>
-                          </Route>
-                        </Routes>
-                      </Suspense>
-                    </ChatInterfaceClick.Provider>
-                  </NewMessage.Provider>
-                </ConnectionInfo.Provider>
-              </AgentFilter.Provider>
-            </StateFilter.Provider>
-          </TagFilter.Provider>
-        </ConnectionQR.Provider>
-      </Router>
-    </AuthProvider>
+                          </Routes>
+                        </Suspense>
+                      </ChatInterfaceClick.Provider>
+                    </NewMessage.Provider>
+                  </ConnectionInfo.Provider>
+                </AgentFilter.Provider>
+              </StateFilter.Provider>
+            </TagFilter.Provider>
+          </ConnectionQR.Provider>
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

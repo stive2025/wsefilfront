@@ -1,5 +1,5 @@
-import NavSlideBar from "/src/components/ui/navslidebar.jsx";
-import NavUtilities from "/src/components/ui/navUtilities.jsx";
+import NavSlideBar from "@/components/ui/navslidebar.jsx";
+import NavUtilities from "@/components/ui/navUtilities.jsx";
 import { Outlet } from "react-router-dom";
 
 

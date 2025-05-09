@@ -1,15 +1,16 @@
 import { useEffect, useContext, useState } from "react";
-import ChatInterface from "/src/components/chats/chatPanel_components.jsx";
-import ChatList from "/src/components/chats/chatList_component.jsx";
-import Resize from "/src/hooks/responsiveHook.jsx";
-import ContactInfo from "/src/components/chats/contactInfo.jsx";
-import SearchInChat from "/src/components/chats/searchInChat.jsx";
-import ListContacts from "/src/components/contacts/listContacts.jsx";
-import ConectionMod from "/src/components/mod/conectionMod.jsx";
-import WebSocketHook from "/src/hooks/websocketHook.jsx"
-import { getCodigoQR } from "/src/services/conections.js";
-import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
-import { ContactInfoClick, ChatInterfaceClick, SearchInChatClick, NewMessage, ConnectionInfo, WebSocketMessage } from "/src/contexts/chats.js";
+import ChatInterface from "@/components/chats/chatPanel_components.jsx";
+import ChatList from "@/components/chats/chatList_component.jsx";
+import Resize from "@/hooks/responsiveHook.jsx";
+import ContactInfo from "@/components/chats/contactInfo.jsx";
+import SearchInChat from "@/components/chats/searchInChat.jsx";
+import ListContacts from "@/components/contacts/listContacts.jsx";
+import ConectionMod from "@/components/mod/conectionMod.jsx";
+import WebSocketHook from "@/hooks/websocketHook.jsx"
+import { getCodigoQR } from "@/services/conections.js";
+import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
+import { ContactInfoClick, ChatInterfaceClick, SearchInChatClick, NewMessage, ConnectionInfo, WebSocketMessage } from "@/contexts/chats.js";
+import { useTheme } from "@/contexts/themeContext";
 
 const ChatComplete = () => {
     const { callEndpoint } = useFetchAndLoad();
@@ -20,6 +21,7 @@ const ChatComplete = () => {
     const { isConnected, setIsConnected } = useContext(ConnectionInfo);
     const isMobile = Resize();
     const [messageData, setMessageData] = useState(null);
+    const { theme } = useTheme();
 
     // Default value to prevent null errors
     const connectionStatus = isConnected || { sesion: false, name: '', number: '' };
@@ -64,7 +66,9 @@ const ChatComplete = () => {
 
     return (
         <WebSocketMessage.Provider value={{ messageData, setMessageData }}>
-            <div className="flex flex-col bg-transparent text-white h-screen">
+            <div className={`flex flex-col h-screen w-full mx-auto 
+                bg-[rgb(var(--color-bg-${theme}))] 
+                text-[rgb(var(--color-text-primary-${theme}))]`}>
                 {/* WebSocketHook siempre debe estar presente para manejar la conexión */}
                 <WebSocketHook />
 
@@ -92,8 +96,10 @@ const ChatComplete = () => {
                             </>
                         )
                     ) : (
-                        <div
-                            className={`h-screen bg-gray-900 text-white ${searchInChat || infoOpen ? "grid grid-cols-3" : "grid grid-cols-[35%_65%]"}`}
+                        <div className={`h-screen w-full 
+                            bg-[rgb(var(--color-bg-${theme}))] 
+                            text-[rgb(var(--color-text-primary-${theme}))]
+                            ${searchInChat || infoOpen ? "grid grid-cols-3" : "grid grid-cols-[35%_65%]"}`}
                         >
                             {newMessage ? <ListContacts /> : <ChatList />}
                             <ChatInterface />

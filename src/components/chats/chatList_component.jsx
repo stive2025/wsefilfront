@@ -1,60 +1,63 @@
 /* eslint-disable react/prop-types */
 import { useState, useEffect, useRef, useCallback, useContext } from "react";
-import { Search, MessageSquarePlus, ChevronLeftCircle, ChevronRightCircle, Loader, Check, Clock, AlertTriangle } from "lucide-react";
-import { ChatInterfaceClick, NewMessage, StateFilter, TagFilter, AgentFilter, WebSocketMessage } from "/src/contexts/chats.js";
-import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
-import { getChatList, updateChat } from "/src/services/chats.js";
-import { getContact, getContactChatsByName, getContactChatsByPhone } from "/src/services/contacts.js";
-import { getAgents } from "/src/services/agents.js";
-import { getTags } from "/src/services/tags.js";
-import Resize from "/src/hooks/responsiveHook.jsx";
-import { GetCookieItem } from "/src/utilities/cookies.js";
-import { ABILITIES } from '/src/constants/abilities';
-import AbilityGuard from '/src/components/common/AbilityGuard';
-import { useAuth } from '/src/contexts/authContext';
+import { Search, ChevronLeftCircle, ChevronRightCircle, Loader, Check, Clock, AlertTriangle } from "lucide-react";
+import { ChatInterfaceClick, StateFilter, TagFilter, AgentFilter, WebSocketMessage } from "@/contexts/chats.js";
+import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
+import { getChatList, updateChat } from "@/services/chats.js";
+import { getContact, getContactChatsByName, getContactChatsByPhone } from "@/services/contacts.js";
+import { getAgents } from "@/services/agents.js";
+import { getTags } from "@/services/tags.js";
+import Resize from "@/hooks/responsiveHook.jsx";
+import { getUserData } from "@/services/authService.js";
+import { ABILITIES } from '@/constants/abilities';
+import AbilityGuard from '@/components/common/AbilityGuard';
+import { useAuth } from '@/contexts/authContext';
+import { useTheme } from "@/contexts/themeContext";
 
 const ChatHeader = () => {
-  const { setNewMessage } = useContext(NewMessage);
+  const { theme } = useTheme();
 
   return (
-    <div className="p-1 flex items-center justify-between bg-gray-900">
+    <div className={`p-1 flex items-center justify-between bg-[rgb(var(--color-bg-${theme}-secondary))]`}>
       <div className="flex items-center space-x-2">
-        <img src="/src/assets/images/logoCRM.png" alt="Logo" className="w-22 h-9" />
-      </div>
-      <div className="flex space-x-2">
-        <AbilityGuard
-          abilities={[ABILITIES.CHAT_PANEL.SEND_TEXT]}
-          fallback={null}
-        >
-          <button
-            className="p-2 hover:bg-gray-700 active:bg-gray-700 rounded-full"
-            onClick={() => setNewMessage(true)}
-          >
-            <MessageSquarePlus size={15} />
-          </button>
-        </AbilityGuard>
+        <img src="./images/logoCRM.png" alt="Logo" className="w-22 h-9" />
       </div>
     </div>
   );
 };
 
 const SearchInput = ({ searchQuery, setSearchQuery }) => {
-
+  const { theme } = useTheme();
+  
   return (
     <AbilityGuard
       abilities={[ABILITIES.CHATS.SEARCH]}
-      fallback={<div className="p-2 bg-gray-900 text-gray-400 text-sm">No tienes permiso para buscar chats</div>}
+      fallback={
+        <div className={`p-2 bg-[rgb(var(--color-bg-${theme}-secondary))] 
+          text-[rgb(var(--color-text-secondary-${theme}))] text-sm`}>
+          No tienes permiso para buscar chats
+        </div>
+      }
     >
-      <div className="p-2 bg-gray-900">
+      <div className={`p-2 bg-[rgb(var(--color-bg-${theme}-secondary))]`}>
         <div className="relative flex items-center">
           <input
             type="text"
             placeholder="Buscar por nombre o teléfono..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-gray-800 rounded-lg pl-8 pr-2 py-1 text-white placeholder-gray-400"
+            className={`w-full bg-[rgb(var(--color-bg-${theme}))] rounded-lg pl-8 pr-2 py-1 
+              text-[rgb(var(--color-text-primary-${theme}))] 
+              placeholder-[rgb(var(--color-text-secondary-${theme}))]
+              hover:border-[rgb(var(--input-hover-border-${theme}))]
+              focus:border-[rgb(var(--input-focus-border-${theme}))]
+              focus:ring-1 focus:ring-[rgb(var(--input-focus-border-${theme}))]
+              outline-none`}
           />
-          <Search className="absolute left-1 text-gray-400" size={18} />
+          <Search 
+            className={`absolute left-1 text-[rgb(var(--color-text-secondary-${theme}))]`} 
+            size={18} 
+          />
         </div>
       </div>
     </AbilityGuard>
@@ -62,6 +65,7 @@ const SearchInput = ({ searchQuery, setSearchQuery }) => {
 };
 
 const TagsBar = ({ tags }) => {
+  const { theme } = useTheme();
   const containerRef = useRef(null);
   const { tagSelected, setTagSelected } = useContext(TagFilter);
 
@@ -78,21 +82,23 @@ const TagsBar = ({ tags }) => {
   };
 
   return (
-    <AbilityGuard
-      abilities={[ABILITIES.CHATS.FILTER_BY_TAG, ABILITIES.CHATS.FILTER_BY_STATUS]}
-      fallback={null}
-    >
-      <div className="relative flex items-center bg-gray-900 p-2">
+    <AbilityGuard abilities={[ABILITIES.CHATS.FILTER_BY_TAG, ABILITIES.CHATS.FILTER_BY_STATUS]} fallback={null}>
+      <div className={`relative flex items-center bg-[rgb(var(--color-bg-${theme}-secondary))] p-2`}>
         <button
-          onClick={scrollLeft}
-          className="absolute left-0 h-5 w-5 ml-2 flex items-center justify-center bg-transparent hover:bg-gray-700 active:bg-gray-700 rounded-full z-10"
+          onClick={scrollLeft}  
+          className={`absolute left-0 h-5 w-5 ml-2 flex items-center justify-center 
+            bg-transparent hover:bg-[rgb(var(--input-hover-bg-${theme}))] 
+            active:bg-[rgb(var(--color-primary-${theme}))] rounded-full
+            text-[rgb(var(--color-text-secondary-${theme}))]
+            hover:text-[rgb(var(--color-primary-${theme}))]`}
         >
           <ChevronLeftCircle size={15} />
         </button>
 
         <div
           ref={containerRef}
-          className="bg-transparent text-white h-8 w-full overflow-hidden shadow-md flex items-center p-1 overflow-x-auto scrollbar-hide mx-8"
+          className={`bg-transparent text-[rgb(var(--color-text-primary-${theme}))] h-8 w-full 
+            overflow-hidden shadow-md flex items-center p-1 overflow-x-auto scrollbar-hide mx-8`}
         >
           <ul className="flex whitespace-nowrap">
             <li
@@ -121,7 +127,11 @@ const TagsBar = ({ tags }) => {
 
         <button
           onClick={scrollRight}
-          className="absolute right-0 h-5 w-5 mr-2 flex items-center justify-center bg-transparent hover:bg-gray-700 active:bg-gray-700 rounded-full z-10"
+          className={`absolute right-0 h-5 w-5 mr-2 flex items-center justify-center 
+            bg-transparent hover:bg-[rgb(var(--input-hover-bg-${theme}))] 
+            active:bg-[rgb(var(--color-primary-${theme}))] rounded-full
+            text-[rgb(var(--color-text-secondary-${theme}))]
+            hover:text-[rgb(var(--color-primary-${theme}))]`}
         >
           <ChevronRightCircle size={15} />
         </button>
@@ -135,6 +145,7 @@ const AgentSelect = ({ role }) => {
   const { loading, callEndpoint } = useFetchAndLoad();
   const [agents, setAgents] = useState([]);
   const { agentSelected, setAgentSelected } = useContext(AgentFilter);
+  const { theme } = useTheme();
 
   useEffect(() => {
     const loadAgents = async () => {
@@ -155,18 +166,19 @@ const AgentSelect = ({ role }) => {
   if (role !== "admin") return null;
 
   return (
-    <AbilityGuard
-      abilities={[ABILITIES.CHATS.FILTER_BY_AGENT]}
-      fallback={null}
-    >
-      <div className="cursor-pointer p-4 flex border-b border-gray-700 bg-gray-900">
+    <AbilityGuard abilities={[ABILITIES.CHATS.FILTER_BY_AGENT]} fallback={null}>
+      <div className={`cursor-pointer p-4 border-b border-[rgb(var(--color-text-secondary-${theme}))] 
+        bg-[rgb(var(--color-bg-${theme}-secondary))]`}>
         <select
-          className={`w-full bg-gray-900 outline-none ${agentSelected ? 'text-white' : 'text-gray-400'}`}
+          className={`w-full bg-[rgb(var(--color-bg-${theme}-secondary))] outline-none 
+            ${agentSelected ? `text-[rgb(var(--color-text-primary-${theme}))]` : 
+            `text-[rgb(var(--color-text-secondary-${theme}))]`}
+            hover:bg-[rgb(var(--input-hover-bg-${theme}))]
+            focus:border-[rgb(var(--input-focus-border-${theme}))]`}
           value={agentSelected || ""}
           onChange={(e) => {
             const agentId = e.target.value ? parseInt(e.target.value) : null;
             setAgentSelected(agentId);
-            console.log(agentSelected);
           }}
           disabled={loading}
         >
@@ -194,6 +206,7 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
   const lastChatRef = useRef(null);
   const { callEndpoint } = useFetchAndLoad();
   const [readChats, setReadChats] = useState(new Set());
+  const { theme } = useTheme();
 
   const renderAckStatus = (ackStatus) => {
     switch (ackStatus) {
@@ -290,13 +303,15 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
 
   if (loading && chats.length === 0) {
     return (
-      <div className="flex justify-center items-center py-10 bg-gray-900">
+      <div className={`flex justify-center items-center py-10 
+       `}>
         <Loader className="animate-spin" size={24} />
       </div>
     );
   } else if (chats.length === 0) {
     return (
-      <div className="flex justify-center items-center py-10 bg-gray-900 text-gray-400">
+      <div className={`flex justify-center items-center py-10 
+        text-[rgb(var(--color-text-secondary-${theme}))]`}>
         No hay chats disponibles
       </div>
     );
@@ -306,18 +321,29 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
     <AbilityGuard
       abilities={[ABILITIES.CHATS.VIEW]}
       fallback={
-        <div className="flex justify-center items-center py-10 bg-gray-900 text-gray-400">
+        <div className={`flex justify-center items-center py-10 
+        bg-[rgb(var(--color-bg-${theme}-secondary))] 
+        text-[rgb(var(--color-text-secondary-${theme}))]`}>
           No tienes permisos para ver la lista de chats
         </div>
       }
     >
-      <div className="bg-gray-900">
+      <div className={`bg-[rgb(var(--color-bg-${theme}-secondary))]`}>
         {chats.map((item, index) => (
           <div
             key={item.id}
+            data-chat-id={item.id}
             ref={index === chats.length - 1 ? lastChatRef : null}
-            className={`w-full flex items-center space-x-3 p-4 hover:bg-gray-800 cursor-pointer ${selectedChatId && selectedChatId.id == item.id ? "bg-gray-700" : ""
-              }`}
+            className={`w-full flex items-center space-x-3 p-4 
+              ${theme === 'light'
+                ? selectedChatId && selectedChatId.id == item.id
+                  ? 'bg-[#e9e6e6]'  // seleccionado claro
+                  : 'bg-[#f9f9f9]'  // no seleccionado claro
+                : selectedChatId && selectedChatId.id == item.id
+                  ? 'bg-[#2e2f2f]'  // seleccionado oscuro
+                  : 'bg-[#161717]'  // no seleccionado oscuro
+              }
+              hover:bg-[rgb(var(--input-hover-bg-${theme}))] cursor-pointer`}
             onClick={() => {
               if (item.state === "PENDING" && item.state !== "CLOSED") {
                 handleUpdateChat(item.id, { unread_message: 0, state: "OPEN" });
@@ -349,33 +375,42 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
               }
             }}
           >
-            <div className="relative">
+            <div className="relative w-10 h-10 flex-shrink-0"> {/* Añadido flex-shrink-0 y dimensiones fijas */}
               <img
-                src={item.avatar || "/src/assets/images/default-avatar.jpg"}
+                src={item.avatar || "@/assets/images/default-avatar.jpg"}
                 alt="Avatar"
-                className="w-10 h-10 rounded-full"
+                className="w-full h-full rounded-full object-cover object-center"
               />
               {item.online && (
-                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-gray-900 rounded-full"></div>
+                <div className={`absolute bottom-0 right-0 w-3 h-3 bg-green-500 
+                  border-2 border-[rgb(var(--color-bg-${theme}-secondary))] rounded-full`}>
+                </div>
               )}
             </div>
 
             <div className="flex-1">
-              <div className="font-medium text-sm md:text-base">{item.name}</div>
+              <div className={`font-medium text-sm md:text-base 
+                text-[rgb(var(--color-text-primary-${theme}))]`}>
+                {item.name}
+              </div>
               <div className="flex items-center gap-1 overflow-hidden">
                 {item.from_me === "true" && (
                   <span className="shrink-0">{renderAckStatus(item.ack)}</span>
                 )}
-                <span className="overflow-hidden text-ellipsis whitespace-nowrap">
+                <span className={`overflow-hidden text-ellipsis whitespace-nowrap 
+                  text-[rgb(var(--color-text-secondary-${theme}))]`}>
                   {item.last_message || item.lastMessage}
                 </span>
               </div>
             </div>
 
-            <div className="text-xs text-gray-400 flex flex-col items-end">
+            <div className={`text-xs text-[rgb(var(--color-text-secondary-${theme}))] 
+              flex flex-col items-end`}>
               <div>{item.timestamp || new Date(item.updated_at).toLocaleDateString()}</div>
               {(item.unread_message > 0 || item.unreadCount > 0) && !readChats.has(item.id) && (
-                <div className="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center mt-1">
+                <div className={`bg-[rgb(var(--color-primary-${theme}))] 
+                  text-[rgb(var(--color-text-primary-${theme}))] 
+                  rounded-full w-5 h-5 flex items-center justify-center mt-1`}>
                   {item.unread_message || item.unreadCount}
                 </div>
               )}
@@ -384,7 +419,8 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
         ))}
 
         {loading && chats.length > 0 && (
-          <div className="flex justify-center items-center py-4 bg-gray-900">
+          <div className={`flex justify-center items-center py-4 
+            bg-[rgb(var(--color-bg-${theme}-secondary))]`}>
             <Loader className="animate-spin" size={20} />
           </div>
         )}
@@ -417,38 +453,107 @@ const ChatList = ({ role = "admin" }) => {
   const [tags, setTags] = useState([]);
   const { hasAbility } = useAuth();
 
+  useEffect(() => {
+    const initialParams = {
+      page: 1,
+      state:"PENDING"
+    };
+    
+    loadChats(initialParams, false);
+  }, [stateSelected]);
 
   useEffect(() => {
     if (messageData && messageData.body) {
-      // Obtener user_data de las cookies
-      const userData = GetCookieItem("user_data");
-      const currentUserId = userData ? JSON.parse(userData).id : null;
-
-      // Verificar coincidencia de user_id
+      console.log("Mensaje recibido:", messageData);
+      const userData = getUserData();
+      const currentUserId = userData?.id;
+  
       if (!currentUserId || messageData.user_id !== currentUserId) {
-        console.log("Mensaje ignorado - user_id no coincide:",
-          `Cookie: ${currentUserId}`,
-          `Mensaje: ${messageData.user_id}`);
+        console.log("Mensaje ignorado - user_id no coincide:", 
+          console.log("id en mensaje:", messageData.user_id),
+          console.log("id en localStorage:", currentUserId),
+          `Usuario actual: ${currentUserId}`, 
+          `Mensaje: ${messageData.body}`);
         return;
       }
 
       console.log("Procesando mensaje para el usuario actual:", currentUserId);
 
-      // Resto del código para procesar el mensaje...
       const existingChatIndex = chats.findIndex(chat =>
         chat.id === messageData.chat_id ||
         (chat.number && chat.number === messageData.number)
       );
 
       if (existingChatIndex >= 0) {
-        // ... (código existente para actualizar chat)
+        // Actualizar chat existente
+        const updatedChats = [...chats];
+        const chatToUpdate = { ...updatedChats[existingChatIndex] };
+
+        // Actualizar último mensaje y contador
+        chatToUpdate.last_message = messageData.body;
+        chatToUpdate.timestamp = new Date().toLocaleString();
+        
+        // Incrementar contador solo si no es el chat seleccionado actualmente
+        if (!selectedChatId || selectedChatId.id !== chatToUpdate.id) {
+          chatToUpdate.unread_message = (chatToUpdate.unread_message || 0) + 1;
+        }
+
+        // Si hay archivos adjuntos
+        if (messageData.media_path) {
+          chatToUpdate.last_message = messageData.media_type === 'image' 
+            ? '📷 Imagen' 
+            : messageData.media_type === 'video' 
+              ? '🎥 Video'
+              : messageData.media_type === 'audio'
+                ? '🎵 Audio'
+                : '📎 Archivo';
+        }
+
+        // Mover el chat actualizado al principio de la lista
+        updatedChats.splice(existingChatIndex, 1);
+        updatedChats.unshift(chatToUpdate);
+
+        setChats(updatedChats);
       } else {
-        // ... (código existente para nuevo chat)
+        // Crear nuevo chat
+        const newChat = {
+          id: messageData.chat_id,
+          number: messageData.number,
+          name: messageData.sender_name || messageData.number,
+          last_message: messageData.body,
+          timestamp: new Date().toLocaleString(),
+          unread_message: 1,
+          state: "PENDING",
+          avatar: "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain"
+        };
+
+        // Si hay archivos adjuntos
+        if (messageData.media_path) {
+          newChat.last_message = messageData.media_type === 'image' 
+            ? '📷 Imagen' 
+            : messageData.media_type === 'video' 
+              ? '🎥 Video'
+              : messageData.media_type === 'audio'
+                ? '🎵 Audio'
+                : '📎 Archivo';
+        }
+
+        // Agregar nuevo chat al principio de la lista
+        setChats(prevChats => [newChat, ...prevChats]);
       }
 
+      // Notificar al componente padre sobre el nuevo mensaje
       if (messageData != null) {
         setMessageDataLocal(messageData);
         setMessageData(null);
+
+        // Opcional: Mostrar notificación del navegador si la ventana no está activa
+        if (document.hidden && "Notification" in window && Notification.permission === "granted") {
+          new Notification("Nuevo mensaje", {
+            body: messageData.body,
+            icon: "./images/logoCRM.png"
+          });
+        }
       }
     }
   }, [messageData, chats, selectedChatId]);
@@ -486,8 +591,6 @@ const ChatList = ({ role = "admin" }) => {
         }
       } else {
         setIsSearching(false);
-
-        endpoint = getChatList(params);
 
         const filterParams = { ...params };
         console.log(filterParams)
@@ -535,7 +638,7 @@ const ChatList = ({ role = "admin" }) => {
                 return {
                   ...chat,
                   name: "Unknown Contact",
-                  avatar: "/src/assets/images/default-avatar.jpg",
+                  avatar: "@/assets/images/default-avatar.jpg",
                   isContact: chatIsContact  // Añadir la bandera aquí
                 };
               } else {
@@ -615,6 +718,35 @@ const ChatList = ({ role = "admin" }) => {
     }
   }, [stateSelected, tagSelected, agentSelected]);
 
+  useEffect(() => {
+    const handleChatStateChange = async (event) => {
+      const { chatId, newState, previousState } = event.detail;
+      console.log(`Chat ${chatId} changed from ${previousState} to ${newState}`);
+      
+      // Si el estado actual filtrado es diferente al nuevo estado del chat
+      if (stateSelected !== newState) {
+        const chatElement = document.querySelector(`[data-chat-id="${chatId}"]`);
+        if (chatElement) {
+          // Aplicar animación de salida
+          chatElement.classList.add('fade-out');
+          
+          // Esperar a que termine la animación
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
+          // Remover el chat de la lista actual
+          setChats(prevChats => prevChats.filter(chat => chat.id !== chatId));
+        }
+      }
+      // Si el chat cambió al estado que estamos filtrando actualmente
+      else if (previousState !== newState && stateSelected === newState) {
+        // Recargar la lista para incluir el nuevo chat
+        loadChats({ page: 1, state: stateSelected }, false);
+      }
+    };
+
+    window.addEventListener('chatStateChanged', handleChatStateChange);
+    return () => window.removeEventListener('chatStateChanged', handleChatStateChange);
+  }, [stateSelected]);
 
   // Efecto para manejar el debounce de la búsqueda
   useEffect(() => {
@@ -636,7 +768,7 @@ const ChatList = ({ role = "admin" }) => {
   }
 
   return isMobile ? (
-    <div className="w-full sm:w-80 border-r border-gray-700 flex flex-col bg-gray-900 text-white h-screen">
+    <div className="w-full  sm:w-80 border-r border-gray-700 flex flex-col text-white h-screen">
       <div className="flex flex-col flex-shrink-0 mt-14">
         <ChatHeader />
         <SearchInput searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
@@ -655,7 +787,7 @@ const ChatList = ({ role = "admin" }) => {
       </div>
     </div>
   ) : (
-    <div className="flex-1 border-r border-gray-700 flex flex-col bg-gray-900 text-white pt-10 ml-10 overflow-y-auto">
+    <div className="flex-1 border-r border-gray-700 flex flex-col text-white pt-10 ml-10 overflow-y-auto">
       <div className="flex flex-col flex-shrink-0">
         <ChatHeader />
         <SearchInput searchQuery={searchQuery} setSearchQuery={setSearchQuery} />

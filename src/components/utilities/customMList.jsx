@@ -1,51 +1,67 @@
 /* eslint-disable react/prop-types */
 import { Pencil, Trash2, Plus, Search } from 'lucide-react';
-import Resize from "/src/hooks/responsiveHook.jsx";
-import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
+import Resize from "@/hooks/responsiveHook.jsx";
+import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
 import { useContext, useEffect, useState, useRef, useCallback } from "react";
-import { CustomCreateForm, UpdateCustomForm, CustomHandle } from "/src/contexts/chats.js";
-import { getCustomMessages, deleteCustomMessage, getCustomMessage } from "/src/services/customMessages.js";
-import { ABILITIES } from '/src/constants/abilities';
-import AbilityGuard from '/src/components/common/AbilityGuard.jsx';
+import { CustomCreateForm, UpdateCustomForm, CustomHandle } from "@/contexts/chats.js";
+import { getCustomMessages, deleteCustomMessage, getCustomMessage } from "@/services/customMessages.js";
+import { ABILITIES } from '@/constants/abilities';
+import AbilityGuard from '@/components/common/AbilityGuard.jsx';
+import { useTheme } from "@/contexts/themeContext";
 
 // Reusable Search Input Component
-const SearchInput = ({ searchTerm, onSearchChange }) => (
-  <AbilityGuard abilities={[ABILITIES.UTILITIES.SEARCH]} fallback={<div className="p-2 bg-gray-900"></div>}>
-    <div className="p-2 bg-gray-900">
-      <div className="relative flex items-center">
-        <input
-          type="text"
-          placeholder="Search..."
-          className="w-full bg-gray-800 rounded-lg pl-8 pr-2 py-1 text-white placeholder-gray-400"
-          value={searchTerm}
-          onChange={(e) => onSearchChange(e.target.value)}
-        />
-        <Search className="absolute left-1 text-gray-400" size={18} />
+const SearchInput = ({ searchTerm, onSearchChange }) => {
+  const { theme } = useTheme();
+  
+  return (
+    <AbilityGuard abilities={[ABILITIES.UTILITIES.SEARCH]} fallback={
+      <div className={`p-2 bg-[rgb(var(--color-bg-${theme}-secondary))]`}></div>
+    }>
+      <div className={`p-2 bg-[rgb(var(--color-bg-${theme}-secondary))]`}>
+        <div className="relative flex items-center">
+          <input
+            type="text"
+            placeholder="Search..."
+            className={`w-full bg-[rgb(var(--color-bg-${theme}))] rounded-lg pl-8 pr-2 py-1 
+              text-[rgb(var(--color-text-primary-${theme}))] placeholder-[rgb(var(--color-text-secondary-${theme}))]`}
+            value={searchTerm}
+            onChange={(e) => onSearchChange(e.target.value)}
+          />
+          <Search className={`absolute left-1 text-[rgb(var(--color-text-secondary-${theme}))]`} size={18} />
+        </div>
       </div>
-    </div>
-  </AbilityGuard>
-);
+    </AbilityGuard>
+  );
+};
 
 // Custom Items Component
 const CustomItems = ({ customMessages, onDeleteCustom, isDeleting, onFindCustom, loadingMore, lastCustomRef }) => {
-  // Check if customMessages exist and contain an array before mapping
+  const { theme } = useTheme();
+
   if (!customMessages || !customMessages.length) {
-    return <div className="p-4 text-gray-400">No hay Mensajes personalizados disponibles</div>;
+    return (
+      <div className={`p-4 text-[rgb(var(--color-text-secondary-${theme}))]`}>
+        No hay Mensajes personalizados disponibles
+      </div>
+    );
   }
 
   return (
-    <div>
+    <div className={`bg-[rgb(var(--color-bg-${theme}-secondary))]`}>
       {customMessages.map((custom, index) => (
         <div
           key={custom.id}
           className="w-full flex items-center p-4"
           ref={index === customMessages.length - 1 ? lastCustomRef : null}
         >
-          <div className="w-full flex items-center space-x-3 hover:bg-gray-700 cursor-pointer active:bg-gray-600">
-            {/* Tag Details */}
+          <div className={`w-full flex items-center space-x-3 hover:bg-[rgb(var(--color-bg-${theme}))] 
+            cursor-pointer active:bg-[rgb(var(--color-primary-${theme}))]`}>
             <div className="flex-1">
-              <div className="font-medium text-sm md:text-base">{custom.name}</div>
-              <div className="text-xs md:text-sm text-gray-400 overflow-hidden text-ellipsis whitespace-nowrap max-w-[200px]">
+              <div className={`font-medium text-sm md:text-base text-[rgb(var(--color-text-primary-${theme}))]`}>
+                {custom.name}
+              </div>
+              <div className={`text-xs md:text-sm text-[rgb(var(--color-text-secondary-${theme}))] 
+                overflow-hidden text-ellipsis whitespace-nowrap max-w-[200px]`}>
                 {custom.description || "Sin descripción"}
               </div>
             </div>
@@ -53,7 +69,8 @@ const CustomItems = ({ customMessages, onDeleteCustom, isDeleting, onFindCustom,
           <div className="flex">
             <AbilityGuard abilities={[ABILITIES.UTILITIES.EDIT]}>
               <button
-                className="mr-2 text-gray-400 hover:text-white"
+                className={`mr-2 text-[rgb(var(--color-text-secondary-${theme}))] 
+                  hover:text-[rgb(var(--color-primary-${theme}))]`}
                 onClick={() => onFindCustom(custom.id)}
               >
                 <Pencil size={16} />
@@ -61,7 +78,8 @@ const CustomItems = ({ customMessages, onDeleteCustom, isDeleting, onFindCustom,
             </AbilityGuard>
             <AbilityGuard abilities={[ABILITIES.UTILITIES.DELETE]}>
               <button
-                className="text-gray-400 hover:text-white"
+                className={`text-[rgb(var(--color-text-secondary-${theme}))] 
+                  hover:text-[rgb(var(--color-primary-${theme}))]`}
                 onClick={() => onDeleteCustom(custom.id)}
                 disabled={isDeleting}
               >
@@ -72,13 +90,16 @@ const CustomItems = ({ customMessages, onDeleteCustom, isDeleting, onFindCustom,
         </div>
       ))}
       {loadingMore && (
-        <div className="p-4 text-gray-400 text-center">Cargando más mensajes...</div>
+        <div className={`p-4 text-[rgb(var(--color-text-secondary-${theme}))] text-center`}>
+          Cargando más mensajes...
+        </div>
       )}
     </div>
   );
 };
 
 const TagsList = () => {
+  const { theme } = useTheme();
   const { setCustomClick } = useContext(CustomCreateForm);
   const { setCustomFind } = useContext(UpdateCustomForm);
   const { customHandle, setCustomHandle } = useContext(CustomHandle);
@@ -283,22 +304,25 @@ const TagsList = () => {
 
   return (
     <AbilityGuard abilities={[ABILITIES.UTILITIES.VIEW]} fallback={
-      <div className="w-full flex items-center justify-center h-full text-gray-400">
+      <div className={`w-full flex items-center justify-center h-full text-[rgb(var(--color-text-secondary-${theme}))]`}>
         No tienes permisos para ver la lista de mensajes personalizados
       </div>
     }>
       {isMobile ? (
-        <div className="w-full sm:w-80 mt-10 flex flex-col text-white">
+        <div className={`w-full sm:w-80 mt-10 flex flex-col bg-[rgb(var(--color-bg-${theme}-secondary))] 
+          text-[rgb(var(--color-text-primary-${theme}))]`}>
           <div className="flex flex-row flex-shrink-0">
             <label className="p-1">Mensajes Personalizados</label>
           </div>
           <div className="flex flex-col flex-shrink-0">
             <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
           </div>
-          {/* Tags list with scroll */}
+
           <div className="flex-1 overflow-y-auto">
             {loading && messages.length === 0 ? (
-              <div className="p-4 text-gray-400">Cargando mensajes personalizados...</div>
+              <div className={`p-4 text-[rgb(var(--color-text-secondary-${theme}))]`}>
+                Cargando mensajes personalizados...
+              </div>
             ) : error ? (
               <div className="p-4 text-red-400">{error}</div>
             ) : (
@@ -313,10 +337,11 @@ const TagsList = () => {
             )}
           </div>
 
-          {/* Button to add new tag in mobile */}
           <AbilityGuard abilities={[ABILITIES.UTILITIES.CREATE]}>
             <button
-              className="absolute bottom-4 right-4 mb-15 rounded-full p-3 shadow-lg text-white cursor-pointer bg-naranja-base hover:bg-naranja-medio"
+              className={`absolute bottom-4 right-4 mb-15 rounded-full p-3 shadow-lg 
+                text-[rgb(var(--color-text-primary-${theme}))] cursor-pointer 
+                bg-[rgb(var(--color-secondary-${theme}))] hover:bg-[rgb(var(--color-primary-${theme}))]`}
               onClick={() => setCustomClick((prev) => !prev)}
             >
               <Plus size={18} />
@@ -324,8 +349,9 @@ const TagsList = () => {
           </AbilityGuard>
         </div>
       ) : (
-        <div className="flex-1 border-r border-gray-700 flex flex-col text-white pt-10 ml-10 overflow-y-auto">
-          {/* Fixed header and search */}
+        <div className={`flex-1 border-r border-[rgb(var(--color-text-secondary-${theme}))] flex flex-col 
+          bg-[rgb(var(--color-bg-${theme}-secondary))] text-[rgb(var(--color-text-primary-${theme}))] 
+          pt-2 ml-10 overflow-y-auto`}>
           <div className="flex flex-row flex-shrink-0">
             <label className="p-1">Mensajes Personalizados</label>
           </div>
@@ -333,10 +359,11 @@ const TagsList = () => {
             <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
           </div>
 
-          {/* Tags list with scroll */}
           <div className="flex-1 overflow-y-auto scrollbar-hide">
             {loading && messages.length === 0 ? (
-              <div className="p-4 text-gray-400">Cargando Mensajes personalizados...</div>
+              <div className={`p-4 text-[rgb(var(--color-text-secondary-${theme}))]`}>
+                Cargando Mensajes personalizados...
+              </div>
             ) : error ? (
               <div className="p-4 text-red-400">{error}</div>
             ) : (
@@ -350,11 +377,12 @@ const TagsList = () => {
               />
             )}
           </div>
-          
-          {/* Button to add new message in desktop */}
+
           <AbilityGuard abilities={[ABILITIES.UTILITIES.CREATE]}>
             <button
-              className="fixed bottom-4 right-4 mb-4 rounded-full p-3 shadow-lg text-white cursor-pointer bg-naranja-base hover:bg-naranja-medio"
+              className={`fixed bottom-4 right-4 mb-4 rounded-full p-3 shadow-lg 
+                text-[rgb(var(--color-text-primary-${theme}))] cursor-pointer 
+                bg-[rgb(var(--color-secondary-${theme}))] hover:bg-[rgb(var(--color-primary-${theme}))]`}
               onClick={() => setCustomClick((prev) => !prev)}
             >
               <Plus size={18} />

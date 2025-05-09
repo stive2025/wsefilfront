@@ -1,26 +1,39 @@
-import Resize from "/src/hooks/responsiveHook.jsx";
-import TagList from "/src/components/utilities/tagsList.jsx";
-import TagForm from "/src/components/utilities/tagForm.jsx";
-import Tagmod from "/src/components/mod/newUtilitieMod.jsx";
-import { TagsCreateForm } from "/src/contexts/chats.js"
+import Resize from "@/hooks/responsiveHook.jsx";
+import TagList from "@/components/utilities/tagsList.jsx";
+import TagForm from "@/components/utilities/tagForm.jsx";
+import Tagmod from "@/components/mod/newUtilitieMod.jsx";
+import { TagsCreateForm } from "@/contexts/chats.js"
 import { useContext } from "react";
-
+import { useTheme } from "@/contexts/themeContext";
 
 const TagsComplete = () => {
-
     const isMobile = Resize();
-    const { tagsClick,setTagsClick } = useContext(TagsCreateForm);
+    const { tagsClick, setTagsClick } = useContext(TagsCreateForm);
+    const { theme } = useTheme();
+
     return isMobile ? (
-        <div className="h-screen w-full mx-auto p-4 bg-gray-900 text-white">
+        <div className={`h-screen w-full mx-auto p-4 
+          bg-[rgb(var(--color-bg-${theme}))] 
+          text-[rgb(var(--color-text-primary-${theme}))]`}
+        >
             <TagList />
-            {tagsClick && <Tagmod isOpen={tagsClick} onClose={() => setTagsClick(false)} option={1}/>}
+            {tagsClick && (
+                <Tagmod 
+                    isOpen={tagsClick} 
+                    onClose={() => setTagsClick(false)} 
+                    option={1}
+                />
+            )}
         </div>
     ) : (
-        <div className="h-screen w-full mx-auto p-4 bg-gray-900 text-white grid grid-cols-2 gap-4 overflow-y-auto">
+        <div className={`h-screen w-full mx-auto pt-15 p-4
+          bg-[rgb(var(--color-bg-${theme}))] 
+          text-[rgb(var(--color-text-primary-${theme}))] 
+          grid grid-cols-2 gap-4 overflow-y-auto`}
+        >
             <TagList />
             <TagForm />
         </div>
-
     );
 };
 

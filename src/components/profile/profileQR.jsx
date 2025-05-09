@@ -1,11 +1,13 @@
 import { useState, useEffect, useContext, useRef } from 'react';
-import Resize from "/src/hooks/responsiveHook.jsx";
+import Resize from "@/hooks/responsiveHook.jsx";
 import { QRCodeCanvas } from 'qrcode.react';
-import { useFetchAndLoad } from "/src/hooks/fechAndload.jsx";
-import { ProfileInfoPanel, ConnectionInfo, ConnectionQR } from "/src/contexts/chats.js";
-import { getCodigoQR } from "/src/services/conections.js";
+import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
+import { ProfileInfoPanel, ConnectionInfo, ConnectionQR } from "@/contexts/chats.js";
+import { getCodigoQR } from "@/services/conections.js";
+import { useTheme } from "@/contexts/themeContext.jsx";
 
 const ProfileQR = () => {
+  const { theme } = useTheme();
   const isMobile = Resize();
   const { setCodigoQR, codigoQR } = useContext(ConnectionQR);
   const { isConnected, setIsConnected } = useContext(ConnectionInfo);
@@ -104,10 +106,16 @@ const ProfileQR = () => {
   }, [profileInfoOpen, isConnected.sesion]);
 
   return (
-    <div className={`bg-gray-900 rounded-lg w-full space-y-4 h-max`}>
+    <div className={`
+      w-full space-y-4 h-max rounded-lg
+      ${theme === 'light' ? 'bg-[rgb(var(--color-bg-light))]' : 'bg-[rgb(var(--color-bg-dark))]'}
+    `}>
       {/* Header */}
       <div className="flex items-center rounded-lg">
-        <h1 className="text-xl font-normal">
+        <h1 className={`
+          text-xl font-normal
+          ${theme === 'light' ? 'text-[rgb(var(--color-text-primary-light))]' : 'text-[rgb(var(--color-text-primary-dark))]'}
+        `}>
           {isConnected.sesion ? "Ya existe una conexión" : "Escanea el código QR"}
         </h1>
       </div>
@@ -115,26 +123,65 @@ const ProfileQR = () => {
       {/* Contenido: QR o información de conexión */}
       <div className="flex justify-center rounded-lg">
         {loading && !isConnected.sesion ? (
-          <p className="text-gray-400">Cargando...</p>
+          <p className={`
+            ${theme === 'light' ? 'text-[rgb(var(--color-text-secondary-light))]' : 'text-[rgb(var(--color-text-secondary-dark))]'}
+          `}>
+            Cargando...
+          </p>
         ) : error ? (
           <p className="text-red-400">{error}</p>
         ) : isConnected.sesion ? (
-          <div className="flex flex-col items-center text-center p-4 bg-gray-800 rounded-lg w-full max-w-xs">
+          <div className={`
+            flex flex-col items-center text-center p-4 rounded-lg w-full max-w-xs
+            ${theme === 'light' ? 'bg-[rgb(var(--color-bg-light-secondary))]' : 'bg-[rgb(var(--color-bg-dark-secondary))]'}
+          `}>
             <div className="mb-3">
-              <span className="text-gray-400 block mb-1">Nombre:</span>
-              <p className="text-lg font-medium">{isConnected.name}</p>
+              <span className={`
+                block mb-1
+                ${theme === 'light' ? 'text-[rgb(var(--color-text-secondary-light))]' : 'text-[rgb(var(--color-text-secondary-dark))]'}
+              `}>
+                Nombre:
+              </span>
+              <p className={`
+                text-lg font-medium
+                ${theme === 'light' ? 'text-[rgb(var(--color-text-primary-light))]' : 'text-[rgb(var(--color-text-primary-dark))]'}
+              `}>
+                {isConnected.name}
+              </p>
             </div>
             <div>
-              <span className="text-gray-400 block mb-1">Teléfono:</span>
-              <p className="text-md font-mono">{formatPhoneNumber(isConnected.number)}</p>
+              <span className={`
+                block mb-1
+                ${theme === 'light' ? 'text-[rgb(var(--color-text-secondary-light))]' : 'text-[rgb(var(--color-text-secondary-dark))]'}
+              `}>
+                Teléfono:
+              </span>
+              <p className={`
+                text-md font-mono
+                ${theme === 'light' ? 'text-[rgb(var(--color-text-primary-light))]' : 'text-[rgb(var(--color-text-primary-dark))]'}
+              `}>
+                {formatPhoneNumber(isConnected.number)}
+              </p>
             </div>
           </div>
         ) : codigoQR ? (
-          <div className='border-6 border-white flex flex-col items-center'>
-            <QRCodeCanvas value={codigoQR} size={isMobile ? 200 : 256} />
+          <div className={`
+            border-6 flex flex-col items-center
+            ${theme === 'light' ? 'border-[rgb(var(--color-primary-light))]' : 'border-[rgb(var(--color-primary-dark))]'}
+          `}>
+            <QRCodeCanvas 
+              value={codigoQR} 
+              size={isMobile ? 200 : 256}
+              bgColor={theme === 'light' ? '#F9F9F9' : '#2d3e3a'}
+              fgColor={theme === 'light' ? '#1F1F1F' : '#FFFFFF'}
+            />
           </div>
         ) : (
-          <p className="text-gray-400">No se pudo cargar el código QR</p>
+          <p className={`
+            ${theme === 'light' ? 'text-[rgb(var(--color-text-secondary-light))]' : 'text-[rgb(var(--color-text-secondary-dark))]'}
+          `}>
+            No se pudo cargar el código QR
+          </p>
         )}
       </div>
     </div>

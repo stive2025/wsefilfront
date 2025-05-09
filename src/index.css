@@ -1,5 +1,95 @@
 @import "tailwindcss";
 /* src/index.css */
+
+@layer base {
+  :root {
+    /* Light theme variables */
+    --color-primary-light: 0 151 147; /* #009793 bordes, onclick, marcaciones, hover de iconos, botones de envio de mensajes*/
+    --color-secondary-light: 255 150 25; /* #FF9619 botones, hover botones*/
+    --color-bg-light: 249 249 249; /* #e9e6e6 fondo*/
+    --color-bg-light-secondary: 233 230 230; /* #FFFFFF fondo para barras laterales y menú*/
+    --color-text-primary-light: 31 31 31; /* #1F1F1F texto y titulos */
+    --color-text-secondary-light: 79 79 79; /* #4F4F4F texto claro, iconos sin seleccionar */
+    
+    /* Light theme input states */
+    --input-hover-border-light: 0 151 147; /* #009793 hover border color */
+    --input-focus-border-light: 255 150 25; /* #FF9619 focus border color */
+    --input-selected-bg-light: 233 230 230; /* #e9e6e6 selected background */
+    --input-hover-bg-light: 240 240 240; /* #f0f0f0 hover background */
+
+    /* Dark theme variables */
+    --color-primary-dark: 0 173 169; /* #00ADA9 bordes, onclick, marcaciones, hover de iconos, botones de envio de mensajes*/
+    --color-secondary-dark: 255 165 51; /* #FFA533 botones, hover botones*/
+    --color-bg-dark: 22 23 23; /* #2d3e3a fondo*/
+    --color-bg-dark-secondary: 29 31 31; /*fondo para barras laterales y menú*/
+    --color-text-primary-dark: 255 255 255; /* #FFFFFF texto y titulos*/
+    --color-text-secondary-dark: 170 170 170; /* #AAAAAA texto claro, iconos sin seleccionar */
+
+    /* Dark theme input states */
+    --input-hover-border-dark: 0 173 169; /* #00ADA9 hover border color */
+    --input-focus-border-dark: 255 165 51; /* #FFA533 focus border color */
+    --input-selected-bg-dark: 35 37 37; /* #232525 selected background */
+    --input-hover-bg-dark: 40 42 42; /* #282a2a hover background */
+  }
+}
+
+/* Input styles */
+.input-base {
+  @apply w-full rounded-md border transition-all duration-200;
+}
+
+/* Light theme input styles */
+.light .input-base {
+  @apply border-gray-300 bg-white text-[#1F1F1F];
+}
+
+.light .input-base:hover {
+  @apply bg-[rgb(var(--input-hover-bg-light))] border-[rgb(var(--input-hover-border-light))];
+}
+
+.light .input-base:focus {
+  @apply outline-none border-[rgb(var(--input-focus-border-light))] ring-1 ring-[rgb(var(--input-focus-border-light))];
+}
+
+.light .input-base:checked,
+.light .input-base[aria-selected="true"] {
+  @apply bg-[rgb(var(--input-selected-bg-light))];
+}
+
+/* Dark theme input styles */
+.dark .input-base {
+  @apply border-gray-600 bg-[#1d1f1f] text-white;
+}
+
+.dark .input-base:hover {
+  @apply bg-[rgb(var(--input-hover-bg-dark))] border-[rgb(var(--input-hover-border-dark))];
+}
+
+.dark .input-base:focus {
+  @apply outline-none border-[rgb(var(--input-focus-border-dark))] ring-1 ring-[rgb(var(--input-focus-border-dark))];
+}
+
+.dark .input-base:checked,
+.dark .input-base[aria-selected="true"] {
+  @apply bg-[rgb(var(--input-selected-bg-dark))];
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+}
+
+/* Clase de utilidad para aplicar la animación */
+.fade-out {
+    animation: fadeOut 0.3s ease-out forwards;
+}
+
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
@@ -8,45 +98,3 @@
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
 }
-
-:root {
-  --color-verde-base: rgb(0, 151, 147);
-  --color-naranja-base: rgb(255, 150, 25);
-  --color-naranja-medio: rgb(255, 170, 64);
-  --color-verde-medio: rgb(83, 191, 188);
-  --color-blanco: rgb(255, 255, 255);
-  --color-message-private:rgb(84, 153, 199)
-}
-
-@layer utilities {
-  .bg-verde-base {
-    background-color: var(--color-verde-base);
-  }
-  .bg-naranja-base {
-    background-color: var(--color-naranja-base);
-  }
-  .bg-message-private {
-    background-color: var(--color-message-private);
-  }
-  .bg-naranja-medio {
-    background-color: var(--color-naranja-medio);
-  }
-  .bg-verde-medio {
-    background-color: var(--color-verde-medio);
-  }
-  .bg-blanco {
-    background-color: var(--color-blanco);
-  }
-  .hover\:bg-naranja-base:hover { background-color: var(--color-naranja-base); }
-  .hover\:bg-verde-base:hover { background-color: var(--color-verde-base); }
-  .hover\:bg-verde-medio:hover { background-color: var(--color-verde-medio); }
-  .hover\:bg-naranja-medio:hover { background-color: var(--color-naranja-medio); }
-  .active\:bg-naranja-base:active { background-color: var(--color-naranja-base); }
-  .active\:bg-verde-base:active { background-color: var(--color-verde-base); }
-  .active\:bg-verde-medio:active { background-color: var(--color-verde-medio); }
-  .active\:bg-naranja-medio:active { background-color: var(--color-naranja-medio); }
-}
-
-
-
-

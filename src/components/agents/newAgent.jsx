@@ -1,11 +1,12 @@
 import { useState, useCallback, useContext, useEffect } from 'react';
 import { User, CheckSquare, Settings } from 'lucide-react';
-import Resize from "/src/hooks/responsiveHook.jsx";
-import { useFetchAndLoad } from "/src/hooks/fechAndLoad.jsx";
-import { createAgent, updateAgent } from "/src/services/agents.js";
-import { UpdateAgentForm, AgentHandle, NewAgentForm } from "/src/contexts/chats.js";
-import { ABILITIES, ROLES, ROLE_DEFAULT_ABILITIES } from "/src/constants/abilities.js";
-import AbilityGuard from '/src/components/common/AbilityGuard.jsx';
+import Resize from "@/hooks/responsiveHook.jsx";
+import { useFetchAndLoad } from "@/hooks/fechAndLoad.jsx";
+import { createAgent, updateAgent } from "@/services/agents.js";
+import { UpdateAgentForm, AgentHandle, NewAgentForm } from "@/contexts/chats.js";
+import { ABILITIES, ROLES, ROLE_DEFAULT_ABILITIES } from "@/constants/abilities.js";
+import AbilityGuard from '@/components/common/AbilityGuard.jsx';
+import { useTheme } from "@/contexts/themeContext";
 
 const NewAgent = () => {
   const isMobile = Resize();
@@ -13,6 +14,7 @@ const NewAgent = () => {
   const { agentFind, setAgentFind } = useContext(UpdateAgentForm);
   const { setAgentHandle } = useContext(AgentHandle);
   const { setAgentNew } = useContext(NewAgentForm);
+  const { theme } = useTheme();
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -89,8 +91,8 @@ const NewAgent = () => {
 
   // Actualizar las habilidades cuando cambia el rol (solo si no estamos en modo edición)
   useEffect(() => {
-    //if (role && !agentFind) {
-    if (role) {
+    if (role && !agentFind) {
+
 
       // Mapear el valor del rol a la clave del objeto ROLES
       let roleKey;
@@ -232,28 +234,102 @@ const NewAgent = () => {
     [firstName, lastName, email, role, selectedAbilities, isFormValidForUpdate, callEndpoint, idAgent, setAgentFind, setAgentHandle]
   );
 
-  // Renderiza cada sección de habilidades
+  // Objeto de traducción para las secciones
+  const SECTION_TRANSLATIONS = {
+    'Listado de Chats': {
+      title: 'Gestión de Conversaciones',
+      abilities: {
+        'VIEW': 'Ver lista de conversaciones',
+        'SEARCH': 'Filtrar y buscar conversaciones',
+        'FILTER_BY_AGENT': 'Filtrar por agente',
+        'FILTER_BY_STATUS': 'Filtrar por estado',
+        'FILTER_BY_TAG': 'Filtrar por etiqueta',
+      }
+    },
+    'Panel de Chat': {
+      title: 'Interacción con Chats',
+      abilities: {
+        'VIEW': 'Ver conversaciones en tiempo real',
+        'SEND_TEXT': 'Enviar mensajes',
+        'SEND_MEDIA': 'Enviar archivos multimedia',
+        'SEARCH_MESSAGES': 'Buscar mensajes',
+        'DOWNLOAD_HISTORY': 'Descargar historial de mensajes',
+        'TRANSFER': 'Transferir conversaciones',
+        'VIEW_CONTACT_INFO': 'Ver información de agente',
+        'TAG_CHAT': 'Etiquetar conversaciones',
+        'MARK_AS_FINISHED': 'Marcar como finalizado',
+      }
+    },
+    'Utilidades': {
+      title: 'Herramientas y Utilidades',
+      abilities: {
+        'VIEW': 'Ver herramientas',
+        'CREATE': 'Crear nuevas herramientas',
+        'EDIT': 'Modificar herramientas existentes',
+        'DELETE': 'Eliminar herramientas',
+        'SEARCH': 'Buscar herramientas',
+      }
+    },
+    'Contactos': {
+      title: 'Gestión de Contactos',
+      abilities: {
+        'CREATE': 'Crear nuevos contactos',
+        'EDIT': 'Editar contactos existentes',
+        'DELETE': 'Eliminar contactos',
+        'SEARCH': 'Buscar contactos',
+        'VIEW': 'Ver lista de contactos'
+      }
+    },
+    'Agentes': {
+      title: 'Gestión de Agentes',
+      abilities: {
+        'CREATE': 'Crear nuevos agentes',
+        'EDIT': 'Modificar agentes existentes',
+        'DELETE': 'Eliminar agentes',
+        'SEARCH': 'Buscar agentes',
+        'VIEW': 'Ver lista de agentes'
+      }
+    },
+    'Perfil': {
+      title: 'Configuración de Perfil',
+      abilities: {
+        'VIEW': 'Ver perfil propio',
+        'SCAN_QR': 'Escanear QR',
+        'CHANGE_PASSWORD': 'Cambiar contraseña',
+      }
+    }
+  };
+
+  // Modificar la función renderAbilitySection
   const renderAbilitySection = (sectionName, abilities) => {
+    const sectionTranslation = SECTION_TRANSLATIONS[sectionName];
+
     return (
-      <div key={sectionName} className="mb-4">
-        <h3 className="text-[#FF9619] font-medium mb-2">{sectionName}</h3>
-        <div className="space-y-2">
+      <div key={sectionName} className="mb-6">
+        <h3 className="text-[#FF9619] font-medium mb-3 text-lg">
+          {sectionTranslation.title}
+        </h3>
+        <div className="space-y-3 pl-2">
           {Object.entries(abilities).map(([abilityKey, abilityValue]) => {
-            // Verificamos si la habilidad está seleccionada
             const isChecked = Array.isArray(selectedAbilities) &&
               selectedAbilities.includes(abilityValue);
 
+            const description = sectionTranslation.abilities[abilityKey] || abilityKey;
+
             return (
-              <div key={abilityValue} className="flex items-center">
+              <div key={abilityValue} className="flex items-center hover:bg-black/10 p-2 rounded-md">
                 <input
                   type="checkbox"
-                  id={`${abilityValue}-${forceUpdate}`} // Añadimos forceUpdate al id para forzar re-render
+                  id={`${abilityValue}-${forceUpdate}`}
                   checked={isChecked}
                   onChange={() => toggleAbilitySelection(abilityValue)}
-                  className="mr-2 h-4 w-4 accent-[#FF9619]"
+                  className="mr-3 h-4 w-4 accent-[#FF9619]"
                 />
-                <label htmlFor={`${abilityValue}-${forceUpdate}`} className="text-sm text-gray-300">
-                  {abilityKey}
+                <label
+                  htmlFor={`${abilityValue}-${forceUpdate}`}
+                  className={`text-sm text-[rgb(var(--color-text-primary-${theme}))]`}
+                >
+                  {description}
                 </label>
               </div>
             );
@@ -269,69 +345,71 @@ const NewAgent = () => {
   return (
     // Envolveremos todo el componente con un AbilityGuard para verificar si puede ver este componente
     <AbilityGuard abilities={[agentFind ? ABILITIES.AGENTS.EDIT : ABILITIES.AGENTS.CREATE]}>
-      <div className={`bg-gray-900 rounded-lg w-full p-6 space-y-4 h-max ${isMobile ? "" : "mt-5"}`}>
+      <div className={`bg-[rgb(var(--color-bg-${theme}))] rounded-lg w-full p-6 space-y-4 h-max ${isMobile ? "" : "mt-5"}`}>
         {/* Header */}
-        <div className="flex items-center p-4 bg-gray-800 rounded-lg">
-          <User size={20} className="text-[#FF9619] mr-4" />
-          <h1 className="text-xl font-normal">{agentFind ? 'Editar Agente' : 'Nuevo Agente'}</h1>
+        <div className={`flex items-center p-4 bg-[rgb(var(--color-bg-${theme}-secondary))] rounded-lg`}>
+          <User size={20} className={`text-[rgb(var(--color-secondary-${theme}))] mr-4`} />
+          <h1 className={`text-xl font-normal text-[rgb(var(--color-text-primary-${theme}))]`}>
+            {agentFind ? 'Editar Agente' : 'Nuevo Agente'}
+          </h1>
         </div>
 
         {/* Form */}
         <div className="p-4 flex-1 flex flex-col space-y-6">
           {/* First Name */}
-          <div className="border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
+          <div className={`border-b border-[rgb(var(--color-text-secondary-${theme}))] pb-2 focus-within:border-[rgb(var(--color-primary-${theme}))]`}>
             <input
               type="text"
               placeholder="Nombres"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
-              className="w-full bg-transparent text-white outline-none"
+              className={`w-full bg-transparent text-[rgb(var(--color-text-primary-${theme}))] outline-none`}
             />
           </div>
 
           {/* Last Name */}
-          <div className="border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
+          <div className={`border-b border-[rgb(var(--color-text-secondary-${theme}))] pb-2 focus-within:border-[rgb(var(--color-primary-${theme}))]`}>
             <input
               type="text"
               placeholder="Apellidos"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
-              className="w-full bg-transparent text-white outline-none"
+              className={`w-full bg-transparent text-[rgb(var(--color-text-primary-${theme}))] outline-none`}
             />
           </div>
 
           {/* Email */}
-          <div className="border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
+          <div className={`border-b border-[rgb(var(--color-text-secondary-${theme}))] pb-2 focus-within:border-[rgb(var(--color-primary-${theme}))]`}>
             <input
               type="email"
               placeholder="Correo"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-transparent text-white outline-none"
+              className={`w-full bg-transparent text-[rgb(var(--color-text-primary-${theme}))] outline-none`}
             />
           </div>
 
           {/* Password - solo se muestra en modo creación */}
           {!agentFind && (
             <AbilityGuard abilities={[ABILITIES.AGENTS.CREATE]}>
-              <div className="border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
+              <div className={`border-b border-[rgb(var(--color-text-secondary-${theme}))] pb-2 focus-within:border-[rgb(var(--color-primary-${theme}))]`}>
                 <input
                   type="password"
                   placeholder="Contraseña"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-transparent text-white outline-none"
+                  className={`w-full bg-transparent text-[rgb(var(--color-text-primary-${theme}))] outline-none`}
                 />
               </div>
             </AbilityGuard>
           )}
 
           {/* Role Combobox */}
-          <div className="border-b border-gray-700 pb-2 focus-within:border-[#FF9619]">
+          <div className={`border-b border-[rgb(var(--color-text-secondary-${theme}))] pb-2 focus-within:border-[rgb(var(--color-primary-${theme}))]`}>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              className={`w-full bg-gray-900 outline-none ${role ? 'text-white' : 'text-gray-400'}`}
+              className={`w-full bg-[rgb(var(--color-bg-${theme}))] outline-none ${role ? `text-[rgb(var(--color-text-primary-${theme}))]` : `text-[rgb(var(--color-text-secondary-${theme}))]`}`}
             >
               <option value="">Seleccionar Rol</option>
               <option value="1">Administrador</option>
@@ -347,9 +425,9 @@ const NewAgent = () => {
               <button
                 type="button"
                 onClick={() => setShowAbilitiesModal(true)}
-                className="flex items-center space-x-2 py-2 px-4 bg-gray-800 hover:bg-gray-700 text-white rounded-md"
+                className={`flex items-center space-x-2 py-2 px-4 bg-[rgb(var(--color-bg-${theme}-secondary))] hover:bg-[rgb(var(--color-primary-${theme}))] text-[rgb(var(--color-text-primary-${theme}))] rounded-md`}
               >
-                <Settings size={18} className="text-[#FF9619]" />
+                <Settings size={18} className={`text-[rgb(var(--color-secondary-${theme}))]`} />
                 <span>
                   Gestionar Permisos ({selectedAbilitiesCount})
                 </span>
@@ -378,7 +456,7 @@ const NewAgent = () => {
                   <button
                     onClick={handleUpdateAgent}
                     disabled={!isFormValidForUpdate || loading}
-                    className="py-2 px-4 rounded bg-naranja-base text-white transition-colors duration-300 hover:bg-naranja-medio disabled:bg-gray-600 disabled:cursor-not-allowed"
+                    className={`py-2 px-4 rounded bg-[rgb(var(--color-primary-${theme}))] text-[rgb(var(--color-text-primary-${theme}))] transition-colors duration-300 hover:bg-[rgb(var(--color-secondary-${theme}))] disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     {loading ? 'Guardando...' : 'Actualizar'}
                   </button>
@@ -395,7 +473,7 @@ const NewAgent = () => {
                 <button
                   disabled={!isFormValid || loading}
                   onClick={handleCreateAgent}
-                  className="w-full py-3 rounded-md disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors duration-300 text-white cursor-pointer rounded-full p-2 bg-naranja-base hover:bg-naranja-medio"
+                  className={`w-full py-3 rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300 text-[rgb(var(--color-text-primary-${theme}))] cursor-pointer bg-[rgb(var(--color-secondary-${theme}))] hover:bg-[rgb(var(--color-primary-${theme}))]`}
                 >
                   {loading ? 'Guardando...' : 'Guardar'}
                 </button>
@@ -407,15 +485,15 @@ const NewAgent = () => {
         {/* Modal de Abilities */}
         {showAbilitiesModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="bg-gray-800 rounded-lg p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto">
+            <div className={`bg-[rgb(var(--color-bg-${theme}-secondary))] rounded-lg p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto`}>
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl text-white font-medium flex items-center">
-                  <CheckSquare size={20} className="text-[#FF9619] mr-2" />
+                <h2 className={`text-xl text-[rgb(var(--color-text-primary-${theme}))] font-medium flex items-center`}>
+                  <CheckSquare size={20} className={`text-[rgb(var(--color-secondary-${theme}))] mr-2`} />
                   Configurar Permisos
                 </h2>
                 <button
                   onClick={() => setShowAbilitiesModal(false)}
-                  className="text-gray-400 hover:text-white"
+                  className={`text-[rgb(var(--color-text-secondary-${theme}))] hover:text-[rgb(var(--color-text-primary-${theme}))]`}
                 >
                   ✕
                 </button>
