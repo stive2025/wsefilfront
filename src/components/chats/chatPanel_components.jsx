@@ -716,26 +716,57 @@ const ChatInterface = () => {
             setUploadProgress(0);
         }
     };
-    const handleReopenChat = async () => {
-        if (!selectedChatId || !selectedChatId.id) {
-            console.error("No chat selected");
-            return;
-        }
-
+    const handleUpdateChat = async (idChat, dataChat) => {
         try {
-            setReopeningChat(true);
-            const { call, abortController } = updateChat(selectedChatId.id, { state: "OPEN" });
-            await callEndpoint({ call, abortController });
-            setSelectedChatId(prev => ({
-                ...prev,
-                status: "OPEN"
-            }));
-            toast.success("Chat reabierto con éxito");
+          const response = await callEndpoint(updateChat(idChat, dataChat), `update_chat_${idChat}`);
+          console.log("Chat actualizado ", response);
+          return response;
         } catch (error) {
-            toast.error("Ocurrió un error al reabrir el chat");
-            console.error("Error al reabrir el chat:", error);
+          console.error("Error actualizando chat ", error);
+          throw error;
+        }
+    };
+    
+    const handleReopenChat = async () => {
+        if (!selectedChatId?.id) return;
+        
+        try {
+          setReopeningChat(true);
+          const previousState = selectedChatId.status;
+          const chatElement = document.querySelector(`[data-chat-id="${selectedChatId.id}"]`);
+      
+          // Actualizar estado en el servidor
+          await handleUpdateChat(selectedChatId.id, { state: "OPEN" });
+      
+          // Aplicar animación si el elemento existe
+          if (chatElement) {
+            chatElement.classList.add('fade-out');
+            await new Promise(resolve => setTimeout(resolve, 300));
+          }
+      
+          // Disparar evento de cambio de estado
+          const event = new CustomEvent('chatStateChanged', {
+            detail: {
+              chatId: selectedChatId.id,
+              newState: "OPEN",
+              previousState: previousState,
+              shouldRemove: true
+            }
+          });
+          window.dispatchEvent(event);
+      
+          // Actualizar el estado local del chat
+          setSelectedChatId(prev => ({
+            ...prev,
+            status: "OPEN"
+          }));
+      
+          toast.success("Chat reabierto exitosamente");
+        } catch (error) {
+          console.error("Error al reabrir el chat:", error);
+          toast.error("Error al reabrir el chat");
         } finally {
-            setReopeningChat(false);
+          setReopeningChat(false);
         }
     };
 

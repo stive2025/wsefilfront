@@ -456,7 +456,7 @@ const ChatList = ({ role = "admin" }) => {
   useEffect(() => {
     const initialParams = {
       page: 1,
-      state: stateSelected || "PENDING"
+      state:"PENDING"
     };
     
     loadChats(initialParams, false);
@@ -721,19 +721,26 @@ const ChatList = ({ role = "admin" }) => {
   useEffect(() => {
     const handleChatStateChange = async (event) => {
       const { chatId, newState, previousState } = event.detail;
+      console.log(`Chat ${chatId} changed from ${previousState} to ${newState}`);
       
-      if (stateSelected === previousState) {
-        // Remover el chat de la lista actual con animación
-        setChats(prevChats => prevChats.filter(chat => chat.id !== chatId));
-      } 
-      
-      // Si el nuevo estado coincide con el filtro actual, recargar la lista
-      if (stateSelected === newState) {
-        const params = {
-          page: 1,
-          state: stateSelected
-        };
-        await loadChats(params, false);
+      // Si el estado actual filtrado es diferente al nuevo estado del chat
+      if (stateSelected !== newState) {
+        const chatElement = document.querySelector(`[data-chat-id="${chatId}"]`);
+        if (chatElement) {
+          // Aplicar animación de salida
+          chatElement.classList.add('fade-out');
+          
+          // Esperar a que termine la animación
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
+          // Remover el chat de la lista actual
+          setChats(prevChats => prevChats.filter(chat => chat.id !== chatId));
+        }
+      }
+      // Si el chat cambió al estado que estamos filtrando actualmente
+      else if (previousState !== newState && stateSelected === newState) {
+        // Recargar la lista para incluir el nuevo chat
+        loadChats({ page: 1, state: stateSelected }, false);
       }
     };
 

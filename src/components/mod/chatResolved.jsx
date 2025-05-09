@@ -7,7 +7,7 @@ import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
 import { useTheme } from "@/contexts/themeContext.jsx";
 import toast from "react-hot-toast";
 
-const ChatTag = ({ isOpen, onClose }) => {
+const ChatResolved = ({ isOpen, onClose }) => {
   const { selectedChatId, setSelectedChatId } = useContext(ChatInterfaceClick);
   const { callEndpoint } = useFetchAndLoad();
   const { theme } = useTheme();
@@ -18,51 +18,51 @@ const ChatTag = ({ isOpen, onClose }) => {
     exit: { opacity: 0, y: 50 }
   };
 
+  // Añadir esta función
+  const handleUpdateChat = async (idChat, dataChat) => {
+    try {
+      const response = await callEndpoint(updateChat(idChat, dataChat), `update_chat_${idChat}`);
+      console.log("Chat actualizado ", response);
+      return response;
+    } catch (error) {
+      console.error("Error actualizando chat ", error);
+      throw error;
+    }
+  };
+
   if (!isOpen) return null;
 
   const handleClose = async () => {
-    if (!selectedChatId || !selectedChatId.id) {
-        console.error("No chat selected");
-        return;
-    }
-
     try {
-        const previousState = selectedChatId.status;
-        const chatElement = document.querySelector(`[data-chat-id="${selectedChatId.id}"]`);
-        
-        // Primero actualizamos el estado en el servidor
-        const { call, abortController } = updateChat(selectedChatId.id, { state: "CLOSED" });
-        await callEndpoint({ call, abortController });
-        
-        // Aplicar la animación y remover el chat
-        if (chatElement) {
-            chatElement.classList.add('fade-out');
-            
-            // Esperar a que termine la animación
-            await new Promise(resolve => setTimeout(resolve, 300));
-            
-            // Disparar evento de cambio de estado
-            const event = new CustomEvent('chatStateChanged', {
-                detail: {
-                    chatId: selectedChatId.id,
-                    newState: "CLOSED",
-                    previousState: previousState,
-                    shouldRemove: true
-                }
-            });
-            window.dispatchEvent(event);
-            
-            // Ocultar el elemento
-            chatElement.style.display = 'none';
+      const previousState = selectedChatId.status;
+      const chatElement = document.querySelector(`[data-chat-id="${selectedChatId.id}"]`);
+      
+      // Actualizar estado en el servidor
+      await handleUpdateChat(selectedChatId.id, { state: "CLOSED" });
+      
+      // Aplicar animación
+      if (chatElement) {
+        chatElement.classList.add('fade-out');
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+      
+      // Disparar evento
+      const event = new CustomEvent('chatStateChanged', {
+        detail: {
+          chatId: selectedChatId.id,
+          newState: "CLOSED",
+          previousState: previousState,
+          shouldRemove: true
         }
-        
-        setSelectedChatId(null);
-        toast.success("Chat finalizado con éxito");
+      });
+      window.dispatchEvent(event);
+      
+      setSelectedChatId(null);
+      onClose();
+      toast.success("Chat finalizado exitosamente");
     } catch (error) {
-        toast.error("Ocurrió un error al finalizar el chat");
-        console.error("Error al cerrar el chat:", error);
-    } finally {
-        onClose();
+      toast.error("Error al finalizar el chat");
+      console.error("Error:", error);
     }
   };
 
@@ -142,4 +142,4 @@ const ChatTag = ({ isOpen, onClose }) => {
   );
 };
 
-export default ChatTag;
+export default ChatResolved;
