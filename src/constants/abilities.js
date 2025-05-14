@@ -74,7 +74,7 @@ export const ABILITIES = {
     
     [ROLES.SUPERVISOR]: [
       // Acceso a chats y operaciones
-      ...Object.values(ABILITIES.CHATS),
+      ...Object.values(ABILITIES.CHATS),  // Esto ya incluye FILTER_BY_AGENT
       ...Object.values(ABILITIES.CHAT_PANEL),
       
       // Gestión de utilidades
@@ -96,6 +96,7 @@ export const ABILITIES = {
       // Acceso a chats
       ABILITIES.CHATS.VIEW,
       ABILITIES.CHATS.SEARCH,
+      ABILITIES.CHATS.FILTER_BY_AGENT, // Agregar este permiso
       ABILITIES.CHATS.FILTER_BY_STATUS,
       ABILITIES.CHATS.FILTER_BY_TAG,
       
@@ -146,4 +147,3 @@ export const ABILITIES = {
       ABILITIES.PROFILE.VIEW
     ]
   };
-  

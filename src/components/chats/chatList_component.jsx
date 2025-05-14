@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 import { useState, useEffect, useRef, useCallback, useContext } from "react";
 import { Search, ChevronLeftCircle, ChevronRightCircle, Loader, Check, Clock, AlertTriangle } from "lucide-react";
-import { ChatInterfaceClick, StateFilter, TagFilter, AgentFilter, WebSocketMessage } from "@/contexts/chats.js";
+import { ChatInterfaceClick, StateFilter, TagFilter, AgentFilter, WebSocketMessage, TempNewMessage } from "@/contexts/chats.js";
 import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
 import { getChatList, updateChat } from "@/services/chats.js";
 import { getContact, getContactChatsByName, getContactChatsByPhone } from "@/services/contacts.js";
@@ -14,6 +14,7 @@ import AbilityGuard from '@/components/common/AbilityGuard';
 import { useAuth } from '@/contexts/authContext';
 import { useTheme } from "@/contexts/themeContext";
 
+// ChatHeader component remains the same
 const ChatHeader = () => {
   const { theme } = useTheme();
 
@@ -26,9 +27,10 @@ const ChatHeader = () => {
   );
 };
 
+// SearchInput component remains the same
 const SearchInput = ({ searchQuery, setSearchQuery }) => {
   const { theme } = useTheme();
-  
+
   return (
     <AbilityGuard
       abilities={[ABILITIES.CHATS.SEARCH]}
@@ -54,9 +56,9 @@ const SearchInput = ({ searchQuery, setSearchQuery }) => {
               focus:ring-1 focus:ring-[rgb(var(--input-focus-border-${theme}))]
               outline-none`}
           />
-          <Search 
-            className={`absolute left-1 text-[rgb(var(--color-text-secondary-${theme}))]`} 
-            size={18} 
+          <Search
+            className={`absolute left-1 text-[rgb(var(--color-text-secondary-${theme}))]`}
+            size={18}
           />
         </div>
       </div>
@@ -64,6 +66,7 @@ const SearchInput = ({ searchQuery, setSearchQuery }) => {
   );
 };
 
+// TagsBar component remains the same
 const TagsBar = ({ tags }) => {
   const { theme } = useTheme();
   const containerRef = useRef(null);
@@ -85,7 +88,7 @@ const TagsBar = ({ tags }) => {
     <AbilityGuard abilities={[ABILITIES.CHATS.FILTER_BY_TAG, ABILITIES.CHATS.FILTER_BY_STATUS]} fallback={null}>
       <div className={`relative flex items-center bg-[rgb(var(--color-bg-${theme}-secondary))] p-2`}>
         <button
-          onClick={scrollLeft}  
+          onClick={scrollLeft}
           className={`absolute left-0 h-5 w-5 ml-2 flex items-center justify-center 
             bg-transparent hover:bg-[rgb(var(--input-hover-bg-${theme}))] 
             active:bg-[rgb(var(--color-primary-${theme}))] rounded-full
@@ -140,7 +143,7 @@ const TagsBar = ({ tags }) => {
   );
 };
 
-
+// AgentSelect component remains the same
 const AgentSelect = ({ role }) => {
   const { loading, callEndpoint } = useFetchAndLoad();
   const [agents, setAgents] = useState([]);
@@ -171,8 +174,8 @@ const AgentSelect = ({ role }) => {
         bg-[rgb(var(--color-bg-${theme}-secondary))]`}>
         <select
           className={`w-full bg-[rgb(var(--color-bg-${theme}-secondary))] outline-none 
-            ${agentSelected ? `text-[rgb(var(--color-text-primary-${theme}))]` : 
-            `text-[rgb(var(--color-text-secondary-${theme}))]`}
+            ${agentSelected ? `text-[rgb(var(--color-text-primary-${theme}))]` :
+              `text-[rgb(var(--color-text-secondary-${theme}))]`}
             hover:bg-[rgb(var(--input-hover-bg-${theme}))]
             focus:border-[rgb(var(--input-focus-border-${theme}))]`}
           value={agentSelected || ""}
@@ -200,8 +203,10 @@ const AgentSelect = ({ role }) => {
   );
 };
 
+// ChatItems component with updated logic to handle tempIdChat
 const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessages, setChats }) => {
   const { selectedChatId, setSelectedChatId } = useContext(ChatInterfaceClick);
+  const { tempIdChat, setTempIdChat } = useContext(TempNewMessage);
   const observerRef = useRef(null);
   const lastChatRef = useRef(null);
   const { callEndpoint } = useFetchAndLoad();
@@ -275,6 +280,7 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
     });
   }, [chats, readChats]);
 
+  // Infinity scroll logic
   useEffect(() => {
     if (loading || !hasMoreChats) return;
 
@@ -300,11 +306,24 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
     };
   }, [loading, hasMoreChats, loadMoreChats, chats.length]);
 
+  // Helper function to check if a chat is currently selected
+  const isChatSelected = (chatId) => {
+    // Check if selected through selectedChatId
+    if (selectedChatId && selectedChatId.id === chatId) {
+      return true;
+    }
+    
+    // Check if selected through tempIdChat
+    if (tempIdChat && tempIdChat === chatId) {
+      return true;
+    }
+    
+    return false;
+  };
 
   if (loading && chats.length === 0) {
     return (
-      <div className={`flex justify-center items-center py-10 
-       `}>
+      <div className={`flex justify-center items-center py-10`}>
         <Loader className="animate-spin" size={24} />
       </div>
     );
@@ -336,25 +355,28 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
             ref={index === chats.length - 1 ? lastChatRef : null}
             className={`w-full flex items-center space-x-3 p-4 
               ${theme === 'light'
-                ? selectedChatId && selectedChatId.id == item.id
+                ? isChatSelected(item.id)
                   ? 'bg-[#e9e6e6]'  // seleccionado claro
                   : 'bg-[#f9f9f9]'  // no seleccionado claro
-                : selectedChatId && selectedChatId.id == item.id
+                : isChatSelected(item.id)
                   ? 'bg-[#2e2f2f]'  // seleccionado oscuro
                   : 'bg-[#161717]'  // no seleccionado oscuro
               }
               hover:bg-[rgb(var(--input-hover-bg-${theme}))] cursor-pointer`}
             onClick={() => {
+               setTempIdChat(null);
+              // Verificar si el chat está en estado pendiente y actualizarlo
               if (item.state === "PENDING" && item.state !== "CLOSED") {
                 handleUpdateChat(item.id, { unread_message: 0, state: "OPEN" });
                 setReadChats(prev => new Set(prev).add(item.id));
-              } else if (item.unread_message > 0) {
+              } 
+              // Marcar como leído si tiene mensajes no leídos
+              else if (item.unread_message > 0) {
                 handleUpdateChat(item.id, { unread_message: 0 });
                 setReadChats(prev => new Set(prev).add(item.id));
               }
-              if (item.isContact) {
                 setSelectedChatId({
-                  id: item.chat_id,
+                  id: item.isContact? item.chat_id: item.id,
                   tag_id: item.tag_id,
                   status: item.state,
                   idContact: item.idContact,
@@ -362,20 +384,9 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
                   photo: item.avatar,
                   number: item.number,
                 });
-              } else {
-                setSelectedChatId({
-                  id: item.id,
-                  tag_id: item.tag_id,
-                  status: item.state,
-                  idContact: item.idContact,
-                  name: item.name,
-                  photo: item.avatar,
-                  number: item.number,
-                });
-              }
             }}
           >
-            <div className="relative w-10 h-10 flex-shrink-0"> {/* Añadido flex-shrink-0 y dimensiones fijas */}
+            <div className="relative w-10 h-10 flex-shrink-0">
               <img
                 src={item.avatar || "@/assets/images/default-avatar.jpg"}
                 alt="Avatar"
@@ -407,7 +418,7 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
             <div className={`text-xs text-[rgb(var(--color-text-secondary-${theme}))] 
               flex flex-col items-end`}>
               <div>{item.timestamp || new Date(item.updated_at).toLocaleDateString()}</div>
-              {(item.unread_message > 0 || item.unreadCount > 0) && !readChats.has(item.id) && (
+              {(item.unread_message > 0 || item.unreadCount > 0) && !readChats.has(item.id) && !isChatSelected(item.id) && (
                 <div className={`bg-[rgb(var(--color-primary-${theme}))] 
                   text-[rgb(var(--color-text-primary-${theme}))] 
                   rounded-full w-5 h-5 flex items-center justify-center mt-1`}>
@@ -429,7 +440,7 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
   );
 };
 
-
+// Updated ChatList component with proper handling of tempIdChat
 const ChatList = ({ role = "admin" }) => {
   const isMobile = Resize();
   const { loading, callEndpoint } = useFetchAndLoad();
@@ -446,6 +457,7 @@ const ChatList = ({ role = "admin" }) => {
   const { messageData, setMessageData } = useContext(WebSocketMessage);
   const [messageDataLocal, setMessageDataLocal] = useState(null);
   const { selectedChatId } = useContext(ChatInterfaceClick);
+  const { tempIdChat } = useContext(TempNewMessage);
   const { stateSelected } = useContext(StateFilter);
   const { tagSelected } = useContext(TagFilter);
   const { agentSelected } = useContext(AgentFilter);
@@ -456,24 +468,30 @@ const ChatList = ({ role = "admin" }) => {
   useEffect(() => {
     const initialParams = {
       page: 1,
-      state:"PENDING"
+      state: "PENDING"
     };
-    
+
     loadChats(initialParams, false);
   }, [stateSelected]);
+
+useEffect(() => {
+  if (!selectedChatId && !tempIdChat && chats.length > 0) {
+    setPage(1);
+    setHasMoreChats(true);
+    loadChats({ page: 1 }, false);
+  }
+}, [selectedChatId, tempIdChat]);
 
   useEffect(() => {
     if (messageData && messageData.body) {
       console.log("Mensaje recibido:", messageData);
       const userData = getUserData();
       const currentUserId = userData?.id;
-  
+
       if (!currentUserId || messageData.user_id !== currentUserId) {
-        console.log("Mensaje ignorado - user_id no coincide:", 
-          console.log("id en mensaje:", messageData.user_id),
-          console.log("id en localStorage:", currentUserId),
-          `Usuario actual: ${currentUserId}`, 
-          `Mensaje: ${messageData.body}`);
+        console.log("Mensaje ignorado - user_id no coincide:",
+          "id en mensaje:", messageData.user_id,
+          "id en localStorage:", currentUserId);
         return;
       }
 
@@ -492,17 +510,22 @@ const ChatList = ({ role = "admin" }) => {
         // Actualizar último mensaje y contador
         chatToUpdate.last_message = messageData.body;
         chatToUpdate.timestamp = new Date().toLocaleString();
-        
+
+        // Comprobar si el chat está seleccionado por ID normal o por ID temporal
+        const isChatCurrentlySelected = 
+          (selectedChatId && selectedChatId.id === chatToUpdate.id) || 
+          (tempIdChat && tempIdChat === chatToUpdate.id);
+
         // Incrementar contador solo si no es el chat seleccionado actualmente
-        if (!selectedChatId || selectedChatId.id !== chatToUpdate.id) {
+        if (!isChatCurrentlySelected) {
           chatToUpdate.unread_message = (chatToUpdate.unread_message || 0) + 1;
         }
 
         // Si hay archivos adjuntos
         if (messageData.media_path) {
-          chatToUpdate.last_message = messageData.media_type === 'image' 
-            ? '📷 Imagen' 
-            : messageData.media_type === 'video' 
+          chatToUpdate.last_message = messageData.media_type === 'image'
+            ? '📷 Imagen'
+            : messageData.media_type === 'video'
               ? '🎥 Video'
               : messageData.media_type === 'audio'
                 ? '🎵 Audio'
@@ -522,16 +545,18 @@ const ChatList = ({ role = "admin" }) => {
           name: messageData.sender_name || messageData.number,
           last_message: messageData.body,
           timestamp: new Date().toLocaleString(),
-          unread_message: 1,
-          state: "PENDING",
+          // Solo incrementar contador si no es el chat seleccionado
+          unread_message: (selectedChatId?.id === messageData.chat_id || 
+                         tempIdChat === messageData.chat_id) ? 0 : 1,
+          state: (tempIdChat && tempIdChat === messageData.chat_id) ? "OPEN" : "PENDING",
           avatar: "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain"
         };
 
         // Si hay archivos adjuntos
         if (messageData.media_path) {
-          newChat.last_message = messageData.media_type === 'image' 
-            ? '📷 Imagen' 
-            : messageData.media_type === 'video' 
+          newChat.last_message = messageData.media_type === 'image'
+            ? '📷 Imagen'
+            : messageData.media_type === 'video'
               ? '🎥 Video'
               : messageData.media_type === 'audio'
                 ? '🎵 Audio'
@@ -556,7 +581,7 @@ const ChatList = ({ role = "admin" }) => {
         }
       }
     }
-  }, [messageData, chats, selectedChatId]);
+  }, [messageData, chats, selectedChatId, tempIdChat]);
 
   const loadTags = async () => {
     try {
@@ -567,7 +592,6 @@ const ChatList = ({ role = "admin" }) => {
       setTags([]);
     }
   };
-
 
   const loadChats = async (params = {}, append = false) => {
     try {
@@ -610,9 +634,6 @@ const ChatList = ({ role = "admin" }) => {
         }
 
         endpoint = getChatList(filterParams);
-
-        // Aplica filtro por etiqueta
-
       }
 
       const response = await callEndpoint(endpoint, endpointKey);
@@ -639,7 +660,7 @@ const ChatList = ({ role = "admin" }) => {
                   ...chat,
                   name: "Unknown Contact",
                   avatar: "@/assets/images/default-avatar.jpg",
-                  isContact: chatIsContact  // Añadir la bandera aquí
+                  isContact: chatIsContact
                 };
               } else {
                 return {
@@ -665,7 +686,6 @@ const ChatList = ({ role = "admin" }) => {
             isContact: chatIsContact,
             profile_picture: chat.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
           };
-
         })
       );
 
@@ -693,10 +713,10 @@ const ChatList = ({ role = "admin" }) => {
     loadChats(params, true);
   }, [page, hasMoreChats, loading, searchQuery, isSearching]);
 
-
   useEffect(() => {
     loadTags();
   }, []);
+
   // Efecto para cargar chats cuando cambian los criterios
   useEffect(() => {
     setPage(1);
@@ -722,17 +742,17 @@ const ChatList = ({ role = "admin" }) => {
     const handleChatStateChange = async (event) => {
       const { chatId, newState, previousState } = event.detail;
       console.log(`Chat ${chatId} changed from ${previousState} to ${newState}`);
-      
+
       // Si el estado actual filtrado es diferente al nuevo estado del chat
       if (stateSelected !== newState) {
         const chatElement = document.querySelector(`[data-chat-id="${chatId}"]`);
         if (chatElement) {
           // Aplicar animación de salida
           chatElement.classList.add('fade-out');
-          
+
           // Esperar a que termine la animación
           await new Promise(resolve => setTimeout(resolve, 300));
-          
+
           // Remover el chat de la lista actual
           setChats(prevChats => prevChats.filter(chat => chat.id !== chatId));
         }

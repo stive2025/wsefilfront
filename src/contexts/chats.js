@@ -4,6 +4,7 @@ import { createContext } from 'react';
 export const ChatInterfaceClick = createContext(false);
 export const SearchInChatClick = createContext(false);
 export const NewMessage = createContext(false);
+export const TempNewMessage = createContext();
 
 // 📌 Contextos relacionados con la información de contacto y agentes
 export const ContactInfoClick = createContext(false);

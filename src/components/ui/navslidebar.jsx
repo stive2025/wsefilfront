@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import { User, LogOut, Contact, Bolt, Users, MessageSquare } from "lucide-react";
-import { ChatInterfaceClick } from "@/contexts/chats.js"
+import { ChatInterfaceClick, TempNewMessage } from "@/contexts/chats.js"
 import { useState, useContext, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Resize from "@/hooks/responsiveHook.jsx"
@@ -18,6 +18,7 @@ const NavSlideBar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { setSelectedChatId } = useContext(ChatInterfaceClick);
+  const { setTempIdChat } = useContext(TempNewMessage);
   const { theme } = useTheme();
 
   // Update active path when location changes
@@ -100,6 +101,7 @@ const NavSlideBar = () => {
           `}
           onClick={() => {
             setSelectedChatId(null);
+            setTempIdChat(null);
             navigate(item.path);
             if (isMobileView) setShowMenu(false);
           }}

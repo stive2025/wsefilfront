@@ -9,7 +9,7 @@ import ConectionMod from "@/components/mod/conectionMod.jsx";
 import WebSocketHook from "@/hooks/websocketHook.jsx"
 import { getCodigoQR } from "@/services/conections.js";
 import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
-import { ContactInfoClick, ChatInterfaceClick, SearchInChatClick, NewMessage, ConnectionInfo, WebSocketMessage } from "@/contexts/chats.js";
+import { ContactInfoClick,  ChatInterfaceClick, SearchInChatClick, NewMessage, ConnectionInfo, WebSocketMessage } from "@/contexts/chats.js";
 import { useTheme } from "@/contexts/themeContext";
 
 const ChatComplete = () => {
@@ -66,49 +66,49 @@ const ChatComplete = () => {
 
     return (
         <WebSocketMessage.Provider value={{ messageData, setMessageData }}>
-            <div className={`flex flex-col h-screen w-full mx-auto 
+                <div className={`flex flex-col h-screen w-full mx-auto 
                 bg-[rgb(var(--color-bg-${theme}))] 
                 text-[rgb(var(--color-text-primary-${theme}))]`}>
-                {/* WebSocketHook siempre debe estar presente para manejar la conexión */}
-                <WebSocketHook />
+                    {/* WebSocketHook siempre debe estar presente para manejar la conexión */}
+                    <WebSocketHook />
 
-                {/* Si no hay sesión activa, solo mostrar el modal de conexión */}
-                {!connectionStatus.sesion ? (
-                    <ConectionMod isOpen={true} />
-                ) : (
-                    /* Renderizado condicional basado en si hay sesión activa */
-                    isMobile ? (
-                        selectedChatId == null ? (
-                            newMessage ? (
-                                <ListContacts />
+                    {/* Si no hay sesión activa, solo mostrar el modal de conexión */}
+                    {!connectionStatus.sesion ? (
+                        <ConectionMod isOpen={true} />
+                    ) : (
+                        /* Renderizado condicional basado en si hay sesión activa */
+                        isMobile ? (
+                            selectedChatId == null ? (
+                                newMessage ? (
+                                    <ListContacts />
+                                ) : (
+                                    <ChatList />
+                                )
                             ) : (
-                                <ChatList />
+                                <>
+                                    {infoOpen ? (
+                                        <ContactInfo />
+                                    ) : searchInChat ? (
+                                        <SearchInChat />
+                                    ) : (
+                                        <ChatInterface />
+                                    )}
+                                </>
                             )
                         ) : (
-                            <>
-                                {infoOpen ? (
-                                    <ContactInfo />
-                                ) : searchInChat ? (
-                                    <SearchInChat />
-                                ) : (
-                                    <ChatInterface />
-                                )}
-                            </>
-                        )
-                    ) : (
-                        <div className={`h-screen w-full 
+                            <div className={`h-screen w-full 
                             bg-[rgb(var(--color-bg-${theme}))] 
                             text-[rgb(var(--color-text-primary-${theme}))]
                             ${searchInChat || infoOpen ? "grid grid-cols-3" : "grid grid-cols-[35%_65%]"}`}
-                        >
-                            {newMessage ? <ListContacts /> : <ChatList />}
-                            <ChatInterface />
-                            {infoOpen && <ContactInfo />}
-                            {searchInChat && <SearchInChat />}
-                        </div>
-                    )
-                )}
-            </div>
+                            >
+                                {newMessage ? <ListContacts /> : <ChatList />}
+                                <ChatInterface />
+                                {infoOpen && <ContactInfo />}
+                                {searchInChat && <SearchInChat />}
+                            </div>
+                        )
+                    )}
+                </div>
         </WebSocketMessage.Provider>
     );
 };
