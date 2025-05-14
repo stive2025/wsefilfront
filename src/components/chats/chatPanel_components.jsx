@@ -13,7 +13,7 @@ import ChatTransfer from "@/components/mod/chatTransfer.jsx";
 import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
 import ChatTag from "@/components/mod/chatTag.jsx";
 import ChatResolved from "@/components/mod/chatResolved.jsx";
-import { TagClick, ResolveClick, SearchInChatClick, ChatInterfaceClick, WebSocketMessage } from "@/contexts/chats.js";
+import { TagClick, ResolveClick, SearchInChatClick, TempNewMessage, ChatInterfaceClick, WebSocketMessage } from "@/contexts/chats.js";
 import { useContext } from "react";
 import { useLocation } from "react-router-dom";
 import { getChat, updateChat } from "@/services/chats.js";
@@ -30,6 +30,7 @@ const ChatInterface = () => {
     const { tagClick, setTagClick } = useContext(TagClick);
     const { resolveClick, setResolveClick } = useContext(ResolveClick);
     const { setSearchInChat } = useContext(SearchInChatClick);
+    const { tempIdChat, setTempIdChat } = useContext(TempNewMessage);
     const { selectedChatId, setSelectedChatId } = useContext(ChatInterfaceClick);
     const { callEndpoint } = useFetchAndLoad();
     const { messageData } = useContext(WebSocketMessage);
@@ -118,7 +119,17 @@ const ChatInterface = () => {
 
             if (isDuplicate) return;
 
-            if (selectedChatId && (selectedChatId.id === messageData.chat_id)) {
+            // Determinar el ID del chat que debemos usar para comparar
+            const chatIdToCompare = selectedChatId?.id || '';
+            const shouldUseTemp = !messageData.from_me && !chatIdToCompare && tempIdChat;
+            const relevantChatId = shouldUseTemp ? tempIdChat : messageData.chat_id;
+
+            // Comprobar si este mensaje pertenece al chat actual
+            const isCurrentChat = selectedChatId &&
+                (chatIdToCompare === relevantChatId ||
+                    (shouldUseTemp && tempIdChat === relevantChatId));
+
+            if (isCurrentChat) {
                 setChatMessages(prevMessages => {
                     // Si es un mensaje nuestro (from_me) y tenemos un mensaje temporal, reemplazarlo
                     if (messageData.from_me) {
@@ -158,9 +169,21 @@ const ChatInterface = () => {
 
                 setTimeout(scrollToBottom, 100);
             }
-        }
-    }, [messageData, selectedChatId]);
 
+            // Si el mensaje es para el chat actualmente abierto y no es un mensaje propio
+            const currentChatId = selectedChatId?.id || tempIdChat;
+
+            if (
+                currentChatId &&
+                messageData.chat_id === currentChatId &&
+                !messageData.from_me
+            ) {
+                handleUpdateChat(currentChatId, { unread_message: 0 });
+            }
+        }
+    }, [messageData, selectedChatId, tempIdChat]);
+
+    
     useEffect(() => {
         return () => {
             selectedFiles.forEach(file => URL.revokeObjectURL(file.previewUrl));
@@ -174,6 +197,8 @@ const ChatInterface = () => {
             }
         };
     }, [selectedFiles, recordedAudio, chatMessages]);
+
+
 
     // Funciones de ayuda
     const scrollToBottom = () => {
@@ -389,8 +414,8 @@ const ChatInterface = () => {
                             className={`${isPrivate === 1
                                 ? `bg-[rgb(var(--color-primary-${theme}))] mx-auto rounded-lg`
                                 : isSelf
-                                    ? `${theme === 'light' 
-                                        ? 'bg-[#d9fdd3]' 
+                                    ? `${theme === 'light'
+                                        ? 'bg-[#d9fdd3]'
                                         : 'bg-[#144d37]'} rounded-l-lg rounded-br-lg ml-auto`
                                     : `bg-[rgb(var(--color-bg-${theme}-secondary))] rounded-r-lg rounded-bl-lg mr-auto`
                                 } p-3 w-full max-w-full break-words whitespace-pre-wrap flex flex-col`}
@@ -563,7 +588,7 @@ const ChatInterface = () => {
                 ack: 0,
                 is_temp: true,
                 tempSignature: tempSignature,
-             // Firma para identificar duplicados
+                // Firma para identificar duplicados
             };
 
             // Agregar información multimedia si existe
@@ -590,7 +615,7 @@ const ChatInterface = () => {
                 number: selectedChatId.number || "",
                 body: messageText,
                 from_me: true,
-                ...(selectedChatId.id && { chat_id: selectedChatId.id }),
+                ...(selectedChatId.id || tempIdChat ? { chat_id: selectedChatId.id || tempIdChat } : {}),
                 ...(selectedChatId.idContact && { contact_id: selectedChatId.idContact }),
                 tempSignature: tempSignature // Incluir la firma en el payload al servidor
             };
@@ -689,9 +714,9 @@ const ChatInterface = () => {
                 });
 
                 if (response.chat_id) {
+                    setTempIdChat(response.chat_id);
                     setSelectedChatId(prev => ({
                         ...prev,
-                        id: response.chat_id,
                         status: "OPEN"
                     }));
                     setIsNewChat(false);
@@ -718,55 +743,55 @@ const ChatInterface = () => {
     };
     const handleUpdateChat = async (idChat, dataChat) => {
         try {
-          const response = await callEndpoint(updateChat(idChat, dataChat), `update_chat_${idChat}`);
-          console.log("Chat actualizado ", response);
-          return response;
+            const response = await callEndpoint(updateChat(idChat, dataChat), `update_chat_${idChat}`);
+            console.log("Chat actualizado ", response);
+            return response;
         } catch (error) {
-          console.error("Error actualizando chat ", error);
-          throw error;
+            console.error("Error actualizando chat ", error);
+            throw error;
         }
     };
-    
+
     const handleReopenChat = async () => {
         if (!selectedChatId?.id) return;
-        
+
         try {
-          setReopeningChat(true);
-          const previousState = selectedChatId.status;
-          const chatElement = document.querySelector(`[data-chat-id="${selectedChatId.id}"]`);
-      
-          // Actualizar estado en el servidor
-          await handleUpdateChat(selectedChatId.id, { state: "OPEN" });
-      
-          // Aplicar animación si el elemento existe
-          if (chatElement) {
-            chatElement.classList.add('fade-out');
-            await new Promise(resolve => setTimeout(resolve, 300));
-          }
-      
-          // Disparar evento de cambio de estado
-          const event = new CustomEvent('chatStateChanged', {
-            detail: {
-              chatId: selectedChatId.id,
-              newState: "OPEN",
-              previousState: previousState,
-              shouldRemove: true
+            setReopeningChat(true);
+            const previousState = selectedChatId.status;
+            const chatElement = document.querySelector(`[data-chat-id="${selectedChatId.id}"]`);
+
+            // Actualizar estado en el servidor
+            await handleUpdateChat(selectedChatId.id, { state: "OPEN" });
+
+            // Aplicar animación si el elemento existe
+            if (chatElement) {
+                chatElement.classList.add('fade-out');
+                await new Promise(resolve => setTimeout(resolve, 300));
             }
-          });
-          window.dispatchEvent(event);
-      
-          // Actualizar el estado local del chat
-          setSelectedChatId(prev => ({
-            ...prev,
-            status: "OPEN"
-          }));
-      
-          toast.success("Chat reabierto exitosamente");
+
+            // Disparar evento de cambio de estado
+            const event = new CustomEvent('chatStateChanged', {
+                detail: {
+                    chatId: selectedChatId.id,
+                    newState: "OPEN",
+                    previousState: previousState,
+                    shouldRemove: true
+                }
+            });
+            window.dispatchEvent(event);
+
+            // Actualizar el estado local del chat
+            setSelectedChatId(prev => ({
+                ...prev,
+                status: "OPEN"
+            }));
+
+            toast.success("Chat reabierto exitosamente");
         } catch (error) {
-          console.error("Error al reabrir el chat:", error);
-          toast.error("Error al reabrir el chat");
+            console.error("Error al reabrir el chat:", error);
+            toast.error("Error al reabrir el chat");
         } finally {
-          setReopeningChat(false);
+            setReopeningChat(false);
         }
     };
 
@@ -923,7 +948,7 @@ const ChatInterface = () => {
                         ref={messagesContainerRef}
                         className={`flex-1 overflow-y-auto p-4 space-y-2 scrollbar-hide`}
                         style={{
-                            backgroundImage: theme === 'dark' 
+                            backgroundImage: theme === 'dark'
                                 ? "url('https://i.pinimg.com/736x/cd/3d/62/cd3d628f57875af792c07d6ad262391c.jpg')"
                                 : "url('https://i.pinimg.com/originals/2b/45/cf/2b45cfec4c0d3c56aed4ccd30b61bd3a.jpg')",
                             backgroundSize: "cover",

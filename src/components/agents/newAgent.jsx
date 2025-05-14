@@ -92,8 +92,6 @@ const NewAgent = () => {
   // Actualizar las habilidades cuando cambia el rol (solo si no estamos en modo edición)
   useEffect(() => {
     if (role && !agentFind) {
-
-
       // Mapear el valor del rol a la clave del objeto ROLES
       let roleKey;
       switch (role) {
@@ -105,7 +103,17 @@ const NewAgent = () => {
       }
 
       if (roleKey && ROLE_DEFAULT_ABILITIES[roleKey]) {
-        setSelectedAbilities(ROLE_DEFAULT_ABILITIES[roleKey]);
+        // Crear una nueva referencia del array de permisos
+        const newAbilities = [...ROLE_DEFAULT_ABILITIES[roleKey]];
+        
+        // Asegurarnos de incluir FILTER_BY_AGENT para roles específicos
+        if (roleKey === ROLES.SUPERVISOR || roleKey === ROLES.AGENT) {
+          if (!newAbilities.includes(ABILITIES.CHATS.FILTER_BY_AGENT)) {
+            newAbilities.push(ABILITIES.CHATS.FILTER_BY_AGENT);
+          }
+        }
+
+        setSelectedAbilities(newAbilities);
         // Forzar actualización de la UI
         setForceUpdate(prev => prev + 1);
       } else {
