@@ -127,6 +127,7 @@ const WebSocketHook = () => {
                         // Si es un mensaje de chat (tiene campo body), procesarlo específicamente
                         if (data.body) {
                             console.log("💬 Mensaje de chat recibido");
+                            console.log("Mensaje completo:", data); 
                             // Esta parte permanece igual para manejar mensajes de chat
                             const normalizedMessage = {
                                 id: data.id_message_wp || Date.now().toString(),

@@ -639,9 +639,10 @@ const ChatInterface = () => {
                         const base64Data = await fileToBase64(fileObj.file);
                         mediaItems.push({
                             type: fileObj.type,
+                            media_type: fileObj.file.type,
                             media: base64Data,
                             caption: messageText || '',
-                            ...(fileObj.type === 'document' && { filename: fileObj.file.name })
+                            filename: fileObj.file.name
                         });
                     } catch (error) {
                         console.error(`Error procesando archivo ${fileObj.file.name}:`, error);
@@ -655,6 +656,7 @@ const ChatInterface = () => {
                         const audioBase64 = await fileToBase64(audioToSend.blob);
                         mediaItems.push({
                             type: 'audio',
+                            media_type: 'audio/wav',
                             media: audioBase64,
                             caption: messageText || '',
                             filename: 'audio_message.wav'
