@@ -6,24 +6,24 @@ const WebSocketHook = () => {
     const { setCodigoQR } = useContext(ConnectionQR);
     const { setIsConnected } = useContext(ConnectionInfo);
     const { setMessageData } = useContext(WebSocketMessage);
-    
+
     // Referencia para rastrear el último mensaje procesado
     const lastMessageRef = useRef(null);
 
     useEffect(() => {
         let conn;
         let reconnectTimeout;
-        
+
         const userDataString = GetCookieItem("userData");
-        
+
         if (!userDataString) {
             console.error("No se encontró userData en las cookies");
             return;
         }
-        
+
         const userData = JSON.parse(userDataString);
         const userId = userData.id;
-        
+
         if (!userId) {
             console.error("No se encontró ID de usuario en las cookies");
             return;
@@ -34,7 +34,7 @@ const WebSocketHook = () => {
             if (reconnectTimeout) {
                 clearTimeout(reconnectTimeout);
             }
-            
+
             // Cerrar conexión previa si existe
             if (conn) {
                 try {
@@ -53,13 +53,13 @@ const WebSocketHook = () => {
 
             conn.onerror = (error) => {
                 console.error("🔴 Error en WebSocket: ", error);
-                
+
                 // En caso de error, cerrar y reconectar
                 try {
                     conn.close();
                 } catch (e) {
                     console.error("Error al cerrar conexión WebSocket en error:", e);
-                    }
+                }
                 console.log("🔄 Reconectando WebSocket...");
                 reconnectTimeout = setTimeout(connectWebSocket, 3000);
             };
@@ -71,29 +71,30 @@ const WebSocketHook = () => {
 
             conn.onmessage = (e) => {
                 try {
+                    console.log('🔍 Raw WebSocket data received:', e.data);
                     const data = JSON.parse(e.data);
-                    
+
                     // Crear un ID único para el mensaje
                     const messageId = data.id_message_wp || data.id || `${data.user_id}_${data.status}_${Date.now()}`;
-                    
+
                     if (lastMessageRef.current === messageId) {
                         return;
                     }
-                    
+
                     lastMessageRef.current = messageId;
-                    
+
                     if (data.user_id && data.user_id.toString() === userId.toString()) {
                         // Manejar estados de conexión...
                         if (data.status === "DISCONNECTED" || data.estatus === "DISCONNECTED") {
                             console.log("🔌 Usuario desconectado según WebSocket");
-                            
+
                             setIsConnected({
                                 sesion: false,
                                 name: '',
                                 number: '',
                                 userId
                             });
-                            
+
                             // Actualizar código QR si está presente
                             if (data.qr_code) {
                                 console.log("🔄 Actualizando código QR:", data.qr_code.substring(0, 20) + "...");
@@ -103,7 +104,7 @@ const WebSocketHook = () => {
                             }
                         } else if (data.status === "CONNECTED" || data.estatus === "CONNECTED") {
                             console.log("🔌 Usuario conectado según WebSocket");
-                            
+
                             setIsConnected({
                                 sesion: true,
                                 name: data.name || '',
@@ -121,10 +122,10 @@ const WebSocketHook = () => {
                                 chat_id: data.chat_id,
                                 number: data.number,
                                 notify_name: data.notify_name,
-                                timestamp: data.timestamp ? 
-                                    (typeof data.timestamp === 'number' ? 
-                                        new Date(data.timestamp * 1000).toISOString() : 
-                                        data.timestamp) : 
+                                timestamp: data.timestamp ?
+                                    (typeof data.timestamp === 'number' ?
+                                        new Date(data.timestamp * 1000).toISOString() :
+                                        data.timestamp) :
                                     new Date().toISOString(),
                                 created_at: data.created_at || new Date().toISOString(),
                                 media_type: data.media_type || 'chat',
@@ -138,7 +139,7 @@ const WebSocketHook = () => {
                                 fileformat: data.fileformat || '',
                                 ack: data.ack || 0
                             };
-                            
+
                             setMessageData(normalizedMessage);
                         }
                     } else {
@@ -158,7 +159,7 @@ const WebSocketHook = () => {
             if (reconnectTimeout) {
                 clearTimeout(reconnectTimeout);
             }
-            
+
             if (conn) {
                 console.log("Cerrando conexión WebSocket (componente desmontado)");
                 conn.close();

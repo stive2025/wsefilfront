@@ -24,7 +24,7 @@ import { useTheme } from "@/contexts/themeContext";
 const ChatInterface = () => {
 
 
-    const SERVER_URL = 'http://193.46.198.228:8085/back/public'; 
+    const SERVER_URL = 'http://193.46.198.228:8085/back/public';
 
     const isMobile = Resize();
     const location = useLocation();
@@ -86,7 +86,7 @@ const ChatInterface = () => {
                 const errorDiv = document.createElement('div');
                 errorDiv.className = 'text-red-500 p-2 rounded bg-red-100 dark:bg-red-900 text-sm';
                 errorDiv.textContent = `Error cargando ${type}`;
-                
+
                 // Reemplazar el elemento multimedia con el mensaje de error
                 container.innerHTML = '';
                 container.appendChild(errorDiv);
@@ -141,7 +141,7 @@ const ChatInterface = () => {
     useEffect(() => {
         if (messageData) {
             console.log('Mensaje recibido del WebSocket:', messageData);
-            
+
             // Solo procesar si es un mensaje válido
             if (messageData.body || messageData.media_type) {
                 const normalizedMessage = {
@@ -163,7 +163,7 @@ const ChatInterface = () => {
                 };
 
                 console.log('Mensaje normalizado:', normalizedMessage);
-                
+
                 // Ignorar mensajes que ya fueron mostrados por el flujo optimista
                 const isDuplicate = chatMessages?.some(msg =>
                     (msg.id === messageData.id) || // Mensaje ya existe con ID real
@@ -455,44 +455,25 @@ const ChatInterface = () => {
 
     // Funciones para mensajes
     const renderMediaContent = (message) => {
-        // Mostrar todos los campos relevantes del mensaje
-        console.log('Datos del mensaje multimedia:', {
-            message_id: message.id,
-            media_type: message.media_type,
-            media_url: message.media_url,
-            media_path: message.media_path,
-            filename: message.filename,
-            data: message.data,
-            is_temp: message.is_temp,
-            body: message.body
-        });
 
-        const { media_type, media_url, data, filename, body, media_path, is_temp } = message;
-        
-        // Construir la URL del medio de manera más robusta
+        const { media_type, localBlob, filename, body, media_path, is_temp } = message;
+
+        // Construct the media URL more robustly
         let mediaSource;
-        if (is_temp) {
-            mediaSource = media_path; // URL local temporal
-        } else if (data) {
-            mediaSource = data; // Datos en base64
-        } else if (media_url) {
-            // Si la URL ya es completa, usarla directamente, si no, construirla
-            mediaSource = media_url.startsWith('http') ? 
-                media_url : 
-                `${SERVER_URL}/${media_url}`;
+        if (is_temp && localBlob) {
+            // For temporary messages (newly uploaded files), use the blob URL directly
+            mediaSource = URL.createObjectURL(localBlob);
+            // Store URL for cleanup when component unmounts
+            message.tempBlobUrl = mediaSource;
+        } else if (is_temp && media_path && !media_path.startsWith('http')) {
+            // For temporary messages with a media_path that's already a blob URL
+            mediaSource = media_path;
         } else if (media_path) {
-            // Último recurso: usar media_path
-            mediaSource = media_path.startsWith('http') ? 
-                media_path : 
+            // For server-stored media
+            mediaSource = media_path.startsWith('http') ?
+                media_path :
                 `${SERVER_URL}/${media_path}`;
         }
-
-        console.log('URL final construida:', {
-            mediaSource,
-            is_temp,
-            originalMediaUrl: media_url,
-            originalMediaPath: media_path
-        });
 
         switch (media_type) {
             case 'image':
@@ -721,13 +702,15 @@ const ChatInterface = () => {
             isChatClosed) {
             return;
         }
-        // Crear mensaje temporal con ID único basado en contenido
+
         const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        const tempSignature = `${messageText}-${selectedFiles.length}-${!!recordedAudio}`;
+        const tempSignature = tempId;
 
         try {
             setSendingMessage(true);
             setUploadProgress(0);
+
+            // Modificar cómo creamos el mensaje temporal
             const newMessage = {
                 id: tempId,
                 body: messageText,
@@ -736,16 +719,20 @@ const ChatInterface = () => {
                 ack: 0,
                 is_temp: true,
                 tempSignature: tempSignature,
-                // Firma para identificar duplicados
             };
 
-            // Agregar información multimedia si existe
+            // Modificar cómo manejamos los archivos multimedia temporales
             if (selectedFiles[0]) {
-                newMessage.media_type = selectedFiles[0].type;
-                newMessage.media_path = selectedFiles[0].previewUrl;
+                const file = selectedFiles[0];
+                newMessage.media_type = file.type;
+                newMessage.media_path = file.previewUrl;
+                // Agregar el blob directamente al mensaje temporal
+                newMessage.localBlob = file.file;
             } else if (recordedAudio) {
                 newMessage.media_type = 'audio';
                 newMessage.media_path = recordedAudio.url;
+                // Agregar el blob directamente al mensaje temporal
+                newMessage.localBlob = recordedAudio.blob;
             }
 
             setChatMessages(prev => prev ? [...prev, newMessage] : [newMessage]);
@@ -765,8 +752,17 @@ const ChatInterface = () => {
                 from_me: true,
                 ...(selectedChatId.id || tempIdChat ? { chat_id: selectedChatId.id || tempIdChat } : {}),
                 ...(selectedChatId.idContact && { contact_id: selectedChatId.idContact }),
-                tempSignature: tempSignature // Incluir la firma en el payload al servidor
+                tempSignature: tempSignature
             };
+
+            // Log del payload inicial
+            console.log('Payload inicial:', {
+                messagePayload,
+                selectedChatId,
+                tempIdChat,
+                hasFiles: filesToSend.length > 0,
+                hasAudio: !!audioToSend
+            });
 
             // Procesar archivos para enviar al servidor
             if (filesToSend.length > 0 || audioToSend) {
@@ -816,22 +812,26 @@ const ChatInterface = () => {
 
                 if (mediaItems.length > 0) {
                     messagePayload.media = JSON.stringify(mediaItems);
+                    // Log del payload con multimedia
+                    console.log('Payload con multimedia:', {
+                        ...messagePayload,
+                        mediaItemsCount: mediaItems.length,
+                        chat_id: messagePayload.chat_id || 'No chat_id present'
+                    });
                 }
             }
 
-            // Enviar al servidor con progreso
             const { call, abortController } = sendMessage(messagePayload, (progress) => {
                 setUploadProgress(progress);
             });
             const response = await callEndpoint({ call, abortController });
 
-            // Agregar console.log para ver la respuesta cuando no hay chatId
-            if (!selectedChatId.id) {
-                console.log('Respuesta del servidor al enviar mensaje sin chatId:', {
-                    response,
-                    messagePayload
-                });
-            }
+            // Log de la respuesta del servidor
+            console.log('Respuesta del servidor:', {
+                response,
+                hadChatId: !!messagePayload.chat_id,
+                newChatId: response?.chat_id
+            });
 
             if (response) {
                 // Actualizar mensaje temporal con datos del servidor
@@ -848,8 +848,6 @@ const ChatInterface = () => {
                                 ...(response.media_url && {
                                     media_path: response.media_url
                                 }),
-                                // Eliminar la firma temporal ya que ahora es un mensaje real
-                                tempSignature: undefined
                             };
 
                             // Liberar URL temporal si existía
@@ -873,8 +871,9 @@ const ChatInterface = () => {
                 }
             }
         } catch (error) {
-            console.error("Error al enviar:", error);
-
+            console.error("Error al enviar mensaje:", {
+                error,
+            });
             // Marcar mensaje como fallido usando tanto el ID como la firma
             setChatMessages(prev => {
                 if (!prev) return [];
@@ -887,6 +886,16 @@ const ChatInterface = () => {
 
             toast.error(error.response?.data?.message || "Error al enviar el mensaje");
         } finally {
+            // Asegurarse de limpiar los blobs en caso de error
+            setChatMessages(prev => {
+                if (!prev) return [];
+                return prev.map(msg => {
+                    if (msg.tempBlobUrl) {
+                        URL.revokeObjectURL(msg.tempBlobUrl);
+                    }
+                    return msg;
+                });
+            });
             setSendingMessage(false);
             setUploadProgress(0);
         }
@@ -922,7 +931,7 @@ const ChatInterface = () => {
             // Disparar evento de cambio de estado
             const event = new CustomEvent('chatStateChanged', {
                 detail: {
-                    chatId: selectedChatId.id,
+                    chat_id: selectedChatId.id,
                     newState: "OPEN",
                     previousState: previousState,
                     shouldRemove: true
