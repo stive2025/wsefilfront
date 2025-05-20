@@ -149,38 +149,6 @@ const ChatInterface = () => {
             });
 
             if (messageData.body || messageData.media_type) {
-                // Normalizar el mensaje de manera consistente
-                const normalizedMessage = {
-                    id: messageData.id_message_wp || messageData.id,
-                    body: messageData.body || '',
-                    // Corregir la lógica del from_me
-                    from_me: messageData.from_me === true || messageData.from_me === "true",
-                    chat_id: messageData.chat_id,
-                    media_type: messageData.media_type || 'chat',
-                    media_url: messageData.media_url || '',
-                    media_path: messageData.media_url ? `${SERVER_URL}/${messageData.media_url}` : '',
-                    data: messageData.data || '',
-                    filename: messageData.filename || '',
-                    filetype: messageData.filetype || '',
-                    fileformat: messageData.fileformat || '',
-                    is_private: messageData.is_private || 0,
-                    created_at: messageData.created_at || messageData.timestamp || new Date().toISOString(),
-                    ack: messageData.ack || 0,
-                    is_temp: false
-                };
-
-                console.log('Mensaje normalizado para UI:', normalizedMessage);
-
-                // Ignorar mensajes que ya fueron mostrados por el flujo optimista
-                const isDuplicate = chatMessages?.some(msg =>
-                    (msg.id === messageData.id) || // Mensaje ya existe con ID real
-                    (msg.is_temp && msg.body === messageData.body &&
-                        msg.from_me === (messageData.from_me ? "true" : "false") &&
-                        (!msg.media_path || msg.media_path === messageData.media_url)) // Mismo contenido
-                );
-
-                if (isDuplicate) return;
-
                 // Determinar el ID del chat que debemos usar para comparar
                 const chatIdToCompare = selectedChatId?.id || '';
                 const shouldUseTemp = !messageData.from_me && !chatIdToCompare && tempIdChat;
@@ -193,47 +161,52 @@ const ChatInterface = () => {
 
                 if (isCurrentChat) {
                     setChatMessages(prevMessages => {
-                        const normalizedMessage = {
-                            id: messageData.id_message_wp || messageData.id,
-                            body: messageData.body || '',
-                            from_me: messageData.from_me === true || messageData.from_me === "false",
-                            media_type: messageData.media_type || 'chat',
-                            // Construir URL completa para medios
-                            media_path: messageData.media_url ? `${SERVER_URL}/${messageData.media_url}` : '',
-                            media_url: messageData.media_url ? `${SERVER_URL}/${messageData.media_url}` : '',
-                            data: messageData.data || '',
-                            filename: messageData.filename || '',
-                            filetype: messageData.filetype || '',
-                            fileformat: messageData.fileformat || '',
-                            is_private: messageData.is_private || 0,
-                            created_at: messageData.created_at || new Date().toISOString(),
-                            ack: messageData.ack || 0,
-                            is_temp: false
-                        };
+                        if (!prevMessages) return [];
 
-                        // Si es un mensaje nuestro (from_me) y tenemos un mensaje temporal, reemplazarlo
-                        if (messageData.from_me) {
-                            const tempMessageIndex = prevMessages?.findIndex(msg =>
-                                msg.is_temp &&
-                                msg.body === messageData.body &&
-                                (!msg.media_path || msg.media_path === messageData.media_url)
-                            );
+                        // Buscar si existe un mensaje temporal que corresponda
+                        const tempMessageIndex = prevMessages.findIndex(msg =>
+                            msg.is_temp &&
+                            msg.body === messageData.body &&
+                            msg.from_me === (messageData.from_me === true || messageData.from_me === "true") &&
+                            (!msg.media_path || msg.media_path === messageData.media_url)
+                        );
 
-                            if (tempMessageIndex !== -1 && tempMessageIndex !== undefined) {
-                                const newMessages = [...prevMessages];
-                                newMessages[tempMessageIndex] = {
-                                    ...newMessages[tempMessageIndex],
-                                    id: messageData.id,
-                                    is_temp: false,
-                                    ack: messageData.ack || 1,
-                                    ...(messageData.media_url && { media_path: messageData.media_url })
-                                };
-                                return newMessages;
-                            }
+                        // Si encontramos un mensaje temporal, actualizarlo
+                        if (tempMessageIndex !== -1) {
+                            const newMessages = [...prevMessages];
+                            newMessages[tempMessageIndex] = {
+                                ...newMessages[tempMessageIndex],
+                                id: messageData.id_message_wp || messageData.id,
+                                is_temp: false,
+                                ack: messageData.ack || 1,
+                                media_path: messageData.media_url ? `${SERVER_URL}/${messageData.media_url}` : newMessages[tempMessageIndex].media_path
+                            };
+                            return newMessages;
                         }
 
-                        // Si no es un mensaje nuestro o no encontramos el temporal, agregar nuevo
-                        return prevMessages ? [...prevMessages, normalizedMessage] : [normalizedMessage];
+                        // Si no es un mensaje temporal (es decir, es un mensaje nuevo recibido), agregarlo
+                        if (!messageData.from_me) {
+                            const normalizedMessage = {
+                                id: messageData.id_message_wp || messageData.id,
+                                body: messageData.body || '',
+                                from_me: messageData.from_me === true || messageData.from_me === "false",
+                                media_type: messageData.media_type || 'chat',
+                                media_path: messageData.media_url ? `${SERVER_URL}/${messageData.media_url}` : '',
+                                media_url: messageData.media_url ? `${SERVER_URL}/${messageData.media_url}` : '',
+                                data: messageData.data || '',
+                                filename: messageData.filename || '',
+                                filetype: messageData.filetype || '',
+                                fileformat: messageData.fileformat || '',
+                                is_private: messageData.is_private || 0,
+                                created_at: messageData.created_at || new Date().toISOString(),
+                                ack: messageData.ack || 0,
+                                is_temp: false
+                            };
+                            return [...prevMessages, normalizedMessage];
+                        }
+
+                        // Si no encontramos mensaje temporal y es un mensaje propio, no hacer nada
+                        return prevMessages;
                     });
 
                     setTimeout(scrollToBottom, 100);
@@ -241,12 +214,9 @@ const ChatInterface = () => {
 
                 // Si el mensaje es para el chat actualmente abierto y no es un mensaje propio
                 const currentChatId = selectedChatId?.id || tempIdChat;
-
-                if (
-                    currentChatId &&
-                    messageData.chat_id === currentChatId &&
-                    !messageData.from_me
-                ) {
+                if (currentChatId && 
+                    messageData.chat_id === currentChatId && 
+                    !messageData.from_me) {
                     handleUpdateChat(currentChatId, { unread_message: 0 });
                 }
             }
@@ -518,7 +488,7 @@ const ChatInterface = () => {
         if(message.media_path?.startsWith('blob:')) {
             mediaSource = message.media_path;
             console.log('🔗 Usando URL temporal:', mediaSource);
-        }else if (message.filename && message.media_path?.startsWith("files/")) {
+        }else if (message.filename && message.media_path?.startsWith("files/") || message.filename?.startsWith("files/")) {
             mediaSource = `${SERVER_URL}${message.filename}`;
 
         }else if(message.filename && message.mediaUrl?.startsWith("files/")) {
