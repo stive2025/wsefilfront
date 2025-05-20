@@ -57,9 +57,11 @@ const ChatInterface = () => {
     const [reopeningChat, setReopeningChat] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
+
+    const [record_stream, setStream] = useState(null);  // Reemplaza mediaRecorderRef
+
     // Referencias
     const fileInputRef = useRef(null);
-    const mediaRecorderRef = useRef(null);
     //const audioChunksRef = useRef([]);
     const messagesContainerRef = useRef(null);
 
@@ -67,6 +69,60 @@ const ChatInterface = () => {
     const isChatClosed = selectedChatId?.status === "CLOSED";
     const shouldShowChat = selectedChatId && (selectedChatId.id || selectedChatId.idContact || selectedChatId.number);
     const hasMessages = chatMessages && chatMessages.length > 0;
+
+
+    const handleMicClick = async () => {
+        if (isRecording) {
+            if (record_stream) {
+                record_stream.stop();
+                setIsRecording(false);
+            }
+        } else {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const recorder = new MediaRecorder(stream);
+
+                recorder.start();
+                setStream(recorder);
+                setIsRecording(true);
+
+                const blobToBase64 = (blob) => {
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                            resolve(reader.result);
+                        };
+                        reader.onerror = reject;
+                        reader.readAsDataURL(blob);
+                    });
+                };
+
+                recorder.addEventListener('dataavailable', async (e) => {
+                    const base64 = await blobToBase64(e.data);
+                    const audioUrl = URL.createObjectURL(e.data);
+                    const fileName = `audio_${new Date().toISOString()}.${getExtension(recorder.mimeType)}`;
+
+
+                    setRecordedAudio({
+                        blob: e.data,
+                        url: audioUrl,
+                        name: fileName,
+                        base64: base64 // Guarda el base64 completo
+                    });
+                    stream.getTracks().forEach(track => track.stop());
+                });
+
+            } catch (error) {
+                console.error("Error accessing microphone:", error);
+                alert("Couldn't access microphone. Please check permissions.");
+            }
+        }
+    };
+
+    
+    const getExtension = (mimeType) => {
+        return mimeType.split("/")[1] || "webm";
+    };
 
     const handleMediaError = (element, type) => {
         console.log(`Intentando cargar ${type} desde:`, element.src);
@@ -214,8 +270,8 @@ const ChatInterface = () => {
 
                 // Si el mensaje es para el chat actualmente abierto y no es un mensaje propio
                 const currentChatId = selectedChatId?.id || tempIdChat;
-                if (currentChatId && 
-                    messageData.chat_id === currentChatId && 
+                if (currentChatId &&
+                    messageData.chat_id === currentChatId &&
                     !messageData.from_me) {
                     handleUpdateChat(currentChatId, { unread_message: 0 });
                 }
@@ -367,111 +423,7 @@ const ChatInterface = () => {
         });
     };
 
-    const handleMicClick = async () => {
-        if (isRecording) {
-            if (mediaRecorderRef.current) {
-                mediaRecorderRef.current.stop();
-                setIsRecording(false);
-            }
-        } else {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                const audioContext = new AudioContext();
-                const source = audioContext.createMediaStreamSource(stream);
-                const processor = audioContext.createScriptProcessor(1024, 1, 1);
 
-                source.connect(processor);
-                processor.connect(audioContext.destination);
-
-                const chunks = [];
-
-                processor.onaudioprocess = (e) => {
-                    const channelData = e.inputBuffer.getChannelData(0);
-                    const wavData = new Float32Array(channelData);
-                    chunks.push(wavData);
-                };
-
-                mediaRecorderRef.current = {
-                    stop: () => {
-                        stream.getTracks().forEach(track => track.stop());
-                        processor.disconnect();
-                        source.disconnect();
-
-                        // Convertir los chunks a WAV
-                        const sampleRate = audioContext.sampleRate;
-                        const numChannels = 1;
-                        const bitsPerSample = 16;
-
-                        // Concatenar todos los chunks
-                        const allChunks = new Float32Array(chunks.reduce((acc, chunk) => acc + chunk.length, 0));
-                        let offset = 0;
-                        chunks.forEach(chunk => {
-                            allChunks.set(chunk, offset);
-                            offset += chunk.length;
-                        });
-
-                        // Convertir Float32Array a Int16Array (16 bits por muestra)
-                        const int16Data = new Int16Array(allChunks.length);
-                        allChunks.forEach((float, i) => {
-                            int16Data[i] = float < 0 ? float * 0x8000 : float * 0x7FFF;
-                        });
-
-                        // Crear el header WAV
-                        const wavHeader = createWavHeader(int16Data.length, sampleRate, numChannels, bitsPerSample);
-
-                        // Combinar header y datos
-                        const wavBlob = new Blob([wavHeader, int16Data], { type: 'audio/wav' });
-                        const audioUrl = URL.createObjectURL(wavBlob);
-
-                        setRecordedAudio({
-                            blob: wavBlob,
-                            url: audioUrl,
-                            name: `audio_${new Date().toISOString()}.wav`
-                        });
-                    }
-                };
-
-                setIsRecording(true);
-
-            } catch (error) {
-                console.error("Error al acceder al micrófono:", error);
-                alert("No se pudo acceder al micrófono. Verifica los permisos.");
-            }
-        }
-    };
-
-    // Función auxiliar para crear el header WAV
-    const createWavHeader = (dataLength, sampleRate, numChannels, bitsPerSample) => {
-        const header = new ArrayBuffer(44);
-        const view = new DataView(header);
-
-        // "RIFF" chunk descriptor
-        writeString(view, 0, 'RIFF');
-        view.setUint32(4, 36 + dataLength * 2, true);
-        writeString(view, 8, 'WAVE');
-
-        // "fmt " sub-chunk
-        writeString(view, 12, 'fmt ');
-        view.setUint32(16, 16, true); // fmt chunk size
-        view.setUint16(20, 1, true); // audio format (PCM)
-        view.setUint16(22, numChannels, true);
-        view.setUint32(24, sampleRate, true);
-        view.setUint32(28, sampleRate * numChannels * bitsPerSample / 8, true); // byte rate
-        view.setUint16(32, numChannels * bitsPerSample / 8, true); // block align
-        view.setUint16(34, bitsPerSample, true);
-
-        // "data" sub-chunk
-        writeString(view, 36, 'data');
-        view.setUint32(40, dataLength * 2, true);
-
-        return header;
-    };
-
-    const writeString = (view, offset, string) => {
-        for (let i = 0; i < string.length; i++) {
-            view.setUint8(offset + i, string.charCodeAt(i));
-        }
-    };
 
 
     // Funciones para mensajes
@@ -485,13 +437,13 @@ const ChatInterface = () => {
         });
 
         let mediaSource;
-        if(message.media_path?.startsWith('blob:')) {
+        if (message.media_path?.startsWith('blob:')) {
             mediaSource = message.media_path;
             console.log('🔗 Usando URL temporal:', mediaSource);
-        }else if (message.filename && message.media_path?.startsWith("files/") || message.filename?.startsWith("files/")) {
+        } else if (message.filename && message.media_path?.startsWith("files/") || message.filename?.startsWith("files/")) {
             mediaSource = `${SERVER_URL}${message.filename}`;
 
-        }else if(message.filename && message.mediaUrl?.startsWith("files/")) {
+        } else if (message.filename && message.mediaUrl?.startsWith("files/")) {
             mediaSource = `${SERVER_URL}${message.mediaUrl}`;
 
         } else if (message.media_path?.startsWith('http')) {
@@ -788,13 +740,7 @@ const ChatInterface = () => {
             };
 
             // Log del payload inicial
-            console.log('Payload inicial:', {
-                messagePayload,
-                selectedChatId,
-                tempIdChat,
-                hasFiles: filesToSend.length > 0,
-                hasAudio: !!audioToSend
-            });
+            console.log('Payload inicial:', messagePayload);
 
             // Procesar archivos para enviar al servidor
             if (filesToSend.length > 0 || audioToSend) {
@@ -804,11 +750,13 @@ const ChatInterface = () => {
                     return new Promise((resolve, reject) => {
                         const reader = new FileReader();
                         reader.readAsDataURL(file);
-                        reader.onload = () => resolve(reader.result.split(',')[1]);
+                        reader.onload = () => {
+                            const base64String = reader.result.split(',')[1]; // ✅ elimina el prefijo
+                            resolve(base64String);
+                        };
                         reader.onerror = error => reject(error);
                     });
                 };
-
                 // Procesar archivos seleccionados
                 for (const fileObj of filesToSend) {
                     try {
@@ -829,11 +777,10 @@ const ChatInterface = () => {
                 // Procesar audio grabado
                 if (audioToSend) {
                     try {
-                        const audioBase64 = await fileToBase64(audioToSend.blob);
                         mediaItems.push({
                             type: 'audio',
                             media_type: 'audio/wav',
-                            media: audioBase64,
+                            media: audioToSend.base64, 
                             caption: messageText || '',
                             filename: 'audio_message.wav'
                         });
