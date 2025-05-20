@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import {
     Send, Search, MessageSquareShare, SquarePlus,
-    Mic, Paperclip, X, ArrowLeft, File, Image,
+    Mic, Paperclip, X, ArrowLeft, File,
     Volume2, PlayCircle, Download, EyeOff, Loader, Clock, Check, AlertTriangle,
     RefreshCcw
 } from "lucide-react";
@@ -22,6 +22,10 @@ import toast from "react-hot-toast";
 import { useTheme } from "@/contexts/themeContext";
 
 const ChatInterface = () => {
+
+
+    const SERVER_URL = 'http://193.46.198.228:8085/back/public'; 
+
     const isMobile = Resize();
     const location = useLocation();
     const [menuOpen, setMenuOpen] = useState(false);
@@ -63,6 +67,33 @@ const ChatInterface = () => {
     const isChatClosed = selectedChatId?.status === "CLOSED";
     const shouldShowChat = selectedChatId && (selectedChatId.id || selectedChatId.idContact || selectedChatId.number);
     const hasMessages = chatMessages && chatMessages.length > 0;
+
+    const handleMediaError = (element, type) => {
+        console.log(`Intentando cargar ${type} desde:`, element.src);
+        console.error(`Error loading ${type}:`, element);
+
+        // Intentar cargar desde la URL del servidor si falló la carga local
+        if (!element.src.includes(SERVER_URL) && element.src.includes('/')) {
+            const filename = element.src.split('/').pop();
+            const newUrl = `${SERVER_URL}/${filename}`;
+            console.log(`Reintentando con URL alternativa:`, newUrl);
+            element.src = newUrl;
+        } else {
+            console.log('URL del servidor también falló:', element.src);
+            // Si ya estábamos usando la URL del servidor o falló también, mostrar error
+            const container = element.parentElement;
+            if (container) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'text-red-500 p-2 rounded bg-red-100 dark:bg-red-900 text-sm';
+                errorDiv.textContent = `Error cargando ${type}`;
+                
+                // Reemplazar el elemento multimedia con el mensaje de error
+                container.innerHTML = '';
+                container.appendChild(errorDiv);
+            }
+        }
+    };
+
 
     // Efectos
     useEffect(() => {
@@ -108,82 +139,114 @@ const ChatInterface = () => {
     }, [chatMessages]);
 
     useEffect(() => {
-        if (messageData && messageData.body) {
-            // Ignorar mensajes que ya fueron mostrados por el flujo optimista
-            const isDuplicate = chatMessages?.some(msg =>
-                (msg.id === messageData.id) || // Mensaje ya existe con ID real
-                (msg.is_temp && msg.body === messageData.body &&
-                    msg.from_me === (messageData.from_me ? "true" : "false") &&
-                    (!msg.media_path || msg.media_path === messageData.media_url)) // Mismo contenido
-            );
+        if (messageData) {
+            console.log('Mensaje recibido del WebSocket:', messageData);
+            
+            // Solo procesar si es un mensaje válido
+            if (messageData.body || messageData.media_type) {
+                const normalizedMessage = {
+                    id: messageData.id_message_wp || messageData.id,
+                    body: messageData.body || '',
+                    from_me: messageData.from_me === true || messageData.from_me === "true",
+                    chat_id: messageData.chat_id,
+                    media_type: messageData.media_type || 'chat',
+                    media_url: messageData.media_url || '',
+                    media_path: messageData.media_url ? `${SERVER_URL}/${messageData.media_url}` : '',
+                    data: messageData.data || '',
+                    filename: messageData.filename || '',
+                    filetype: messageData.filetype || '',
+                    fileformat: messageData.fileformat || '',
+                    is_private: messageData.is_private || 0,
+                    created_at: messageData.created_at || messageData.timestamp || new Date().toISOString(),
+                    ack: messageData.ack || 0,
+                    is_temp: false
+                };
 
-            if (isDuplicate) return;
+                console.log('Mensaje normalizado:', normalizedMessage);
+                
+                // Ignorar mensajes que ya fueron mostrados por el flujo optimista
+                const isDuplicate = chatMessages?.some(msg =>
+                    (msg.id === messageData.id) || // Mensaje ya existe con ID real
+                    (msg.is_temp && msg.body === messageData.body &&
+                        msg.from_me === (messageData.from_me ? "true" : "false") &&
+                        (!msg.media_path || msg.media_path === messageData.media_url)) // Mismo contenido
+                );
 
-            // Determinar el ID del chat que debemos usar para comparar
-            const chatIdToCompare = selectedChatId?.id || '';
-            const shouldUseTemp = !messageData.from_me && !chatIdToCompare && tempIdChat;
-            const relevantChatId = shouldUseTemp ? tempIdChat : messageData.chat_id;
+                if (isDuplicate) return;
 
-            // Comprobar si este mensaje pertenece al chat actual
-            const isCurrentChat = selectedChatId &&
-                (chatIdToCompare === relevantChatId ||
-                    (shouldUseTemp && tempIdChat === relevantChatId));
+                // Determinar el ID del chat que debemos usar para comparar
+                const chatIdToCompare = selectedChatId?.id || '';
+                const shouldUseTemp = !messageData.from_me && !chatIdToCompare && tempIdChat;
+                const relevantChatId = shouldUseTemp ? tempIdChat : messageData.chat_id;
 
-            if (isCurrentChat) {
-                setChatMessages(prevMessages => {
-                    // Si es un mensaje nuestro (from_me) y tenemos un mensaje temporal, reemplazarlo
-                    if (messageData.from_me) {
-                        const tempMessageIndex = prevMessages?.findIndex(msg =>
-                            msg.is_temp &&
-                            msg.body === messageData.body &&
-                            (!msg.media_path || msg.media_path === messageData.media_url)
-                        );
+                // Comprobar si este mensaje pertenece al chat actual
+                const isCurrentChat = selectedChatId &&
+                    (chatIdToCompare === relevantChatId ||
+                        (shouldUseTemp && tempIdChat === relevantChatId));
 
-                        if (tempMessageIndex !== -1 && tempMessageIndex !== undefined) {
-                            const newMessages = [...prevMessages];
-                            newMessages[tempMessageIndex] = {
-                                ...newMessages[tempMessageIndex],
-                                id: messageData.id,
-                                is_temp: false,
-                                ack: messageData.ack || 1,
-                                ...(messageData.media_url && { media_path: messageData.media_url })
-                            };
-                            return newMessages;
+                if (isCurrentChat) {
+                    setChatMessages(prevMessages => {
+                        const normalizedMessage = {
+                            id: messageData.id_message_wp || messageData.id,
+                            body: messageData.body || '',
+                            from_me: messageData.from_me === true || messageData.from_me === "false",
+                            media_type: messageData.media_type || 'chat',
+                            // Construir URL completa para medios
+                            media_path: messageData.media_url ? `${SERVER_URL}/${messageData.media_url}` : '',
+                            media_url: messageData.media_url ? `${SERVER_URL}/${messageData.media_url}` : '',
+                            data: messageData.data || '',
+                            filename: messageData.filename || '',
+                            filetype: messageData.filetype || '',
+                            fileformat: messageData.fileformat || '',
+                            is_private: messageData.is_private || 0,
+                            created_at: messageData.created_at || new Date().toISOString(),
+                            ack: messageData.ack || 0,
+                            is_temp: false
+                        };
+
+                        // Si es un mensaje nuestro (from_me) y tenemos un mensaje temporal, reemplazarlo
+                        if (messageData.from_me) {
+                            const tempMessageIndex = prevMessages?.findIndex(msg =>
+                                msg.is_temp &&
+                                msg.body === messageData.body &&
+                                (!msg.media_path || msg.media_path === messageData.media_url)
+                            );
+
+                            if (tempMessageIndex !== -1 && tempMessageIndex !== undefined) {
+                                const newMessages = [...prevMessages];
+                                newMessages[tempMessageIndex] = {
+                                    ...newMessages[tempMessageIndex],
+                                    id: messageData.id,
+                                    is_temp: false,
+                                    ack: messageData.ack || 1,
+                                    ...(messageData.media_url && { media_path: messageData.media_url })
+                                };
+                                return newMessages;
+                            }
                         }
-                    }
 
-                    // Si no es un mensaje nuestro o no encontramos el temporal, agregar nuevo
-                    const newMessage = {
-                        id: messageData.id,
-                        body: messageData.body,
-                        from_me: messageData.from_me ? "true" : "false",
-                        media_type: messageData.media_type || 'chat',
-                        media_path: messageData.media_url || '',
-                        is_private: messageData.is_private || 0,
-                        created_at: messageData.created_at || new Date().toISOString(),
-                        ack: messageData.ack || 0
-                    };
+                        // Si no es un mensaje nuestro o no encontramos el temporal, agregar nuevo
+                        return prevMessages ? [...prevMessages, normalizedMessage] : [normalizedMessage];
+                    });
 
-                    return prevMessages ? [...prevMessages, newMessage] : [newMessage];
-                });
+                    setTimeout(scrollToBottom, 100);
+                }
 
-                setTimeout(scrollToBottom, 100);
-            }
+                // Si el mensaje es para el chat actualmente abierto y no es un mensaje propio
+                const currentChatId = selectedChatId?.id || tempIdChat;
 
-            // Si el mensaje es para el chat actualmente abierto y no es un mensaje propio
-            const currentChatId = selectedChatId?.id || tempIdChat;
-
-            if (
-                currentChatId &&
-                messageData.chat_id === currentChatId &&
-                !messageData.from_me
-            ) {
-                handleUpdateChat(currentChatId, { unread_message: 0 });
+                if (
+                    currentChatId &&
+                    messageData.chat_id === currentChatId &&
+                    !messageData.from_me
+                ) {
+                    handleUpdateChat(currentChatId, { unread_message: 0 });
+                }
             }
         }
     }, [messageData, selectedChatId, tempIdChat]);
 
-    
+
     useEffect(() => {
         return () => {
             selectedFiles.forEach(file => URL.revokeObjectURL(file.previewUrl));
@@ -391,8 +454,155 @@ const ChatInterface = () => {
     };
 
     // Funciones para mensajes
+    const renderMediaContent = (message) => {
+        // Mostrar todos los campos relevantes del mensaje
+        console.log('Datos del mensaje multimedia:', {
+            message_id: message.id,
+            media_type: message.media_type,
+            media_url: message.media_url,
+            media_path: message.media_path,
+            filename: message.filename,
+            data: message.data,
+            is_temp: message.is_temp,
+            body: message.body
+        });
+
+        const { media_type, media_url, data, filename, body, media_path, is_temp } = message;
+        
+        // Construir la URL del medio de manera más robusta
+        let mediaSource;
+        if (is_temp) {
+            mediaSource = media_path; // URL local temporal
+        } else if (data) {
+            mediaSource = data; // Datos en base64
+        } else if (media_url) {
+            // Si la URL ya es completa, usarla directamente, si no, construirla
+            mediaSource = media_url.startsWith('http') ? 
+                media_url : 
+                `${SERVER_URL}/${media_url}`;
+        } else if (media_path) {
+            // Último recurso: usar media_path
+            mediaSource = media_path.startsWith('http') ? 
+                media_path : 
+                `${SERVER_URL}/${media_path}`;
+        }
+
+        console.log('URL final construida:', {
+            mediaSource,
+            is_temp,
+            originalMediaUrl: media_url,
+            originalMediaPath: media_path
+        });
+
+        switch (media_type) {
+            case 'image':
+                return (
+                    <div className="relative group">
+                        {body && <div className="mb-2 break-words">{body}</div>}
+                        <img
+                            src={mediaSource}
+                            alt={filename || "Image"}
+                            className="max-w-full max-h-48 rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => handleMediaPreview(mediaSource, media_type)}
+                            onError={(e) => handleMediaError(e.target, 'imagen')}
+                        />
+                        {!is_temp && (
+                            <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.DOWNLOAD_HISTORY]}>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDownload(mediaSource, filename);
+                                        }}
+                                        className="bg-teal-600 rounded-full p-1"
+                                    >
+                                        <Download size={16} color="white" />
+                                    </button>
+                                </AbilityGuard>
+                            </div>
+                        )}
+                    </div>
+                );
+
+            case 'ptt':
+            case 'audio':
+                return (
+                    <div className="flex flex-col space-y-2">
+                        {body && <div className="break-words">{body}</div>}
+                        <div className="flex items-center space-x-2">
+                            <audio
+                                controls
+                                src={mediaSource}
+                                className="max-w-[200px] h-8"
+                                onError={(e) => handleMediaError(e.target, 'audio')}
+                            />
+                            {!is_temp && (
+                                <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.DOWNLOAD_HISTORY]}>
+                                    <button
+                                        onClick={() => handleDownload(mediaSource, filename)}
+                                        className="text-white hover:text-gray-300"
+                                    >
+                                        <Download size={20} />
+                                    </button>
+                                </AbilityGuard>
+                            )}
+                        </div>
+                    </div>
+                );
+
+            case 'video':
+                return (
+                    <div className="relative group">
+                        {body && <div className="mb-2 break-words">{body}</div>}
+                        <video
+                            controls
+                            src={mediaSource}
+                            className="max-w-full max-h-48 rounded-lg"
+                            onError={(e) => handleMediaError(e.target, 'video')}
+                        />
+                        {!is_temp && (
+                            <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.DOWNLOAD_HISTORY]}>
+                                    <button
+                                        onClick={() => handleDownload(mediaSource, filename)}
+                                        className="bg-teal-600 rounded-full p-1"
+                                    >
+                                        <Download size={16} color="white" />
+                                    </button>
+                                </AbilityGuard>
+                            </div>
+                        )}
+                    </div>
+                );
+
+            case 'document':
+                return (
+                    <div className="flex flex-col space-y-2">
+                        {body && <div className="break-words">{body}</div>}
+                        <div className="flex items-center space-x-2">
+                            <File size={20} />
+                            <span className="truncate max-w-[200px]">{filename}</span>
+                            {!is_temp && (
+                                <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.DOWNLOAD_HISTORY]}>
+                                    <button
+                                        onClick={() => handleDownload(mediaSource, filename)}
+                                        className="text-white hover:text-gray-300"
+                                    >
+                                        <Download size={20} />
+                                    </button>
+                                </AbilityGuard>
+                            )}
+                        </div>
+                    </div>
+                );
+
+            default:
+                return body || '';
+        }
+    };
+
     const renderMessageContent = (message, prevMessageDate) => {
-        const { media_type, body, media_path, created_at, is_temp } = message;
+        const { created_at } = message;
         const isSelf = message.from_me === "true";
         const isPrivate = message.is_private;
         const messageTime = formatMessageTime(created_at);
@@ -429,96 +639,7 @@ const ChatInterface = () => {
 
                             <div className="flex items-center space-x-2">
                                 <div className="flex-1 min-w-0">
-                                    {media_path && media_path !== 'no' ? (
-                                        media_type === 'url' ? (
-                                            <a
-                                                href={media_path}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="underline overflow-hidden text-ellipsis"
-                                            >
-                                                {media_path}
-                                            </a>
-                                        ) : media_type === 'image' ? (
-                                            <div className="relative group">
-                                                {body && <div className="mb-2">{body}</div>}
-                                                <img
-                                                    src={media_path}
-                                                    alt="Preview"
-                                                    className="max-w-full max-h-48 rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                                                    onClick={() => handleMediaPreview(media_path, media_type)}
-                                                />
-                                                {is_temp && (
-                                                    <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
-                                                        <Loader size={20} className="animate-spin" />
-                                                    </div>
-                                                )}
-                                                <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-2">
-                                                    <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.DOWNLOAD_HISTORY]}>
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleDownload(media_path);
-                                                            }}
-                                                            className="bg-teal-600 rounded-full p-1"
-                                                        >
-                                                            <Download size={16} color="white" />
-                                                        </button>
-                                                    </AbilityGuard>
-                                                </div>
-                                            </div>
-                                        ) : media_type === 'audio' ? (
-                                            <div className="flex items-center space-x-2">
-                                                <audio
-                                                    controls
-                                                    src={media_path}
-                                                    className="h-8"
-                                                />
-                                                {is_temp && <Loader size={16} className="animate-spin ml-2" />}
-                                                {!is_temp && (
-                                                    <button
-                                                        onClick={() => handleDownload(media_path)}
-                                                        className="text-white hover:text-gray-300"
-                                                    >
-                                                        <Download size={20} />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center space-x-2">
-                                                    {media_type === 'video' ? (
-                                                        <PlayCircle size={20} />
-                                                    ) : (
-                                                        <File size={20} />
-                                                    )}
-                                                    <span className="truncate max-w-[calc(100%-60px)]">
-                                                        {media_path.split('/').pop()}
-                                                    </span>
-                                                </div>
-                                                {!is_temp && (
-                                                    <div className="flex space-x-2 flex-shrink-0">
-                                                        {media_type === 'video' && (
-                                                            <button
-                                                                onClick={() => handleMediaPreview(media_path, media_type)}
-                                                                className="text-white hover:text-gray-300"
-                                                            >
-                                                                <Image size={20} />
-                                                            </button>
-                                                        )}
-                                                        <button
-                                                            onClick={() => handleDownload(media_path)}
-                                                            className="text-white hover:text-gray-300"
-                                                        >
-                                                            <Download size={20} />
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )
-                                    ) : (
-                                        <>{body}</>
-                                    )}
+                                    {renderMediaContent(message)}
                                 </div>
                             </div>
 
@@ -558,14 +679,41 @@ const ChatInterface = () => {
         setMediaPreview({ path: mediaPath, type: mediaType });
     };
 
-    const handleDownload = (mediaPath) => {
-        const link = document.createElement('a');
-        link.href = mediaPath;
-        link.download = mediaPath.split('/').pop();
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    const dataURLtoBlob = (dataUrl) => {
+        const arr = dataUrl.split(',');
+        const mime = arr[0].match(/:(.*?);/)[1];
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new Blob([u8arr], { type: mime });
     };
+
+    const handleDownload = (url, filename) => {
+        // Si tenemos data (base64), crear y descargar blob
+        if (url.startsWith('data:')) {
+            const blob = dataURLtoBlob(url);
+            const blobUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(blobUrl);
+        } else {
+            // Si es una URL normal, descargar directamente
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    };
+
 
     const handleSendMessage = async () => {
         if ((messageText.trim() === "" && selectedFiles.length === 0 && !recordedAudio) ||

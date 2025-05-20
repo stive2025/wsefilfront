@@ -73,25 +73,17 @@ const WebSocketHook = () => {
                 try {
                     const data = JSON.parse(e.data);
                     
-                    // Crear un ID único para el mensaje basado en su contenido
-                    const messageId = data.id_message_wp || 
-                                     data.id || 
-                                     `${data.user_id}_${data.status}_${Date.now()}`;
+                    // Crear un ID único para el mensaje
+                    const messageId = data.id_message_wp || data.id || `${data.user_id}_${data.status}_${Date.now()}`;
                     
-                    // Evitar procesar el mismo mensaje múltiples veces
                     if (lastMessageRef.current === messageId) {
                         return;
                     }
                     
                     lastMessageRef.current = messageId;
                     
-                    console.log(`📩 Mensaje WebSocket recibido (${messageId}):`, data);
-
-                    // Verificar que el mensaje sea para este usuario
                     if (data.user_id && data.user_id.toString() === userId.toString()) {
-                        console.log(`✅ Mensaje corresponde al usuario ${userId}`);
-                        
-                        // Manejar mensajes de estado de conexión
+                        // Manejar estados de conexión...
                         if (data.status === "DISCONNECTED" || data.estatus === "DISCONNECTED") {
                             console.log("🔌 Usuario desconectado según WebSocket");
                             
@@ -120,30 +112,33 @@ const WebSocketHook = () => {
                             });
                         }
 
-                        // Enviar el mensaje completo al contexto para que otros componentes puedan usarlo
-                        // Esto es clave - enviamos el mensaje completo incluyendo el QR si existe
-                        setMessageData(data);
-                        
-                        // Si es un mensaje de chat (tiene campo body), procesarlo específicamente
-                        if (data.body) {
-                            console.log("💬 Mensaje de chat recibido");
-                            console.log("Mensaje completo:", data); 
-                            // Esta parte permanece igual para manejar mensajes de chat
+                        // Normalizar el mensaje para el chat
+                        if (data.body !== undefined || data.media_type) {
                             const normalizedMessage = {
-                                id: data.id_message_wp || Date.now().toString(),
-                                body: data.body,
+                                id: data.id_message_wp || data.id || Date.now().toString(),
+                                body: data.body || '',
                                 from_me: data.from_me === true || data.from_me === "true",
                                 chat_id: data.chat_id,
                                 number: data.number,
                                 notify_name: data.notify_name,
-                                timestamp: data.timestamp ? new Date(data.timestamp * 1000).toISOString() : new Date().toISOString(),
+                                timestamp: data.timestamp ? 
+                                    (typeof data.timestamp === 'number' ? 
+                                        new Date(data.timestamp * 1000).toISOString() : 
+                                        data.timestamp) : 
+                                    new Date().toISOString(),
                                 created_at: data.created_at || new Date().toISOString(),
                                 media_type: data.media_type || 'chat',
                                 media_url: data.media_url || '',
                                 is_private: data.is_private || 0,
                                 user_id: data.user_id || null,
+                                // Nuevos campos para medios
+                                data: data.data || '',
+                                filename: data.filename || '',
+                                filetype: data.filetype || '',
+                                fileformat: data.fileformat || '',
+                                ack: data.ack || 0
                             };
-                            // También enviamos el mensaje normalizado
+                            
                             setMessageData(normalizedMessage);
                         }
                     } else {
