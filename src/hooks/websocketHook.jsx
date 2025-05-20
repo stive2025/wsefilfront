@@ -69,84 +69,101 @@ const WebSocketHook = () => {
                 reconnectTimeout = setTimeout(connectWebSocket, 3000);
             };
 
+            const normalizeMessage = (data) => {
+                console.group('🎵 Normalizando mensaje de audio');
+                console.log('Datos recibidos:', data);
+
+                const baseMessage = {
+                    id: data.id_message_wp || data.id || Date.now().toString(),
+                    body: data.body || '',
+                    from_me: data.from_me,
+                    chat_id: data.chat_id,
+                    number: data.number,
+                    notify_name: data.notify_name || '.',
+                    timestamp: data.timestamp ?
+                        (typeof data.timestamp === 'number' ?
+                            new Date(data.timestamp * 1000).toISOString() :
+                            data.timestamp) :
+                        new Date().toISOString(),
+                    created_at: data.created_at || new Date().toISOString(),
+                    is_private: data.is_private || 0,
+                    user_id: data.user_id || null,
+                    ack: data.ack || 0,
+                    temp_signature: data.temp_signature || null
+                };
+
+                if (data.media_type === 'audio' || data.media_type === 'ptt') {
+                    console.log('Procesando mensaje de audio');
+                    return {
+                        ...baseMessage,
+                        media_type: data.media_type,
+                        filename: data.filename,
+                        media_url: data.filename || '',
+                        filetype: 'audio',
+                        fileformat: data.filename?.split('.').pop() || 'wav'
+                    };
+                }
+
+                // Handle media
+                if (data.media && Array.isArray(data.media) && data.media.length > 0) {
+                    // Sent message with media
+                    const mediaItem = data.media[0];
+                    return {
+                        ...baseMessage,
+                        media_type: mediaItem.type || 'chat',
+                        media_url: mediaItem.filename || '',
+                        filename: mediaItem.filename || '',
+                        filetype: mediaItem.type || '',
+                        fileformat: mediaItem.filename?.split('.').pop() || '',
+                        caption: mediaItem.caption || data.body || ''
+                    };
+                } else if (data.media_type && data.media_type !== 'chat') {
+                    // Received message with media
+                    return {
+                        ...baseMessage,
+                        media_type: data.media_type,
+                        media_url: data.media_url || '',
+                        filename: data.filename || '',
+                        filetype: data.filetype || data.media_type,
+                        fileformat: data.fileformat || '',
+                    };
+                }
+
+                // Regular chat message
+                return {
+                    ...baseMessage,
+                    media_type: 'chat',
+                    media_url: '',
+                };
+            };
+
             conn.onmessage = (e) => {
                 try {
-                    console.log('🔍 Raw WebSocket data received:', e.data);
+                    console.group('📨 Mensaje WebSocket');
                     const data = JSON.parse(e.data);
+                    console.log('📥 Datos recibidos:', data);
 
-                    // Crear un ID único para el mensaje
                     const messageId = data.id_message_wp || data.id || `${data.user_id}_${data.status}_${Date.now()}`;
 
                     if (lastMessageRef.current === messageId) {
+                        console.log('🔄 Mensaje duplicado, ignorando');
+                        console.groupEnd();
                         return;
                     }
 
                     lastMessageRef.current = messageId;
 
-                    if (data.user_id && data.user_id.toString() === userId.toString()) {
-                        // Manejar estados de conexión...
-                        if (data.status === "DISCONNECTED" || data.estatus === "DISCONNECTED") {
-                            console.log("🔌 Usuario desconectado según WebSocket");
-
-                            setIsConnected({
-                                sesion: false,
-                                name: '',
-                                number: '',
-                                userId
-                            });
-
-                            // Actualizar código QR si está presente
-                            if (data.qr_code) {
-                                console.log("🔄 Actualizando código QR:", data.qr_code.substring(0, 20) + "...");
-                                setCodigoQR(data.qr_code);
-                            } else {
-                                console.warn("⚠️ Mensaje de desconexión sin código QR");
-                            }
-                        } else if (data.status === "CONNECTED" || data.estatus === "CONNECTED") {
-                            console.log("🔌 Usuario conectado según WebSocket");
-
-                            setIsConnected({
-                                sesion: true,
-                                name: data.name || '',
-                                number: data.number || '',
-                                userId
-                            });
-                        }
-
-                        // Normalizar el mensaje para el chat
-                        if (data.body !== undefined || data.media_type) {
-                            const normalizedMessage = {
-                                id: data.id_message_wp || data.id || Date.now().toString(),
-                                body: data.body || '',
-                                from_me: data.from_me === true || data.from_me === "true",
-                                chat_id: data.chat_id,
-                                number: data.number,
-                                notify_name: data.notify_name,
-                                timestamp: data.timestamp ?
-                                    (typeof data.timestamp === 'number' ?
-                                        new Date(data.timestamp * 1000).toISOString() :
-                                        data.timestamp) :
-                                    new Date().toISOString(),
-                                created_at: data.created_at || new Date().toISOString(),
-                                media_type: data.media_type || 'chat',
-                                media_url: data.media_url || '',
-                                is_private: data.is_private || 0,
-                                user_id: data.user_id || null,
-                                // Nuevos campos para medios
-                                data: data.data || '',
-                                filename: data.filename || '',
-                                filetype: data.filetype || '',
-                                fileformat: data.fileformat || '',
-                                ack: data.ack || 0
-                            };
-
+                    if (data.user_id?.toString() === userId.toString()) {
+                        if (data.body !== undefined || data.media_type || (data.media && data.media.length > 0)) {
+                            const normalizedMessage = normalizeMessage(data);
+                            console.log('📝 Mensaje procesado:', normalizedMessage);
                             setMessageData(normalizedMessage);
                         }
-                    } else {
-                        console.log(`⚠️ Mensaje ignorado: usuario ${data.user_id} ≠ ${userId}`);
                     }
+                    console.groupEnd();
                 } catch (err) {
-                    console.error("❌ Error procesando mensaje WebSocket:", err);
+                    console.error("❌ Error:", err);
+                    console.groupEnd();
                 }
             };
         };

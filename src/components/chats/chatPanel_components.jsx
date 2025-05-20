@@ -24,7 +24,7 @@ import { useTheme } from "@/contexts/themeContext";
 const ChatInterface = () => {
 
 
-    const SERVER_URL = 'http://193.46.198.228:8085/back/public';
+    const SERVER_URL = 'http://193.46.198.228:8085/back/public/';
 
     const isMobile = Resize();
     const location = useLocation();
@@ -60,7 +60,7 @@ const ChatInterface = () => {
     // Referencias
     const fileInputRef = useRef(null);
     const mediaRecorderRef = useRef(null);
-    const audioChunksRef = useRef([]);
+    //const audioChunksRef = useRef([]);
     const messagesContainerRef = useRef(null);
 
     // Determinar si el chat está cerrado
@@ -140,13 +140,20 @@ const ChatInterface = () => {
 
     useEffect(() => {
         if (messageData) {
-            console.log('Mensaje recibido del WebSocket:', messageData);
+            console.group('📱 Procesamiento de Mensaje en Chat');
+            console.log('Mensaje recibido:', {
+                tipo: messageData.media_type,
+                fromMe: messageData.from_me,
+                mediaUrl: messageData.media_url,
+                filename: messageData.filename
+            });
 
-            // Solo procesar si es un mensaje válido
             if (messageData.body || messageData.media_type) {
+                // Normalizar el mensaje de manera consistente
                 const normalizedMessage = {
                     id: messageData.id_message_wp || messageData.id,
                     body: messageData.body || '',
+                    // Corregir la lógica del from_me
                     from_me: messageData.from_me === true || messageData.from_me === "true",
                     chat_id: messageData.chat_id,
                     media_type: messageData.media_type || 'chat',
@@ -162,7 +169,7 @@ const ChatInterface = () => {
                     is_temp: false
                 };
 
-                console.log('Mensaje normalizado:', normalizedMessage);
+                console.log('Mensaje normalizado para UI:', normalizedMessage);
 
                 // Ignorar mensajes que ya fueron mostrados por el flujo optimista
                 const isDuplicate = chatMessages?.some(msg =>
@@ -244,6 +251,7 @@ const ChatInterface = () => {
                 }
             }
         }
+        console.groupEnd();
     }, [messageData, selectedChatId, tempIdChat]);
 
 
@@ -398,47 +406,63 @@ const ChatInterface = () => {
         } else {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                const mediaRecorder = new MediaRecorder(stream);
+                const audioContext = new AudioContext();
+                const source = audioContext.createMediaStreamSource(stream);
+                const processor = audioContext.createScriptProcessor(1024, 1, 1);
 
-                audioChunksRef.current = [];
+                source.connect(processor);
+                processor.connect(audioContext.destination);
 
-                mediaRecorder.ondataavailable = (e) => {
-                    if (e.data.size > 0) {
-                        audioChunksRef.current.push(e.data);
+                const chunks = [];
+
+                processor.onaudioprocess = (e) => {
+                    const channelData = e.inputBuffer.getChannelData(0);
+                    const wavData = new Float32Array(channelData);
+                    chunks.push(wavData);
+                };
+
+                mediaRecorderRef.current = {
+                    stop: () => {
+                        stream.getTracks().forEach(track => track.stop());
+                        processor.disconnect();
+                        source.disconnect();
+
+                        // Convertir los chunks a WAV
+                        const sampleRate = audioContext.sampleRate;
+                        const numChannels = 1;
+                        const bitsPerSample = 16;
+
+                        // Concatenar todos los chunks
+                        const allChunks = new Float32Array(chunks.reduce((acc, chunk) => acc + chunk.length, 0));
+                        let offset = 0;
+                        chunks.forEach(chunk => {
+                            allChunks.set(chunk, offset);
+                            offset += chunk.length;
+                        });
+
+                        // Convertir Float32Array a Int16Array (16 bits por muestra)
+                        const int16Data = new Int16Array(allChunks.length);
+                        allChunks.forEach((float, i) => {
+                            int16Data[i] = float < 0 ? float * 0x8000 : float * 0x7FFF;
+                        });
+
+                        // Crear el header WAV
+                        const wavHeader = createWavHeader(int16Data.length, sampleRate, numChannels, bitsPerSample);
+
+                        // Combinar header y datos
+                        const wavBlob = new Blob([wavHeader, int16Data], { type: 'audio/wav' });
+                        const audioUrl = URL.createObjectURL(wavBlob);
+
+                        setRecordedAudio({
+                            blob: wavBlob,
+                            url: audioUrl,
+                            name: `audio_${new Date().toISOString()}.wav`
+                        });
                     }
                 };
 
-                mediaRecorder.onstop = () => {
-                    const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-                    const totalCurrentSize = selectedFiles.reduce((total, file) => total + file.file.size, 0);
-
-                    if (totalCurrentSize + audioBlob.size > FILE_SIZE_LIMIT) {
-                        setFileSizeError("La suma de los archivos multimedia no debe superar los 2MB.");
-                        setTimeout(() => setFileSizeError(""), 5000);
-                        stream.getTracks().forEach(track => track.stop());
-                        return;
-                    }
-
-                    if (audioBlob.size > FILE_SIZE_LIMIT) {
-                        setFileSizeError("La grabación de audio excede el límite de 2MB.");
-                        setTimeout(() => setFileSizeError(""), 5000);
-                        stream.getTracks().forEach(track => track.stop());
-                        return;
-                    }
-
-                    const audioUrl = URL.createObjectURL(audioBlob);
-                    setRecordedAudio({
-                        blob: audioBlob,
-                        url: audioUrl,
-                        name: `audio_${new Date().toISOString()}.wav`
-                    });
-
-                    stream.getTracks().forEach(track => track.stop());
-                };
-
-                mediaRecorderRef.current = mediaRecorder;
-                mediaRecorder.start();
                 setIsRecording(true);
+
             } catch (error) {
                 console.error("Error al acceder al micrófono:", error);
                 alert("No se pudo acceder al micrófono. Verifica los permisos.");
@@ -446,54 +470,92 @@ const ChatInterface = () => {
         }
     };
 
-    const removeAudio = () => {
-        if (recordedAudio) {
-            URL.revokeObjectURL(recordedAudio.url);
-            setRecordedAudio(null);
+    // Función auxiliar para crear el header WAV
+    const createWavHeader = (dataLength, sampleRate, numChannels, bitsPerSample) => {
+        const header = new ArrayBuffer(44);
+        const view = new DataView(header);
+
+        // "RIFF" chunk descriptor
+        writeString(view, 0, 'RIFF');
+        view.setUint32(4, 36 + dataLength * 2, true);
+        writeString(view, 8, 'WAVE');
+
+        // "fmt " sub-chunk
+        writeString(view, 12, 'fmt ');
+        view.setUint32(16, 16, true); // fmt chunk size
+        view.setUint16(20, 1, true); // audio format (PCM)
+        view.setUint16(22, numChannels, true);
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, sampleRate * numChannels * bitsPerSample / 8, true); // byte rate
+        view.setUint16(32, numChannels * bitsPerSample / 8, true); // block align
+        view.setUint16(34, bitsPerSample, true);
+
+        // "data" sub-chunk
+        writeString(view, 36, 'data');
+        view.setUint32(40, dataLength * 2, true);
+
+        return header;
+    };
+
+    const writeString = (view, offset, string) => {
+        for (let i = 0; i < string.length; i++) {
+            view.setUint8(offset + i, string.charCodeAt(i));
         }
     };
 
+
     // Funciones para mensajes
     const renderMediaContent = (message) => {
+        console.group('🖼️ Renderizado de Contenido Multimedia');
+        console.log('Mensaje:', {
+            tipo: message.media_type,
+            filename: message.filename,
+            mediaPath: message.media_path,
+            isTemporal: message.is_temp
+        });
 
-        const { media_type, localBlob, filename, body, media_path, is_temp } = message;
-
-        // Construct the media URL more robustly
         let mediaSource;
-        if (is_temp && localBlob) {
-            // For temporary messages (newly uploaded files), use the blob URL directly
-            mediaSource = URL.createObjectURL(localBlob);
-            // Store URL for cleanup when component unmounts
-            message.tempBlobUrl = mediaSource;
-        } else if (is_temp && media_path && !media_path.startsWith('http')) {
-            // For temporary messages with a media_path that's already a blob URL
-            mediaSource = media_path;
-        } else if (media_path) {
-            // For server-stored media
-            mediaSource = media_path.startsWith('http') ?
-                media_path :
-                `${SERVER_URL}/${media_path}`;
+        if(message.media_path?.startsWith('blob:')) {
+            mediaSource = message.media_path;
+            console.log('🔗 Usando URL temporal:', mediaSource);
+        }else if (message.filename && message.media_path?.startsWith("files/")) {
+            mediaSource = `${SERVER_URL}${message.filename}`;
+
+        }else if(message.filename && message.mediaUrl?.startsWith("files/")) {
+            mediaSource = `${SERVER_URL}${message.mediaUrl}`;
+
+        } else if (message.media_path?.startsWith('http')) {
+            mediaSource = message.media_path;
+            console.log('🔗 Usando URL completa:', mediaSource);
+        }
+        // Si es una ruta relativa, construir la URL completa
+        else if (message.media_path) {
+            mediaSource = `${SERVER_URL}${message.media_path}`;
+            console.log('🔨 Construyendo URL:', mediaSource);
         }
 
-        switch (media_type) {
+        console.log('URL final para renderizado:', mediaSource);
+        console.groupEnd();
+
+        switch (message.media_type) {
             case 'image':
                 return (
                     <div className="relative group">
-                        {body && <div className="mb-2 break-words">{body}</div>}
+                        {message.body && <div className="mb-2 break-words">{message.body}</div>}
                         <img
                             src={mediaSource}
-                            alt={filename || "Image"}
+                            alt={message.filename || "Image"}
                             className="max-w-full max-h-48 rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                            onClick={() => handleMediaPreview(mediaSource, media_type)}
+                            onClick={() => handleMediaPreview(mediaSource, message.media_type)}
                             onError={(e) => handleMediaError(e.target, 'imagen')}
                         />
-                        {!is_temp && (
+                        {!message.is_temp && (
                             <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.DOWNLOAD_HISTORY]}>
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            handleDownload(mediaSource, filename);
+                                            handleDownload(mediaSource, message.filename);
                                         }}
                                         className="bg-teal-600 rounded-full p-1"
                                     >
@@ -509,7 +571,7 @@ const ChatInterface = () => {
             case 'audio':
                 return (
                     <div className="flex flex-col space-y-2">
-                        {body && <div className="break-words">{body}</div>}
+                        {message.body && <div className="break-words">{message.body}</div>}
                         <div className="flex items-center space-x-2">
                             <audio
                                 controls
@@ -517,10 +579,10 @@ const ChatInterface = () => {
                                 className="max-w-[200px] h-8"
                                 onError={(e) => handleMediaError(e.target, 'audio')}
                             />
-                            {!is_temp && (
+                            {!message.is_temp && (
                                 <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.DOWNLOAD_HISTORY]}>
                                     <button
-                                        onClick={() => handleDownload(mediaSource, filename)}
+                                        onClick={() => handleDownload(mediaSource, message.filename)}
                                         className="text-white hover:text-gray-300"
                                     >
                                         <Download size={20} />
@@ -534,18 +596,18 @@ const ChatInterface = () => {
             case 'video':
                 return (
                     <div className="relative group">
-                        {body && <div className="mb-2 break-words">{body}</div>}
+                        {message.body && <div className="mb-2 break-words">{message.body}</div>}
                         <video
                             controls
                             src={mediaSource}
                             className="max-w-full max-h-48 rounded-lg"
                             onError={(e) => handleMediaError(e.target, 'video')}
                         />
-                        {!is_temp && (
+                        {!message.is_temp && (
                             <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.DOWNLOAD_HISTORY]}>
                                     <button
-                                        onClick={() => handleDownload(mediaSource, filename)}
+                                        onClick={() => handleDownload(mediaSource, message.filename)}
                                         className="bg-teal-600 rounded-full p-1"
                                     >
                                         <Download size={16} color="white" />
@@ -559,14 +621,14 @@ const ChatInterface = () => {
             case 'document':
                 return (
                     <div className="flex flex-col space-y-2">
-                        {body && <div className="break-words">{body}</div>}
+                        {message.body && <div className="break-words">{message.body}</div>}
                         <div className="flex items-center space-x-2">
                             <File size={20} />
-                            <span className="truncate max-w-[200px]">{filename}</span>
-                            {!is_temp && (
+                            <span className="truncate max-w-[200px]">{message.filename}</span>
+                            {!message.is_temp && (
                                 <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.DOWNLOAD_HISTORY]}>
                                     <button
-                                        onClick={() => handleDownload(mediaSource, filename)}
+                                        onClick={() => handleDownload(mediaSource, message.filename)}
                                         className="text-white hover:text-gray-300"
                                     >
                                         <Download size={20} />
@@ -578,7 +640,7 @@ const ChatInterface = () => {
                 );
 
             default:
-                return body || '';
+                return message.body || '';
         }
     };
 
@@ -1163,7 +1225,7 @@ const ChatInterface = () => {
                                             <Volume2 size={24} />
                                         </div>
                                         <button
-                                            onClick={removeAudio}
+                                            // onClick={removeAudio}
                                             className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1"
                                         >
                                             <X size={12} />
