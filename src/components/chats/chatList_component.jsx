@@ -203,6 +203,26 @@ const AgentSelect = ({ role }) => {
   );
 };
 
+// En el componente ChatItems, actualizar la parte donde se muestra el mensaje
+const getMessagePreview = (message) => {
+  if (message.media_type === 'chat') {
+    return message.body;
+  }
+  switch (message.media_type) {
+    case 'image':
+      return '📷 Imagen';
+    case 'video':
+      return '🎥 Video';
+    case 'audio':
+    case 'ptt':
+      return '🎵 Audio';
+    case 'document':
+      return '📎 Documento';
+    default:
+      return message.body || '📎 Archivo';
+  }
+};
+
 // ChatItems component with updated logic to handle tempIdChat
 const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessages, setChats }) => {
   const { selectedChatId, setSelectedChatId } = useContext(ChatInterfaceClick);
@@ -410,7 +430,7 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
                 )}
                 <span className={`overflow-hidden text-ellipsis whitespace-nowrap 
                   text-[rgb(var(--color-text-secondary-${theme}))]`}>
-                  {item.last_message || item.lastMessage}
+                  {item.last_message || getMessagePreview(item)}
                 </span>
               </div>
             </div>
@@ -483,12 +503,12 @@ useEffect(() => {
 }, [selectedChatId, tempIdChat]);
 
   useEffect(() => {
-    if (messageData && messageData.body) {
-      console.log("Mensaje recibido:", messageData);
+    if (messageData) {
+      console.log("Mensaje normalizado recibido:", messageData);
       const userData = getUserData();
       const currentUserId = userData?.id;
 
-      if (!currentUserId || messageData.user_id !== currentUserId) {
+      if (!currentUserId || messageData.user_id?.toString() !== currentUserId.toString()) {
         console.log("Mensaje ignorado - user_id no coincide:",
           "id en mensaje:", messageData.user_id,
           "id en localStorage:", currentUserId);
@@ -507,11 +527,33 @@ useEffect(() => {
         const updatedChats = [...chats];
         const chatToUpdate = { ...updatedChats[existingChatIndex] };
 
-        // Actualizar último mensaje y contador
-        chatToUpdate.last_message = messageData.body;
-        chatToUpdate.timestamp = new Date().toLocaleString();
+        // Función auxiliar para obtener el texto del mensaje según el tipo de medio
+        const getMessagePreview = (message) => {
+          if (message.media_type === 'chat') {
+            return message.body;
+          }
+          switch (message.media_type) {
+            case 'image':
+              return '📷 Imagen';
+            case 'video':
+              return '🎥 Video';
+            case 'audio':
+            case 'ptt':
+              return '🎵 Audio';
+            case 'document':
+              return '📎 Documento';
+            default:
+              return message.body || '📎 Archivo';
+          }
+        };
 
-        // Comprobar si el chat está seleccionado por ID normal o por ID temporal
+        // Actualizar último mensaje y contador
+        chatToUpdate.last_message = getMessagePreview(messageData);
+        chatToUpdate.timestamp = new Date(messageData.timestamp).toLocaleString();
+        chatToUpdate.ack = messageData.ack;
+        chatToUpdate.from_me = messageData.from_me;
+
+        // Comprobar si el chat está seleccionado
         const isChatCurrentlySelected = 
           (selectedChatId && selectedChatId.id === chatToUpdate.id) || 
           (tempIdChat && tempIdChat === chatToUpdate.id);
@@ -519,17 +561,6 @@ useEffect(() => {
         // Incrementar contador solo si no es el chat seleccionado actualmente
         if (!isChatCurrentlySelected) {
           chatToUpdate.unread_message = (chatToUpdate.unread_message || 0) + 1;
-        }
-
-        // Si hay archivos adjuntos
-        if (messageData.media_path) {
-          chatToUpdate.last_message = messageData.media_type === 'image'
-            ? '📷 Imagen'
-            : messageData.media_type === 'video'
-              ? '🎥 Video'
-              : messageData.media_type === 'audio'
-                ? '🎵 Audio'
-                : '📎 Archivo';
         }
 
         // Mover el chat actualizado al principio de la lista
@@ -542,9 +573,11 @@ useEffect(() => {
         const newChat = {
           id: messageData.chat_id,
           number: messageData.number,
-          name: messageData.sender_name || messageData.number,
-          last_message: messageData.body,
-          timestamp: new Date().toLocaleString(),
+          name: messageData.notify_name || messageData.number,
+          last_message: getMessagePreview(messageData),
+          timestamp: new Date(messageData.timestamp).toLocaleString(),
+          from_me: messageData.from_me,
+          ack: messageData.ack,
           // Solo incrementar contador si no es el chat seleccionado
           unread_message: (selectedChatId?.id === messageData.chat_id || 
                          tempIdChat === messageData.chat_id) ? 0 : 1,
@@ -552,30 +585,20 @@ useEffect(() => {
           avatar: "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain"
         };
 
-        // Si hay archivos adjuntos
-        if (messageData.media_path) {
-          newChat.last_message = messageData.media_type === 'image'
-            ? '📷 Imagen'
-            : messageData.media_type === 'video'
-              ? '🎥 Video'
-              : messageData.media_type === 'audio'
-                ? '🎵 Audio'
-                : '📎 Archivo';
-        }
-
         // Agregar nuevo chat al principio de la lista
         setChats(prevChats => [newChat, ...prevChats]);
       }
 
       // Notificar al componente padre sobre el nuevo mensaje
-      if (messageData != null) {
+      if (messageData) {
         setMessageDataLocal(messageData);
         setMessageData(null);
 
-        // Opcional: Mostrar notificación del navegador si la ventana no está activa
+        // Mostrar notificación del navegador si la ventana no está activa
         if (document.hidden && "Notification" in window && Notification.permission === "granted") {
+          const notificationBody = getMessagePreview(messageData);
           new Notification("Nuevo mensaje", {
-            body: messageData.body,
+            body: notificationBody,
             icon: "./images/logoCRM.png"
           });
         }
