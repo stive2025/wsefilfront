@@ -694,7 +694,7 @@ const ChatInterface = () => {
             setSendingMessage(true);
             setUploadProgress(0);
 
-            // Modificar cómo creamos el mensaje temporal
+            // Crear mensaje temporal
             const newMessage = {
                 id: tempId,
                 body: messageText,
@@ -705,31 +705,27 @@ const ChatInterface = () => {
                 tempSignature: tempSignature,
             };
 
-            // Modificar cómo manejamos los archivos multimedia temporales
+            // Manejar archivos multimedia temporales
             if (selectedFiles[0]) {
                 const file = selectedFiles[0];
                 newMessage.media_type = file.type;
-                newMessage.media_path = file.previewUrl;
-                // Agregar el blob directamente al mensaje temporal
-                newMessage.localBlob = file.file;
+                newMessage.filename = file.file.name;
             } else if (recordedAudio) {
                 newMessage.media_type = 'audio';
-                newMessage.media_path = recordedAudio.url;
-                // Agregar el blob directamente al mensaje temporal
-                newMessage.localBlob = recordedAudio.blob;
+                newMessage.filename = recordedAudio.name;
             }
 
             setChatMessages(prev => prev ? [...prev, newMessage] : [newMessage]);
             scrollToBottom();
 
-            // Limpiar UI inmediatamente
+            // Limpiar UI
             setMessageText("");
             const filesToSend = [...selectedFiles];
             const audioToSend = recordedAudio;
             setSelectedFiles([]);
             setRecordedAudio(null);
 
-            // Preparar payload para el servidor
+            // Preparar payload
             const messagePayload = {
                 number: selectedChatId.number || "",
                 body: messageText,
@@ -739,10 +735,7 @@ const ChatInterface = () => {
                 tempSignature: tempSignature
             };
 
-            // Log del payload inicial
-            console.log('Payload inicial:', messagePayload);
-
-            // Procesar archivos para enviar al servidor
+            // Procesar archivos
             if (filesToSend.length > 0 || audioToSend) {
                 const mediaItems = [];
 
@@ -750,53 +743,36 @@ const ChatInterface = () => {
                     return new Promise((resolve, reject) => {
                         const reader = new FileReader();
                         reader.readAsDataURL(file);
-                        reader.onload = () => {
-                            const base64String = reader.result.split(',')[1]; // ✅ elimina el prefijo
-                            resolve(base64String);
-                        };
-                        reader.onerror = error => reject(error);
+                        reader.onload = () => resolve(reader.result.split(',')[1]);
+                        reader.onerror = reject;
                     });
                 };
+
                 // Procesar archivos seleccionados
                 for (const fileObj of filesToSend) {
-                    try {
-                        const base64Data = await fileToBase64(fileObj.file);
-                        mediaItems.push({
-                            type: fileObj.type,
-                            media_type: fileObj.file.type,
-                            media: base64Data,
-                            caption: messageText || '',
-                            filename: fileObj.file.name
-                        });
-                    } catch (error) {
-                        console.error(`Error procesando archivo ${fileObj.file.name}:`, error);
-                        continue;
-                    }
+                    const base64Data = await fileToBase64(fileObj.file);
+                    mediaItems.push({
+                        type: fileObj.type,
+                        media_type: fileObj.file.type,
+                        media: base64Data,
+                        caption: messageText || '',
+                        filename: fileObj.file.name
+                    });
                 }
 
                 // Procesar audio grabado
                 if (audioToSend) {
-                    try {
-                        mediaItems.push({
-                            type: 'audio',
-                            media_type: 'audio/wav',
-                            media: audioToSend.base64, 
-                            caption: messageText || '',
-                            filename: 'audio_message.wav'
-                        });
-                    } catch (error) {
-                        console.error("Error procesando audio grabado:", error);
-                    }
+                    mediaItems.push({
+                        type: 'audio',
+                        media_type: 'audio/webm',
+                        media: audioToSend.base64,
+                        caption: messageText || '',
+                        filename: audioToSend.name
+                    });
                 }
 
                 if (mediaItems.length > 0) {
                     messagePayload.media = JSON.stringify(mediaItems);
-                    // Log del payload con multimedia
-                    console.log('Payload con multimedia:', {
-                        ...messagePayload,
-                        mediaItemsCount: mediaItems.length,
-                        chat_id: messagePayload.chat_id || 'No chat_id present'
-                    });
                 }
             }
 
@@ -805,36 +781,22 @@ const ChatInterface = () => {
             });
             const response = await callEndpoint({ call, abortController });
 
-            // Log de la respuesta del servidor
-            console.log('Respuesta del servidor:', {
-                response,
-                hadChatId: !!messagePayload.chat_id,
-                newChatId: response?.chat_id
-            });
-
             if (response) {
                 // Actualizar mensaje temporal con datos del servidor
                 setChatMessages(prev => {
                     if (!prev) return [];
 
                     return prev.map(msg => {
-                        if (msg.id === tempId || msg.tempSignature === tempSignature) {
-                            const updatedMsg = {
+                        if (msg.tempSignature === tempSignature) {
+                            const mediaData = response.media?.[0];
+                            return {
                                 ...msg,
                                 id: response.message_id || msg.id,
                                 ack: response.ack || 1,
                                 is_temp: false,
-                                ...(response.media_url && {
-                                    media_path: response.media_url
-                                }),
+                                media_path: mediaData?.filename ? `${SERVER_URL}/${mediaData.filename}` : msg.media_path,
+                                filename: mediaData?.filename || msg.filename
                             };
-
-                            // Liberar URL temporal si existía
-                            if (msg.is_temp && msg.media_path) {
-                                URL.revokeObjectURL(msg.media_path);
-                            }
-
-                            return updatedMsg;
                         }
                         return msg;
                     });
@@ -850,14 +812,10 @@ const ChatInterface = () => {
                 }
             }
         } catch (error) {
-            console.error("Error al enviar mensaje:", {
-                error,
-            });
-            // Marcar mensaje como fallido usando tanto el ID como la firma
             setChatMessages(prev => {
                 if (!prev) return [];
                 return prev.map(msg =>
-                    (msg.id === tempId || msg.tempSignature === tempSignature)
+                    msg.tempSignature === tempSignature
                         ? { ...msg, ack: -1 }
                         : msg
                 );
@@ -865,16 +823,6 @@ const ChatInterface = () => {
 
             toast.error(error.response?.data?.message || "Error al enviar el mensaje");
         } finally {
-            // Asegurarse de limpiar los blobs en caso de error
-            setChatMessages(prev => {
-                if (!prev) return [];
-                return prev.map(msg => {
-                    if (msg.tempBlobUrl) {
-                        URL.revokeObjectURL(msg.tempBlobUrl);
-                    }
-                    return msg;
-                });
-            });
             setSendingMessage(false);
             setUploadProgress(0);
         }
@@ -1265,6 +1213,7 @@ const ChatInterface = () => {
                                         </button>
                                     </div>
                                 </AbilityGuard>
+                                
                                 <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.SEND_MEDIA]}>
                                     <button
                                         className={`p-2 rounded-full ${isRecording ? 'bg-red-500' : `bg-[rgb(var(--color-bg-${theme}-secondary))]`}
