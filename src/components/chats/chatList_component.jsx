@@ -84,8 +84,13 @@ const TagsBar = ({ tags }) => {
     }
   };
 
+  const handleTagClick = (tagId) => {
+    console.log('Tag seleccionado:', tagId);
+    setTagSelected(tagId);
+  };
+
   return (
-    <AbilityGuard abilities={[ABILITIES.CHATS.FILTER_BY_TAG, ABILITIES.CHATS.FILTER_BY_STATUS]} fallback={null}>
+    <AbilityGuard abilities={[ABILITIES.CHATS.FILTER_BY_TAG]} fallback={null}>
       <div className={`relative flex items-center bg-[rgb(var(--color-bg-${theme}-secondary))] p-2`}>
         <button
           onClick={scrollLeft}
@@ -104,24 +109,26 @@ const TagsBar = ({ tags }) => {
             overflow-hidden shadow-md flex items-center p-1 overflow-x-auto scrollbar-hide mx-8`}
         >
           <ul className="flex whitespace-nowrap">
-            <li
-              className={`flex items-center gap-2 cursor-pointer rounded-full p-2 text-xs ${tagSelected === 0 ? "bg-gray-700 text-white" : "hover:text-gray-300"
-                }`}
-              onClick={() => setTagSelected(0)}
-            >
-              Todos
-            </li>
-            {Array.isArray(tags) ? (
-              tags.map((tag) => (
+            {Array.isArray(tags) && tags.length > 0 ? (
+              <>
                 <li
-                  key={tag.id}
-                  className={`flex items-center gap-2 cursor-pointer rounded-full p-2 text-xs ${tagSelected === tag.id ? "bg-gray-700 text-white" : "hover:text-gray-300"
-                    }`}
-                  onClick={() => { setTagSelected(tag.id); console.log("TAG", tagSelected) }}
+                  className={`flex items-center gap-2 cursor-pointer rounded-full p-2 text-xs 
+                    ${!tagSelected ? "bg-gray-700 text-white" : "hover:text-gray-300"}`}
+                  onClick={() => handleTagClick(null)}
                 >
-                  {tag.name}
+                  Sin etiqueta
                 </li>
-              ))
+                {tags.map((tag) => (
+                  <li
+                    key={tag.id}
+                    className={`flex items-center gap-2 cursor-pointer rounded-full p-2 text-xs 
+                      ${tagSelected === tag.id ? "bg-gray-700 text-white" : "hover:text-gray-300"}`}
+                    onClick={() => handleTagClick(tag.id)}
+                  >
+                    {tag.name}
+                  </li>
+                ))}
+              </>
             ) : (
               <li className="text-xs text-gray-400">No hay etiquetas disponibles</li>
             )}
@@ -622,10 +629,8 @@ useEffect(() => {
       let endpointKey = 'chatList';
       let isContact = false;
 
-      // Verifica si hay una consulta de búsqueda
       if (searchQuery) {
         setIsSearching(true);
-
         // Determina si es búsqueda por teléfono o por nombre
         if (/^\d+$/.test(searchQuery)) {
           endpoint = getContactChatsByPhone(searchQuery);
@@ -638,24 +643,16 @@ useEffect(() => {
         }
       } else {
         setIsSearching(false);
+        const filterParams = { 
+          ...params,
+          state: params.state || 'OPEN'  // Ensure default state is OPEN
+        };
 
-        const filterParams = { ...params };
-        console.log(filterParams)
-
-        if (stateSelected !== "ALL") {
-          filterParams.state = stateSelected;
-          console.log(filterParams)
+        if (filterParams.id_tag === null || filterParams.id_tag === undefined) {
+          delete filterParams.id_tag;
         }
 
-        if (agentSelected) {
-          filterParams.agent_id = agentSelected;
-        }
-
-        if (tagSelected !== 0) {
-          filterParams.id_tag = tagSelected;
-          console.log("filterParams.tag_id", filterParams)
-        }
-
+        console.log('Final API parameters:', filterParams);
         endpoint = getChatList(filterParams);
       }
 
@@ -718,7 +715,12 @@ useEffect(() => {
         setChats(enrichedChats);
       }
     } catch (error) {
-      console.error("Error loading chats:", error);
+      console.error("Error loading chats:", {
+        error,
+        params,
+        state: params.state,
+        tagId: params.id_tag
+      });
       if (!append) {
         setChats([]);
       }
@@ -742,14 +744,35 @@ useEffect(() => {
 
   // Efecto para cargar chats cuando cambian los criterios
   useEffect(() => {
-    setPage(1);
-    setHasMoreChats(true);
+    if (!isSearching) {
+      console.group('Applying Filters');
+      console.log('State:', stateSelected);
+      console.log('Tag:', tagSelected);
+      console.log('Agent:', agentSelected);
+      
+      setPage(1);
+      setHasMoreChats(true);
+      
+      const filterParams = { 
+        page: 1,
+        // Always include state, default to OPEN
+        state: stateSelected || 'OPEN'
+      };
+      
+      if (tagSelected && tagSelected !== 0) {
+        filterParams.id_tag = tagSelected;
+      }
+      
+      if (agentSelected) {
+        filterParams.agent_id = agentSelected;
+      }
 
-    // Solo incluimos parámetro de página para getChatList, no para búsquedas
-    const params = searchQuery ? {} : { page: 1 };
-
-    loadChats(params, false);
-  }, [searchQuery]);
+      console.log('Filter parameters:', filterParams);
+      loadChats(filterParams, false);
+      
+      console.groupEnd();
+    }
+  }, [stateSelected, tagSelected, agentSelected]);
 
   // NOTA: Este efecto está comentado porque los filtros no afectan la búsqueda actualmente
 
