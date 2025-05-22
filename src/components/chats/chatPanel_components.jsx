@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
     Send, Search, MessageSquareShare, SquarePlus,
     Mic, Paperclip, X, ArrowLeft, File,
@@ -25,7 +25,6 @@ const ChatInterface = () => {
 
 
     const SERVER_URL = 'http://193.46.198.228:8085/back/public/';
-
     const isMobile = Resize();
     const location = useLocation();
     const [menuOpen, setMenuOpen] = useState(false);
@@ -39,37 +38,35 @@ const ChatInterface = () => {
     const { callEndpoint } = useFetchAndLoad();
     const { messageData } = useContext(WebSocketMessage);
     const { theme } = useTheme();
-
     // File size limit in bytes (2MB = 2 * 1024 * 1024)
     const FILE_SIZE_LIMIT = 2 * 1024 * 1024;
     const [fileSizeError, setFileSizeError] = useState("");
     const [isDragging, setIsDragging] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
-
     // Estados para gestionar mensajes y archivos
     const [messageText, setMessageText] = useState("");
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [isRecording, setIsRecording] = useState(false);
     const [recordedAudio, setRecordedAudio] = useState(null);
-    const [chatMessages, setChatMessages] = useState(null);
+    const [chatMessages, setChatMessages] = useState([]);
     const [sendingMessage, setSendingMessage] = useState(false);
     const [isNewChat, setIsNewChat] = useState(false);
     const [reopeningChat, setReopeningChat] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
-
-
     const [record_stream, setStream] = useState(null);  // Reemplaza mediaRecorderRef
-
     // Referencias
     const fileInputRef = useRef(null);
     //const audioChunksRef = useRef([]);
     const messagesContainerRef = useRef(null);
-
     // Determinar si el chat está cerrado
     const isChatClosed = selectedChatId?.status === "CLOSED";
     const shouldShowChat = selectedChatId && (selectedChatId.id || selectedChatId.idContact || selectedChatId.number);
     const hasMessages = chatMessages && chatMessages.length > 0;
 
+    const [page, setPage] = useState(1);
+    const [hasMoreMessages, setHasMoreMessages] = useState(true);
+    const [loadingMoreMessages, setLoadingMoreMessages] = useState(false);
+    const [initialLoad, setInitialLoad] = useState(true);
 
     const handleMicClick = async () => {
         if (isRecording) {
@@ -119,7 +116,7 @@ const ChatInterface = () => {
         }
     };
 
-    
+
     const getExtension = (mimeType) => {
         return mimeType.split("/")[1] || "webm";
     };
@@ -145,43 +142,70 @@ const ChatInterface = () => {
         }
     };
 
+    const loadMessages = async (pageNum = 1, append = false) => {
+        if (!selectedChatId?.id) return;
 
-    // Efectos
-    useEffect(() => {
-        const loadMessages = async () => {
-            setIsLoading(true);
-
-            if (selectedChatId && selectedChatId.id) {
-                try {
-                    const response = await callEndpoint(getChat(selectedChatId.id));
-                    setChatMessages(response.messages);
-                    setSelectedChatId(prev => ({
-                        ...prev,
-                        status: response.state || prev.state
-                    }));
-                    setIsNewChat(false);
-                } catch (error) {
-                    console.error("Error cargando mensajes:", error);
-                    setChatMessages([]);
-                    toast.error("Error al cargar los mensajes del chat");
-                }
-            } else if (selectedChatId && selectedChatId.idContact) {
-                setChatMessages([]);
-                setIsNewChat(true);
-                setSelectedChatId(prev => ({
-                    ...prev,
-                    status: "OPEN"
-                }));
+        try {
+            if (pageNum === 1) {
+                setIsLoading(true);
             } else {
-                setChatMessages(null);
-                setIsNewChat(false);
+                setLoadingMoreMessages(true);
             }
 
-            setIsLoading(false);
-        };
+            const response = await callEndpoint(getChat(selectedChatId.id, pageNum));
+            console.log("Mensajes cargados:", response);
 
-        loadMessages();
+            const newMessages = response.messages.data || [];
+            setHasMoreMessages(newMessages.length > 0);
+
+            if (append) {
+                setChatMessages(prev => [...newMessages, ...(prev || [])]);
+            } else {
+                setChatMessages(newMessages);
+                setSelectedChatId(prev => ({
+                    ...prev,
+                    status: response.state || prev.state
+                }));
+                setIsNewChat(false);
+            }
+        } catch (error) {
+            console.error("Error cargando mensajes:", error);
+            if (!append) {
+                setChatMessages([]);
+                toast.error("Error al cargar los mensajes del chat");
+            }
+        } finally {
+            setIsLoading(false);
+            setLoadingMoreMessages(false);
+            setInitialLoad(false);
+        }
+    };
+
+    // Agregar función para manejar el scroll
+    const handleScroll = useCallback((e) => {
+        const element = e.target;
+        if (element.scrollTop === 0 && !loadingMoreMessages && hasMoreMessages && !initialLoad) {
+            setPage(prev => prev + 1);
+            loadMessages(page + 1, true);
+        }
+    }, [loadingMoreMessages, hasMoreMessages, page, initialLoad]);
+
+
+    // Efecto INICIAL
+    useEffect(() => {
+        setPage(1);
+        setHasMoreMessages(true);
+        setInitialLoad(true);
+        loadMessages(1, false);
     }, [selectedChatId?.id]);
+
+    useEffect(() => {
+        const messagesContainer = messagesContainerRef.current;
+        if (messagesContainer) {
+            messagesContainer.addEventListener('scroll', handleScroll);
+            return () => messagesContainer.removeEventListener('scroll', handleScroll);
+        }
+    }, [handleScroll]);
 
     useEffect(() => {
         if (chatMessages && chatMessages.length > 0) {
@@ -600,7 +624,11 @@ const ChatInterface = () => {
     };
 
     const renderMessagesWithDateSeparators = () => {
-        if (!chatMessages || chatMessages.length === 0) return null;
+        // Verificar que chatMessages existe y es un array
+        console.log("Mensajes del chat:", chatMessages);
+        if (!Array.isArray(chatMessages) || chatMessages.length === 0) {
+            return null;
+        }
 
         let lastMessageDate = "";
 
@@ -709,8 +737,8 @@ const ChatInterface = () => {
 
             // Log del payload antes de enviar
             console.log('Payload a enviar al backend:', {
-              ...messagePayload,
-              mediaItems: filesToSend.length > 0 || audioToSend ? 'Archivos adjuntos' : 'Sin archivos'
+                ...messagePayload,
+                mediaItems: filesToSend.length > 0 || audioToSend ? 'Archivos adjuntos' : 'Sin archivos'
             });
 
             // Procesar archivos
@@ -1019,6 +1047,11 @@ const ChatInterface = () => {
                             backgroundRepeat: "no-repeat"
                         }}
                     >
+                        {loadingMoreMessages && (
+                            <div className="flex justify-center py-2">
+                                <Loader className="animate-spin" size={20} />
+                            </div>
+                        )}
                         {isNewChat && !hasMessages ? (
                             <div className="flex flex-col justify-center items-center h-full opacity-50">
                                 <p>Nuevo chat con {selectedChatId.name || selectedChatId.number}</p>
@@ -1190,7 +1223,7 @@ const ChatInterface = () => {
                                         </button>
                                     </div>
                                 </AbilityGuard>
-                                
+
                                 <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.SEND_MEDIA]}>
                                     <button
                                         className={`p-2 rounded-full ${isRecording ? 'bg-red-500' : `bg-[rgb(var(--color-bg-${theme}-secondary))]`}

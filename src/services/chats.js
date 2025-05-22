@@ -45,10 +45,10 @@ const getChatList = (params = {}) => {
   };
 };
 
-const getChat = (chatId) => {
+const getChat = (chatId, page = 1) => {
   const abortController = loadAbort();
   return {
-    call: CustomFetch(`chats/${chatId}`, {
+    call: CustomFetch(`chats/${chatId}?page=${page}`, {
       signal: abortController.controller.signal,
     }),
     abortController,
