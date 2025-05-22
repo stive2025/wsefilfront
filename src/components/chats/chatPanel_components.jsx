@@ -125,17 +125,12 @@ const ChatInterface = () => {
     };
 
     const handleMediaError = (element, type) => {
-        console.log(`Intentando cargar ${type} desde:`, element.src);
-        console.error(`Error loading ${type}:`, element);
-
         // Intentar cargar desde la URL del servidor si falló la carga local
         if (!element.src.includes(SERVER_URL) && element.src.includes('/')) {
             const filename = element.src.split('/').pop();
             const newUrl = `${SERVER_URL}/${filename}`;
-            console.log(`Reintentando con URL alternativa:`, newUrl);
             element.src = newUrl;
         } else {
-            console.log('URL del servidor también falló:', element.src);
             // Si ya estábamos usando la URL del servidor o falló también, mostrar error
             const container = element.parentElement;
             if (container) {
@@ -196,14 +191,6 @@ const ChatInterface = () => {
 
     useEffect(() => {
         if (messageData) {
-            console.group('📱 Procesamiento de Mensaje en Chat');
-            console.log('Mensaje recibido:', {
-                tipo: messageData.media_type,
-                fromMe: messageData.from_me,
-                mediaUrl: messageData.media_url,
-                filename: messageData.filename
-            });
-
             if (messageData.body || messageData.media_type) {
                 // Determinar el ID del chat que debemos usar para comparar
                 const chatIdToCompare = selectedChatId?.id || '';
@@ -277,7 +264,6 @@ const ChatInterface = () => {
                 }
             }
         }
-        console.groupEnd();
     }, [messageData, selectedChatId, tempIdChat]);
 
 
@@ -428,18 +414,9 @@ const ChatInterface = () => {
 
     // Funciones para mensajes
     const renderMediaContent = (message) => {
-        console.group('🖼️ Renderizado de Contenido Multimedia');
-        console.log('Mensaje:', {
-            tipo: message.media_type,
-            filename: message.filename,
-            mediaPath: message.media_path,
-            isTemporal: message.is_temp
-        });
-
         let mediaSource;
         if (message.media_path?.startsWith('blob:')) {
             mediaSource = message.media_path;
-            console.log('🔗 Usando URL temporal:', mediaSource);
         } else if (message.filename && message.media_path?.startsWith("files/") || message.filename?.startsWith("files/")) {
             mediaSource = `${SERVER_URL}${message.filename}`;
 
@@ -448,16 +425,11 @@ const ChatInterface = () => {
 
         } else if (message.media_path?.startsWith('http')) {
             mediaSource = message.media_path;
-            console.log('🔗 Usando URL completa:', mediaSource);
         }
         // Si es una ruta relativa, construir la URL completa
         else if (message.media_path) {
             mediaSource = `${SERVER_URL}${message.media_path}`;
-            console.log('🔨 Construyendo URL:', mediaSource);
         }
-
-        console.log('URL final para renderizado:', mediaSource);
-        console.groupEnd();
 
         switch (message.media_type) {
             case 'image':
@@ -735,6 +707,12 @@ const ChatInterface = () => {
                 tempSignature: tempSignature
             };
 
+            // Log del payload antes de enviar
+            console.log('Payload a enviar al backend:', {
+              ...messagePayload,
+              mediaItems: filesToSend.length > 0 || audioToSend ? 'Archivos adjuntos' : 'Sin archivos'
+            });
+
             // Procesar archivos
             if (filesToSend.length > 0 || audioToSend) {
                 const mediaItems = [];
@@ -830,7 +808,6 @@ const ChatInterface = () => {
     const handleUpdateChat = async (idChat, dataChat) => {
         try {
             const response = await callEndpoint(updateChat(idChat, dataChat), `update_chat_${idChat}`);
-            console.log("Chat actualizado ", response);
             return response;
         } catch (error) {
             console.error("Error actualizando chat ", error);
