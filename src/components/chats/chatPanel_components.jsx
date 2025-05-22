@@ -23,7 +23,9 @@ import { useTheme } from "@/contexts/themeContext";
 
 const ChatInterface = () => {
 
-
+    const isScrollingManually = useRef(false);
+    const scrollTimeoutRef = useRef(null);
+    const scrollPositionRef = useRef(null);
     const SERVER_URL = 'http://193.46.198.228:8085/back/public/';
     const isMobile = Resize();
     const location = useLocation();
@@ -141,6 +143,11 @@ const ChatInterface = () => {
             }
         }
     };
+    const scrollToBottom = useCallback(() => {
+        if (!isScrollingManually.current && messagesContainerRef.current) {
+            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        }
+    }, []);
 
     const loadMessages = async (pageNum = 1, append = false) => {
         if (!selectedChatId) return;
@@ -148,6 +155,8 @@ const ChatInterface = () => {
         try {
             if (pageNum === 1) {
                 setIsLoading(true);
+                isScrollingManually.current = false; // Resetear el flag manual al cargar nuevo chat
+
             } else {
                 setLoadingMoreMessages(true);
             }
@@ -172,6 +181,7 @@ const ChatInterface = () => {
                 if (append) {
                     // Cuando cargamos más mensajes (paginación), los agregamos al principio
                     setChatMessages(prev => [...newMessages.reverse(), ...(prev || [])]);
+                    return
                 } else {
                     // Carga inicial, invertimos el orden para que los más recientes queden abajo
                     setChatMessages(newMessages.reverse());
@@ -192,19 +202,23 @@ const ChatInterface = () => {
             setIsLoading(false);
             setLoadingMoreMessages(false);
             setInitialLoad(false);
-
-            // Solo hacer scroll al fondo si no estamos cargando más mensajes
-            if (!append && messagesContainerRef.current) {
-                setTimeout(() => {
-                    messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-                }, 100);
-            }
         }
     };
+
     // Agregar función para manejar el scroll
     const handleScroll = useCallback((e) => {
+        if (scrollTimeoutRef.current) {
+            clearTimeout(scrollTimeoutRef.current);
+        }
+
         const element = e.target;
-        if (element.scrollTop === 0 && !loadingMoreMessages && hasMoreMessages && !initialLoad) {
+        scrollPositionRef.current = element.scrollTop;
+
+        // Determinar si el usuario está cerca del top (con un margen de 50px)
+        const isNearTop = element.scrollTop <= 50;
+
+        if (isNearTop && !loadingMoreMessages && hasMoreMessages && !initialLoad) {
+            
             setPage(prev => prev + 1);
             loadMessages(page + 1, true);
         }
@@ -216,6 +230,7 @@ const ChatInterface = () => {
         setPage(1);
         setHasMoreMessages(true);
         setInitialLoad(true);
+        isScrollingManually.current = false;
         loadMessages(1, false);
     }, [selectedChatId?.id]);
 
@@ -229,10 +244,16 @@ const ChatInterface = () => {
 
 
     useEffect(() => {
-        if (chatMessages && chatMessages.length > 0) {
-            scrollToBottom();
+        if (chatMessages && chatMessages.length > 0 && !initialLoad) {
+            const isNewMessage = chatMessages[chatMessages.length - 1]?.is_temp ||
+                chatMessages[chatMessages.length - 1]?.from_me === "true" ||
+                !chatMessages[chatMessages.length - 1]?.from_me;
+
+            if (isNewMessage && !isScrollingManually.current) {
+                scrollToBottom();
+            }
         }
-    }, [chatMessages]);
+    }, [chatMessages, initialLoad]);
 
     useEffect(() => {
         if (messageData) {
@@ -297,7 +318,9 @@ const ChatInterface = () => {
                         return prevMessages;
                     });
 
-                    setTimeout(scrollToBottom, 100);
+                    if (isCurrentChat && !isScrollingManually.current) {
+                        setTimeout(scrollToBottom, 100);
+                    }
                 }
 
                 // Si el mensaje es para el chat actualmente abierto y no es un mensaje propio
@@ -329,11 +352,7 @@ const ChatInterface = () => {
 
 
     // Funciones de ayuda
-    const scrollToBottom = () => {
-        if (messagesContainerRef.current) {
-            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-        }
-    };
+
 
     const formatMessageTime = (timestamp) => {
         if (!timestamp) return "";
@@ -910,6 +929,16 @@ const ChatInterface = () => {
             setUploadProgress(0);
         }
     };
+
+    // Eliminar el scrollToBottom del loadMessages y crear un nuevo useEffect para manejar el scroll
+    useEffect(() => {
+        // Solo hacer scroll automático cuando cambia el selectedChatId
+        if (messagesContainerRef.current && selectedChatId) {
+            setTimeout(() => {
+                messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+            }, 100);
+        }
+    }, [selectedChatId]); // Solo depende de selectedChatId
 
     if (shouldShowChat && isLoading) {
         return (
