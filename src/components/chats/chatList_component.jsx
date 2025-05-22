@@ -339,12 +339,12 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
     if (selectedChatId && selectedChatId.id === chatId) {
       return true;
     }
-    
+
     // Check if selected through tempIdChat
     if (tempIdChat && tempIdChat === chatId) {
       return true;
     }
-    
+
     return false;
   };
 
@@ -391,26 +391,26 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
               }
               hover:bg-[rgb(var(--input-hover-bg-${theme}))] cursor-pointer`}
             onClick={() => {
-               setTempIdChat(null);
+              setTempIdChat(null);
               // Verificar si el chat está en estado pendiente y actualizarlo
               if (item.state === "PENDING" && item.state !== "CLOSED") {
                 handleUpdateChat(item.id, { unread_message: 0, state: "OPEN" });
                 setReadChats(prev => new Set(prev).add(item.id));
-              } 
+              }
               // Marcar como leído si tiene mensajes no leídos
               else if (item.unread_message > 0) {
                 handleUpdateChat(item.id, { unread_message: 0 });
                 setReadChats(prev => new Set(prev).add(item.id));
               }
-                setSelectedChatId({
-                  id: item.isContact? item.chat_id: item.id,
-                  tag_id: item.tag_id,
-                  status: item.state,
-                  idContact: item.idContact,
-                  name: item.name,
-                  photo: item.avatar,
-                  number: item.number,
-                });
+              setSelectedChatId({
+                id: item.isContact ? item.chat_id : item.id,
+                tag_id: item.tag_id,
+                status: item.state,
+                idContact: item.idContact,
+                name: item.name,
+                photo: item.avatar,
+                number: item.number,
+              });
             }}
           >
             <div className="relative w-10 h-10 flex-shrink-0">
@@ -501,13 +501,13 @@ const ChatList = ({ role = "admin" }) => {
     loadChats(initialParams, false);
   }, [stateSelected]);
 
-useEffect(() => {
-  if (!selectedChatId && !tempIdChat && chats.length > 0) {
-    setPage(1);
-    setHasMoreChats(true);
-    loadChats({ page: 1 }, false);
-  }
-}, [selectedChatId, tempIdChat]);
+  useEffect(() => {
+    if (!selectedChatId && !tempIdChat && chats.length > 0) {
+      setPage(1);
+      setHasMoreChats(true);
+      loadChats({ page: 1 }, false);
+    }
+  }, [selectedChatId, tempIdChat]);
 
   useEffect(() => {
     if (messageData) {
@@ -561,8 +561,8 @@ useEffect(() => {
         chatToUpdate.from_me = messageData.from_me;
 
         // Comprobar si el chat está seleccionado
-        const isChatCurrentlySelected = 
-          (selectedChatId && selectedChatId.id === chatToUpdate.id) || 
+        const isChatCurrentlySelected =
+          (selectedChatId && selectedChatId.id === chatToUpdate.id) ||
           (tempIdChat && tempIdChat === chatToUpdate.id);
 
         // Incrementar contador solo si no es el chat seleccionado actualmente
@@ -586,8 +586,8 @@ useEffect(() => {
           from_me: messageData.from_me,
           ack: messageData.ack,
           // Solo incrementar contador si no es el chat seleccionado
-          unread_message: (selectedChatId?.id === messageData.chat_id || 
-                         tempIdChat === messageData.chat_id) ? 0 : 1,
+          unread_message: (selectedChatId?.id === messageData.chat_id ||
+            tempIdChat === messageData.chat_id) ? 0 : 1,
           state: (tempIdChat && tempIdChat === messageData.chat_id) ? "OPEN" : "PENDING",
           avatar: "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain"
         };
@@ -629,9 +629,9 @@ useEffect(() => {
       let endpointKey = 'chatList';
       let isContact = false;
 
+      // Si hay búsqueda, ignorar filtros
       if (searchQuery) {
         setIsSearching(true);
-        // Determina si es búsqueda por teléfono o por nombre
         if (/^\d+$/.test(searchQuery)) {
           endpoint = getContactChatsByPhone(searchQuery);
           endpointKey = 'contactChatsByPhone';
@@ -643,18 +643,21 @@ useEffect(() => {
         }
       } else {
         setIsSearching(false);
-        const filterParams = { 
+        // Usar los parámetros proporcionados, asegurando que state siempre tenga valor
+        const filterParams = {
           ...params,
-          state: params.state || 'OPEN'  // Ensure default state is OPEN
+          state: params.state || 'OPEN'
         };
 
-        if (filterParams.id_tag === null || filterParams.id_tag === undefined) {
-          delete filterParams.id_tag;
-        }
-
+        Object.keys(filterParams).forEach(key => {
+          if (filterParams[key] === null || filterParams[key] === undefined) {
+            delete filterParams[key];
+          }
+        });
         console.log('Final API parameters:', filterParams);
         endpoint = getChatList(filterParams);
       }
+
 
       const response = await callEndpoint(endpoint, endpointKey);
       setPaginationInfo({
@@ -715,12 +718,7 @@ useEffect(() => {
         setChats(enrichedChats);
       }
     } catch (error) {
-      console.error("Error loading chats:", {
-        error,
-        params,
-        state: params.state,
-        tagId: params.id_tag
-      });
+      console.error("Error loading chats:", error);
       if (!append) {
         setChats([]);
       }
@@ -742,47 +740,36 @@ useEffect(() => {
     loadTags();
   }, []);
 
-  // Efecto para cargar chats cuando cambian los criterios
   useEffect(() => {
     if (!isSearching) {
       console.group('Applying Filters');
       console.log('State:', stateSelected);
       console.log('Tag:', tagSelected);
       console.log('Agent:', agentSelected);
-      
+
       setPage(1);
       setHasMoreChats(true);
-      
-      const filterParams = { 
+
+      const filterParams = {
         page: 1,
-        // Always include state, default to OPEN
-        state: stateSelected || 'OPEN'
+        state: stateSelected || 'OPEN' // Cambiar el valor por defecto a 'OPEN'
       };
-      
-      if (tagSelected && tagSelected !== 0) {
+
+      // Solo incluir tagSelected si tiene valor y no es 0
+      if (tagSelected) {
         filterParams.id_tag = tagSelected;
       }
-      
+
       if (agentSelected) {
         filterParams.agent_id = agentSelected;
       }
 
       console.log('Filter parameters:', filterParams);
       loadChats(filterParams, false);
-      
+
       console.groupEnd();
     }
-  }, [stateSelected, tagSelected, agentSelected]);
-
-  // NOTA: Este efecto está comentado porque los filtros no afectan la búsqueda actualmente
-
-  useEffect(() => {
-    if (!isSearching) {
-      setPage(1);
-      setHasMoreChats(true);
-      loadChats({ page: 1 }, false);
-    }
-  }, [stateSelected, tagSelected, agentSelected]);
+  }, [stateSelected, tagSelected, agentSelected, isSearching]);
 
   useEffect(() => {
     const handleChatStateChange = async (event) => {

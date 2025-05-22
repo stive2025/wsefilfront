@@ -13,20 +13,20 @@ const Navtopbar = () => {
   const [activeItem, setActiveItem] = useState(stateSelected || "PENDING");
 
   useEffect(() => {
+    // Solo establecer PENDING si no hay estado seleccionado
     if (!stateSelected) {
-      setStateSelected("PENDING");
+      setStateSelected("OPEN"); // Cambiar a 'OPEN' como valor por defecto
     }
-    setActiveItem(stateSelected || "PENDING");
-  }, []);
+    setActiveItem(stateSelected || "OPEN");
+  }, [stateSelected, setStateSelected]);
 
   if (location.pathname !== '/chatList') {
     return null;
   }
 
   const menuOptions = [
-    /*{ key: "ALL", label: "TODO" },*/
-    { key: "PENDING", label: "PENDIENTE" },
     { key: "OPEN", label: "PROCESO" },
+    { key: "PENDING", label: "PENDIENTE" },
     { key: "CLOSED", label: "RESUELTOS" }
   ];
 
@@ -38,7 +38,7 @@ const Navtopbar = () => {
         setActiveItem(stateSelected);
       }
     }, [stateSelected]);
-    
+
     return (
       <li
         onClick={() => {
