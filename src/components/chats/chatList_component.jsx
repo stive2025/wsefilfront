@@ -580,7 +580,7 @@ useEffect(() => {
         const newChat = {
           id: messageData.chat_id,
           number: messageData.number,
-          name: messageData.notify_name || messageData.number,
+          name: messageData.number,
           last_message: getMessagePreview(messageData),
           timestamp: new Date(messageData.timestamp).toLocaleString(),
           from_me: messageData.from_me,

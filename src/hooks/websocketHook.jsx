@@ -33,7 +33,6 @@ const WebSocketHook = () => {
                 from_me: data.from_me === true || data.from_me === "true",
                 chat_id: data.chat_id,
                 number: data.number,
-                notify_name: data.notify_name || '.',
                 timestamp: data.timestamp
                     ? (typeof data.timestamp === 'number'
                         ? new Date(data.timestamp * 1000).toISOString()
