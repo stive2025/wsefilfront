@@ -837,11 +837,6 @@ const ChatInterface = () => {
 
                 if (response.chat_id) {
                     setTempIdChat(response.chat_id);
-                    setSelectedChatId(prev => ({
-                        ...prev,
-                        id: response.chat_id, // Actualizamos el id del chat
-                        status: "OPEN"
-                    }));
                     setIsNewChat(false);
                 }
             }
@@ -861,6 +856,7 @@ const ChatInterface = () => {
             setUploadProgress(0);
         }
     };
+
     const handleUpdateChat = async (idChat, dataChat) => {
         try {
             const response = await callEndpoint(updateChat(idChat, dataChat), `update_chat_${idChat}`);
