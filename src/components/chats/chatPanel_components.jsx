@@ -143,7 +143,7 @@ const ChatInterface = () => {
     };
 
     const loadMessages = async (pageNum = 1, append = false) => {
-        if (!selectedChatId?.id) return;
+        if (!selectedChatId) return;
 
         try {
             if (pageNum === 1) {
@@ -152,21 +152,35 @@ const ChatInterface = () => {
                 setLoadingMoreMessages(true);
             }
 
-            const response = await callEndpoint(getChat(selectedChatId.id, pageNum));
-            console.log("Mensajes cargados:", response);
-
-            const newMessages = response.messages.data || [];
-            setHasMoreMessages(newMessages.length > 0);
-
-            if (append) {
-                setChatMessages(prev => [...newMessages, ...(prev || [])]);
-            } else {
-                setChatMessages(newMessages);
+            // Si es un nuevo chat (tiene idContact pero no id)
+            if (selectedChatId.idContact && !selectedChatId.id) {
+                setChatMessages([]);
+                setIsNewChat(true);
                 setSelectedChatId(prev => ({
                     ...prev,
-                    status: response.state || prev.state
+                    status: "OPEN"
                 }));
-                setIsNewChat(false);
+                return;
+            }
+
+            // Si es un chat existente
+            if (selectedChatId.id) {
+                const response = await callEndpoint(getChat(selectedChatId.id, pageNum));
+                const newMessages = response.messages.data || [];
+                setHasMoreMessages(newMessages.length > 0);
+
+                if (append) {
+                    // Cuando cargamos más mensajes (paginación), los agregamos al principio
+                    setChatMessages(prev => [...newMessages.reverse(), ...(prev || [])]);
+                } else {
+                    // Carga inicial, invertimos el orden para que los más recientes queden abajo
+                    setChatMessages(newMessages.reverse());
+                    setSelectedChatId(prev => ({
+                        ...prev,
+                        status: response.state || prev.state
+                    }));
+                    setIsNewChat(false);
+                }
             }
         } catch (error) {
             console.error("Error cargando mensajes:", error);
@@ -178,9 +192,15 @@ const ChatInterface = () => {
             setIsLoading(false);
             setLoadingMoreMessages(false);
             setInitialLoad(false);
+
+            // Solo hacer scroll al fondo si no estamos cargando más mensajes
+            if (!append && messagesContainerRef.current) {
+                setTimeout(() => {
+                    messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+                }, 100);
+            }
         }
     };
-
     // Agregar función para manejar el scroll
     const handleScroll = useCallback((e) => {
         const element = e.target;
@@ -207,6 +227,7 @@ const ChatInterface = () => {
         }
     }, [handleScroll]);
 
+
     useEffect(() => {
         if (chatMessages && chatMessages.length > 0) {
             scrollToBottom();
@@ -224,7 +245,8 @@ const ChatInterface = () => {
                 // Comprobar si este mensaje pertenece al chat actual
                 const isCurrentChat = selectedChatId &&
                     (chatIdToCompare === relevantChatId ||
-                        (shouldUseTemp && tempIdChat === relevantChatId));
+                        (shouldUseTemp && tempIdChat === relevantChatId) ||
+                        (isNewChat && !messageData.from_me));
 
                 if (isCurrentChat) {
                     setChatMessages(prevMessages => {
@@ -252,11 +274,11 @@ const ChatInterface = () => {
                         }
 
                         // Si no es un mensaje temporal (es decir, es un mensaje nuevo recibido), agregarlo
-                        if (!messageData.from_me) {
+                        if (!messageData.from_me || isNewChat) {
                             const normalizedMessage = {
                                 id: messageData.id_message_wp || messageData.id,
                                 body: messageData.body || '',
-                                from_me: messageData.from_me === true || messageData.from_me === "false",
+                                from_me: messageData.from_me === true || messageData.from_me === "true",
                                 media_type: messageData.media_type || 'chat',
                                 media_path: messageData.media_url ? `${SERVER_URL}/${messageData.media_url}` : '',
                                 media_url: messageData.media_url ? `${SERVER_URL}/${messageData.media_url}` : '',
@@ -272,7 +294,6 @@ const ChatInterface = () => {
                             return [...prevMessages, normalizedMessage];
                         }
 
-                        // Si no encontramos mensaje temporal y es un mensaje propio, no hacer nada
                         return prevMessages;
                     });
 
@@ -288,7 +309,7 @@ const ChatInterface = () => {
                 }
             }
         }
-    }, [messageData, selectedChatId, tempIdChat]);
+    }, [messageData, selectedChatId, tempIdChat, isNewChat]);
 
 
     useEffect(() => {
@@ -433,7 +454,12 @@ const ChatInterface = () => {
         });
     };
 
-
+    const removeRecordedAudio = () => {
+        if (recordedAudio) {
+            URL.revokeObjectURL(recordedAudio.url);
+            setRecordedAudio(null);
+        }
+    };
 
 
     // Funciones para mensajes
@@ -624,14 +650,13 @@ const ChatInterface = () => {
     };
 
     const renderMessagesWithDateSeparators = () => {
-        // Verificar que chatMessages existe y es un array
-        console.log("Mensajes del chat:", chatMessages);
         if (!Array.isArray(chatMessages) || chatMessages.length === 0) {
             return null;
         }
 
         let lastMessageDate = "";
 
+        // Renderizamos los mensajes en orden directo (más antiguos arriba, más recientes abajo)
         return chatMessages.map((message, index) => {
             const messageDate = formatMessageDate(message.created_at);
             const currentElement = renderMessageContent(message, lastMessageDate);
@@ -694,7 +719,7 @@ const ChatInterface = () => {
             setSendingMessage(true);
             setUploadProgress(0);
 
-            // Crear mensaje temporal
+            // Crear mensaje temporal (siempre lo mostramos, incluso en nuevos chats)
             const newMessage = {
                 id: tempId,
                 body: messageText,
@@ -710,11 +735,14 @@ const ChatInterface = () => {
                 const file = selectedFiles[0];
                 newMessage.media_type = file.type;
                 newMessage.filename = file.file.name;
+                newMessage.media_path = file.previewUrl;
             } else if (recordedAudio) {
                 newMessage.media_type = 'audio';
                 newMessage.filename = recordedAudio.name;
+                newMessage.media_path = recordedAudio.url;
             }
 
+            // Siempre agregamos el mensaje temporal (comportamiento optimista)
             setChatMessages(prev => prev ? [...prev, newMessage] : [newMessage]);
             scrollToBottom();
 
@@ -791,7 +819,6 @@ const ChatInterface = () => {
                 // Actualizar mensaje temporal con datos del servidor
                 setChatMessages(prev => {
                     if (!prev) return [];
-
                     return prev.map(msg => {
                         if (msg.tempSignature === tempSignature) {
                             const mediaData = response.media?.[0];
@@ -812,6 +839,7 @@ const ChatInterface = () => {
                     setTempIdChat(response.chat_id);
                     setSelectedChatId(prev => ({
                         ...prev,
+                        id: response.chat_id, // Actualizamos el id del chat
                         status: "OPEN"
                     }));
                     setIsNewChat(false);
@@ -882,7 +910,8 @@ const ChatInterface = () => {
             console.error("Error al reabrir el chat:", error);
             toast.error("Error al reabrir el chat");
         } finally {
-            setReopeningChat(false);
+            setSendingMessage(false);
+            setUploadProgress(0);
         }
     };
 
@@ -1100,7 +1129,7 @@ const ChatInterface = () => {
                                             <Volume2 size={24} />
                                         </div>
                                         <button
-                                            // onClick={removeAudio}
+                                            onClick={removeRecordedAudio}
                                             className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1"
                                         >
                                             <X size={12} />
