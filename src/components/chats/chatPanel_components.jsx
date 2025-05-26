@@ -143,11 +143,7 @@ const ChatInterface = () => {
             }
         }
     };
-    const scrollToBottom = useCallback(() => {
-        if (!isScrollingManually.current && messagesContainerRef.current) {
-            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-        }
-    }, []);
+
 
     const loadMessages = async (pageNum = 1, append = false) => {
         if (!selectedChatId) return;
@@ -244,18 +240,6 @@ const ChatInterface = () => {
 
 
     useEffect(() => {
-        if (chatMessages && chatMessages.length > 0 && !initialLoad) {
-            const isNewMessage = chatMessages[chatMessages.length - 1]?.is_temp ||
-                chatMessages[chatMessages.length - 1]?.from_me === "true" ||
-                !chatMessages[chatMessages.length - 1]?.from_me;
-
-            if (isNewMessage && !isScrollingManually.current) {
-                scrollToBottom();
-            }
-        }
-    }, [chatMessages, initialLoad]);
-
-    useEffect(() => {
         if (messageData) {
             if (messageData.body || messageData.media_type) {
                 // Determinar el ID del chat que debemos usar para comparar
@@ -317,10 +301,6 @@ const ChatInterface = () => {
 
                         return prevMessages;
                     });
-
-                    if (isCurrentChat && !isScrollingManually.current) {
-                        setTimeout(scrollToBottom, 100);
-                    }
                 }
 
                 // Si el mensaje es para el chat actualmente abierto y no es un mensaje propio
@@ -763,7 +743,6 @@ const ChatInterface = () => {
 
             // Siempre agregamos el mensaje temporal (comportamiento optimista)
             setChatMessages(prev => prev ? [...prev, newMessage] : [newMessage]);
-            scrollToBottom();
 
             // Limpiar UI
             setMessageText("");
@@ -930,7 +909,6 @@ const ChatInterface = () => {
         }
     };
 
-    // Eliminar el scrollToBottom del loadMessages y crear un nuevo useEffect para manejar el scroll
     useEffect(() => {
         // Solo hacer scroll automático cuando cambia el selectedChatId
         if (messagesContainerRef.current && selectedChatId) {

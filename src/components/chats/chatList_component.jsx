@@ -345,7 +345,6 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
           </div>
         ) : chats.length === 0 ? (
           <div className="flex justify-center items-center py-10 text-sm text-[rgb(var(--color-text-secondary-${theme}))]">
-            No hay chats disponibles
           </div>
         ) : (
           <>
