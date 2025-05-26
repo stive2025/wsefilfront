@@ -48,10 +48,15 @@ const ContactInfo = () => {
     }, [infoOpen]);
 
     useEffect(() => {
-        if (infoOpen) {
-            setInfoOpen(false);
+        const currentChatId = selectedChatId?.idContact;
+        if (infoOpen && currentChatId !== undefined) {
+            const lastChatId = JSON.parse(sessionStorage.getItem('lastChatId'));
+            if (lastChatId !== currentChatId) {
+                setInfoOpen(false);
+                sessionStorage.setItem('lastChatId', JSON.stringify(currentChatId));
+            }
         }
-    }, [selectedChatId])
+    }, [selectedChatId, infoOpen])
 
 
     const variants = {
