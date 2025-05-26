@@ -15,8 +15,6 @@ import { useAuth } from '@/contexts/authContext';
 import { useTheme } from "@/contexts/themeContext";
 import { getUserLabelColors } from "@/utils/getUserLabelColors";
 
-
-
 // ChatHeader component remains the same
 const ChatHeader = () => {
   const { theme } = useTheme();
@@ -119,7 +117,7 @@ const TagsBar = ({ tags }) => {
                     ${!tagSelected ? "bg-gray-700 text-white" : "hover:text-gray-300"}`}
                   onClick={() => handleTagClick(null)}
                 >
-                  Sin etiqueta
+                  Todo
                 </li>
                 {tags.map((tag) => (
                   <li
@@ -213,7 +211,7 @@ const AgentSelect = ({ role }) => {
   );
 };
 
-// En el componente ChatItems, actualizar la parte donde se muestra el mensaje
+// Helper function to get message preview
 const getMessagePreview = (message) => {
   if (message.media_type === 'chat') {
     return message.body;
@@ -233,7 +231,6 @@ const getMessagePreview = (message) => {
   }
 };
 
-// ChatItems component with updated logic to handle tempIdChat
 const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessages, setChats }) => {
   const { selectedChatId, setSelectedChatId } = useContext(ChatInterfaceClick);
   const { tempIdChat, setTempIdChat } = useContext(TempNewMessage);
@@ -245,20 +242,17 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
 
   const renderAckStatus = (ackStatus) => {
     switch (ackStatus) {
-      case -1: // ACK_ERROR
-        return <AlertTriangle size={14} className="text-yellow-500" />;
-      case 0: // ACK_PENDING
-        return <Clock size={14} className="text-gray-400" />;
-      case 1: // ACK_SERVER
-        return <Check size={14} className="text-gray-400" />;
-      case 2: // ACK_DEVICE
+      case -1: return <AlertTriangle size={14} className="text-yellow-500" />;
+      case 0: return <Clock size={14} className="text-gray-400" />;
+      case 1: return <Check size={14} className="text-gray-400" />;
+      case 2:
         return (
           <div className="relative">
             <Check size={14} className="text-gray-400" />
             <Check size={14} className="text-gray-400 absolute top-0 left-1" />
           </div>
         );
-      case 3: // ACK_READ
+      case 3:
         return (
           <div className="relative">
             <Check size={14} className="text-blue-500" />
@@ -273,13 +267,9 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
   const handleUpdateChat = async (idChat, dataChat) => {
     try {
       await callEndpoint(updateChat(idChat, dataChat), `update_chat_${idChat}`);
-
-      // Actualiza también el estado local de los chats
       setChats(prevChats =>
         prevChats.map(chat =>
-          chat.id === idChat
-            ? { ...chat, ...dataChat }
-            : chat
+          chat.id === idChat ? { ...chat, ...dataChat } : chat
         )
       );
     } catch (error) {
@@ -287,7 +277,6 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
     }
   };
 
-  // El useEffect para manejar los mensajes entrantes
   useEffect(() => {
     if (incomingMessages && incomingMessages.chat_id) {
       setReadChats(prev => {
@@ -298,17 +287,14 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
     }
   }, [incomingMessages]);
 
-  // useEffect para mantener actualizado el contador en chats leídos
   useEffect(() => {
     chats.forEach(chat => {
       if (readChats.has(chat.id) && (chat.unread_message > 0 || chat.unreadCount > 0)) {
         handleUpdateChat(chat.id, { unread_message: 0 });
-        console.log(`Actualizando contador de mensajes no leídos a 0 para chat ${chat.id}`);
       }
     });
   }, [chats, readChats]);
 
-  // Infinity scroll logic
   useEffect(() => {
     if (loading || !hasMoreChats) return;
 
@@ -334,35 +320,12 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
     };
   }, [loading, hasMoreChats, loadMoreChats, chats.length]);
 
-  // Helper function to check if a chat is currently selected
   const isChatSelected = (chatId) => {
-    // Check if selected through selectedChatId
-    if (selectedChatId && selectedChatId.id === chatId) {
-      return true;
-    }
-
-    // Check if selected through tempIdChat
-    if (tempIdChat && tempIdChat === chatId) {
-      return true;
-    }
-
-    return false;
+    return (
+      (selectedChatId && selectedChatId.id === chatId) ||
+      (tempIdChat && tempIdChat === chatId)
+    );
   };
-
-  if (loading && chats.length === 0) {
-    return (
-      <div className={`flex justify-center items-center py-10`}>
-        <Loader className="animate-spin" size={24} />
-      </div>
-    );
-  } else if (chats.length === 0) {
-    return (
-      <div className={`flex justify-center items-center py-10 
-        text-[rgb(var(--color-text-secondary-${theme}))]`}>
-        No hay chats disponibles
-      </div>
-    );
-  }
 
   return (
     <AbilityGuard
@@ -376,112 +339,118 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
       }
     >
       <div className={`bg-[rgb(var(--color-bg-${theme}-secondary))]`}>
-        {chats.map((item, index) => {
-          const { bg, text } = getUserLabelColors(item.by_user);
+        {loading ? (
+          <div className="flex justify-center items-center py-10">
+            <Loader className="animate-spin" size={24} />
+          </div>
+        ) : chats.length === 0 ? (
+          <div className="flex justify-center items-center py-10 text-sm text-[rgb(var(--color-text-secondary-${theme}))]">
+            No hay chats disponibles
+          </div>
+        ) : (
+          <>
+            {chats.map((item, index) => {
+              const { bg, text } = getUserLabelColors(item.by_user);
 
-          return (
-            <div
-              key={item.id}
-              data-chat-id={item.id}
-              ref={index === chats.length - 1 ? lastChatRef : null}
-              className={`relative w-full flex items-center justify-between p-4 
-        ${theme === 'light'
-                  ? isChatSelected(item.id)
-                    ? 'bg-[#e9e6e6]'
-                    : 'bg-[#f9f9f9]'
-                  : isChatSelected(item.id)
-                    ? 'bg-[#2e2f2f]'
-                    : 'bg-[#161717]'
-                }
-        hover:bg-[rgb(var(--input-hover-bg-${theme}))] cursor-pointer`}
-              onClick={() => {
-                setTempIdChat(null);
-                if (item.state === "PENDING" && item.state !== "CLOSED") {
-                  handleUpdateChat(item.id, { unread_message: 0, state: "OPEN" });
-                  setReadChats(prev => new Set(prev).add(item.id));
-                } else if (item.unread_message > 0) {
-                  handleUpdateChat(item.id, { unread_message: 0 });
-                  setReadChats(prev => new Set(prev).add(item.id));
-                }
-                setSelectedChatId({
-                  id: item.isContact ? item.chat_id : item.id,
-                  tag_id: item.tag_id,
-                  status: item.state,
-                  idContact: item.idContact,
-                  name: item.name,
-                  photo: item.avatar,
-                  number: item.number,
-                });
-              }}
-            >
-              {/* Etiqueta de agente */}
-              <AbilityGuard abilities={[ABILITIES.CHATS.FILTER_BY_AGENT]}>
-                {item.by_user && (
-                  <div className={`absolute top-1 right-1 text-[10px] px-2 py-0.5 rounded-full 
-            ${bg} ${text} font-semibold whitespace-nowrap`}>
-                    {item.by_user}
-                  </div>
-                )}
-              </AbilityGuard>
-
-              {/* Avatar */}
-              <div className="relative w-10 h-10 flex-shrink-0 mr-3">
-                <img
-                  src={item.avatar || "@/assets/images/default-avatar.jpg"}
-                  alt="Avatar"
-                  className="w-full h-full rounded-full object-cover object-center"
-                />
-              </div>
-
-              {/* Info principal */}
-              <div className="flex-1 min-w-0 m-2">
-                <div className="flex justify-between items-center mb-1">
-                  <span className={`font-medium text-sm md:text-base text-[rgb(var(--color-text-primary-${theme}))] truncate`}>
-                    {item.name}
-                  </span>
-                  <span className={`text-xs text-[rgb(var(--color-text-secondary-${theme}))] flex-shrink-0`}>
-                    {item.timestamp || new Date(item.updated_at).toLocaleDateString()}
-                  </span>
-                </div>
-
-                <div className="flex justify-between items-center gap-2">
-                  <div className="flex items-center gap-1 overflow-hidden min-w-0">
-                    {item.from_me === "true" && (
-                      <span className="shrink-0">{renderAckStatus(item.ack)}</span>
-                    )}
-                    <span className={`text-sm truncate text-[rgb(var(--color-text-secondary-${theme}))]`}>
-                      {item.last_message || getMessagePreview(item)}
-                    </span>
-                  </div>
-
-                  {/* Burbuja de mensajes no leídos */}
-                  {(item.unread_message > 0 || item.unreadCount > 0) &&
-                    !readChats.has(item.id) &&
-                    !isChatSelected(item.id) && (
-                      <div className={`flex-shrink-0 bg-[rgb(var(--color-primary-${theme}))] 
-                text-[rgb(var(--color-text-primary-${theme}))] rounded-full w-5 h-5 
-                flex items-center justify-center text-xs`}>
-                        {item.unread_message || item.unreadCount}
+              return (
+                <div
+                  key={item.id}
+                  data-chat-id={item.id}
+                  ref={index === chats.length - 1 ? lastChatRef : null}
+                  className={`relative w-full flex items-center justify-between p-4 
+                    ${theme === "light"
+                      ? isChatSelected(item.id)
+                        ? "bg-[#e9e6e6]"
+                        : "bg-[#f9f9f9]"
+                      : isChatSelected(item.id)
+                        ? "bg-[#2e2f2f]"
+                        : "bg-[#161717]"
+                    }
+                    hover:bg-[rgb(var(--input-hover-bg-${theme}))] cursor-pointer`}
+                  onClick={() => {
+                    setTempIdChat(null);
+                    if (item.state === "PENDING" && item.state !== "CLOSED") {
+                      handleUpdateChat(item.id, { unread_message: 0, state: "OPEN" });
+                      setReadChats((prev) => new Set(prev).add(item.id));
+                    } else if (item.unread_message > 0) {
+                      handleUpdateChat(item.id, { unread_message: 0 });
+                      setReadChats((prev) => new Set(prev).add(item.id));
+                    }
+                    setSelectedChatId({
+                      id: item.isContact ? item.chat_id : item.id,
+                      tag_id: item.tag_id,
+                      status: item.state,
+                      idContact: item.idContact,
+                      name: item.name,
+                      photo: item.avatar,
+                      number: item.number,
+                    });
+                  }}
+                >
+                  <AbilityGuard abilities={[ABILITIES.CHATS.FILTER_BY_AGENT]}>
+                    {item.by_user && (
+                      <div className={`absolute top-1 right-1 text-[10px] px-2 py-0.5 rounded-full ${bg} ${text} font-semibold whitespace-nowrap`}>
+                        {item.by_user}
                       </div>
                     )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+                  </AbilityGuard>
 
-        {loading && chats.length > 0 && (
-          <div className={`flex justify-center items-center py-4 
-            bg-[rgb(var(--color-bg-${theme}-secondary))]`}>
-            <Loader className="animate-spin" size={20} />
-          </div>
+                  <div className="relative w-10 h-10 flex-shrink-0 mr-3">
+                    <img
+                      src={item.avatar || "@/assets/images/default-avatar.jpg"}
+                      alt="Avatar"
+                      className="w-full h-full rounded-full object-cover object-center"
+                    />
+                  </div>
+
+                  <div className="flex-1 min-w-0 m-2">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className={`font-medium text-sm md:text-base text-[rgb(var(--color-text-primary-${theme}))] truncate`}>
+                        {item.name}
+                      </span>
+                      <span className={`text-xs text-[rgb(var(--color-text-secondary-${theme}))] flex-shrink-0`}>
+                        {item.timestamp || new Date(item.updated_at).toLocaleDateString()}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center gap-2">
+                      <div className="flex items-center gap-1 overflow-hidden min-w-0">
+                        {item.from_me === "true" && (
+                          <span className="shrink-0">{renderAckStatus(item.ack)}</span>
+                        )}
+                        <span className={`text-sm truncate text-[rgb(var(--color-text-secondary-${theme}))]`}>
+                          {item.last_message || getMessagePreview(item)}
+                        </span>
+                      </div>
+
+                      {(item.unread_message > 0 || item.unreadCount > 0) &&
+                        !readChats.has(item.id) &&
+                        !isChatSelected(item.id) && (
+                          <div className={`flex-shrink-0 bg-[rgb(var(--color-primary-${theme}))] 
+                            text-[rgb(var(--color-text-primary-${theme}))] rounded-full w-5 h-5 
+                            flex items-center justify-center text-xs`}>
+                            {item.unread_message || item.unreadCount}
+                          </div>
+                        )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {loading && chats.length > 0 && (
+              <div className="flex justify-center items-center py-4">
+                <Loader className="animate-spin" size={20} />
+              </div>
+            )}
+          </>
         )}
       </div>
     </AbilityGuard>
   );
 };
 
-// Updated ChatList component with proper handling of tempIdChat
+
 const ChatList = ({ role = "admin" }) => {
   const isMobile = Resize();
   const { loading, callEndpoint } = useFetchAndLoad();
@@ -502,27 +471,230 @@ const ChatList = ({ role = "admin" }) => {
   const { stateSelected } = useContext(StateFilter);
   const { tagSelected } = useContext(TagFilter);
   const { agentSelected } = useContext(AgentFilter);
-  const [isSearching, setIsSearching] = useState(false);
   const [tags, setTags] = useState([]);
   const { hasAbility } = useAuth();
 
+  // Estado para controlar qué tipo de carga estamos haciendo
+  const [loadingState, setLoadingState] = useState({
+    type: null, // 'filter' | 'search' | 'pagination'
+    isActive: false
+  });
+
+  // Debounce para la búsqueda
+  const [searchDebounce, setSearchDebounce] = useState(null);
+
+  // Función para limpiar el estado cuando cambiamos el tipo de carga
+  const resetChatState = () => {
+    setPage(1);
+    setHasMoreChats(true);
+    setChats([]);
+  };
+
+  // Cargar tags al inicio
+  const loadTags = async () => {
+    try {
+      const response = await callEndpoint(getTags({ page: 1 }));
+      setTags(response.data || []);
+    } catch (error) {
+      console.error("Error obteniendo Tags:", error);
+      setTags([]);
+    }
+  };
+
+  // Función principal para cargar chats
+  const loadChats = async (params = {}, append = false) => {
+    if (loadingState.isActive) return; // Evitar cargas simultáneas
+
+    try {
+      setLoadingState({ type: params.type || 'filter', isActive: true });
+
+      let endpoint;
+      let endpointKey = 'chatList';
+      let isContact = false;
+
+      // Determinar el endpoint basado en si hay búsqueda
+      if (searchQuery.trim()) {
+        if (/^\d+$/.test(searchQuery.trim())) {
+          endpoint = getContactChatsByPhone(searchQuery.trim());
+          endpointKey = 'contactChatsByPhone';
+        } else {
+          endpoint = getContactChatsByName(searchQuery.trim());
+          endpointKey = 'contactChatsByName';
+        }
+        isContact = true;
+      } else {
+        // Construir parámetros de filtro
+        const filterParams = {
+          page: params.page || 1,
+          state: params.state || stateSelected || 'PENDING'
+        };
+
+        // Agregar filtros opcionales solo si tienen valor
+        if (tagSelected) {
+          filterParams.id_tag = tagSelected;
+        }
+        if (agentSelected) {
+          filterParams.agent_id = agentSelected;
+        }
+
+        console.log('API Parameters:', filterParams);
+        endpoint = getChatList(filterParams);
+      }
+
+      const response = await callEndpoint(endpoint, endpointKey);
+
+      setPaginationInfo({
+        current_page: response.current_page || 1,
+        last_page: response.last_page || 1,
+        total: response.total || 0
+      });
+
+      setHasMoreChats((response.current_page || 1) < (response.last_page || 1));
+
+      const chatData = response.data || [];
+      console.log("Datos de chats recibidos:", chatData);
+
+      // Enriquecer chats con información de contactos
+      const enrichedChats = await Promise.all(
+        chatData.map(async (chat, index) => {
+          if (chat.contact_id) {
+            try {
+              const contactKey = `contact_${chat.contact_id}_${index}`;
+              const contactResponse = await callEndpoint(getContact(chat.contact_id), contactKey);
+
+              return {
+                ...chat,
+                idContact: contactResponse?.id,
+                name: contactResponse?.name || "Contacto desconocido",
+                number: contactResponse?.phone_number || chat.number,
+                avatar: contactResponse?.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
+                isContact: isContact
+              };
+            } catch (error) {
+              console.error("Error fetching contact details for ID:", chat.contact_id, error);
+              return {
+                ...chat,
+                name: chat.name || "Contacto desconocido",
+                avatar: chat.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
+                isContact: isContact
+              };
+            }
+          }
+
+          return {
+            ...chat,
+            avatar: chat.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
+            isContact: isContact
+          };
+        })
+      );
+
+      // Actualizar el estado de chats
+      if (append) {
+        setChats(prev => {
+          // Evitar duplicados al hacer append
+          const existingIds = new Set(prev.map(chat => chat.id));
+          const newChats = enrichedChats.filter(chat => !existingIds.has(chat.id));
+          return [...prev, ...newChats];
+        });
+        console.log("Chats añadidos:", enrichedChats);
+      } else {
+        setChats(enrichedChats);
+        console.log("Chats cargados:", enrichedChats);
+      }
+
+    } catch (error) {
+      console.error("Error loading chats:", error);
+      if (!append) {
+        setChats([]);
+      }
+      setHasMoreChats(false);
+    } finally {
+      setLoadingState({ type: null, isActive: false });
+    }
+  };
+
+  // Función para cargar más chats (paginación)
+  const loadMoreChats = useCallback(() => {
+    if (!hasMoreChats || loadingState.isActive) return;
+
+    const nextPage = page + 1;
+    setPage(nextPage);
+
+    loadChats({
+      page: nextPage,
+      type: 'pagination',
+      state: stateSelected
+    }, true);
+  }, [page, hasMoreChats, loadingState.isActive, stateSelected, searchQuery, tagSelected, agentSelected]);
+
+  // Efecto para cargar tags iniciales
+  useEffect(() => {
+    loadTags();
+  }, []);
+
+  // Efecto para manejar cambios en filtros (no búsqueda)
+  useEffect(() => {
+    // Solo ejecutar si no hay búsqueda activa
+    if (!searchQuery.trim()) {
+      console.log('Aplicando filtros:', { stateSelected, tagSelected, agentSelected });
+      resetChatState();
+      loadChats({
+        page: 1,
+        state: stateSelected || 'OPEN',
+        type: 'filter'
+      }, false);
+    }
+  }, [stateSelected, tagSelected, agentSelected]);
+
+  // Efecto para manejar la búsqueda con debounce
+  useEffect(() => {
+    // Limpiar timeout anterior
+    if (searchDebounce) {
+      clearTimeout(searchDebounce);
+    }
+
+    // Si hay texto de búsqueda, configurar debounce
+    if (searchQuery.trim()) {
+      const timeout = setTimeout(() => {
+        console.log('Ejecutando búsqueda:', searchQuery);
+        resetChatState();
+        loadChats({
+          page: 1,
+          type: 'search'
+        }, false);
+      }, 500);
+
+      setSearchDebounce(timeout);
+    } else {
+      // Si no hay búsqueda, volver a los filtros
+      resetChatState();
+      loadChats({
+        page: 1,
+        state: stateSelected || 'PENDING',
+        type: 'filter'
+      }, false);
+    }
+
+    // Cleanup
+    return () => {
+      if (searchDebounce) {
+        clearTimeout(searchDebounce);
+      }
+    };
+  }, [searchQuery]);
+
+  // Cargar chats iniciales
   useEffect(() => {
     const initialParams = {
       page: 1,
-      state: "PENDING"
+      state: stateSelected || "OPEN",
+      type: 'initial'
     };
-
     loadChats(initialParams, false);
-  }, [stateSelected]);
+  }, []); // Solo al montar el componente
 
-  useEffect(() => {
-    if (!selectedChatId && !tempIdChat && chats.length > 0) {
-      setPage(1);
-      setHasMoreChats(true);
-      loadChats({ page: 1 }, false);
-    }
-  }, [selectedChatId, tempIdChat]);
-
+  // Efecto para manejar mensajes WebSocket
   useEffect(() => {
     if (messageData) {
       console.log("Mensaje normalizado recibido:", messageData);
@@ -530,9 +702,7 @@ const ChatList = ({ role = "admin" }) => {
       const currentUserId = userData?.id;
 
       if (!currentUserId || messageData.user_id?.toString() !== currentUserId.toString()) {
-        console.log("Mensaje ignorado - user_id no coincide:",
-          "id en mensaje:", messageData.user_id,
-          "id en localStorage:", currentUserId);
+        console.log("Mensaje ignorado - user_id no coincide");
         return;
       }
 
@@ -548,284 +718,59 @@ const ChatList = ({ role = "admin" }) => {
         const updatedChats = [...chats];
         const chatToUpdate = { ...updatedChats[existingChatIndex] };
 
-        // Función auxiliar para obtener el texto del mensaje según el tipo de medio
-        const getMessagePreview = (message) => {
-          if (message.media_type === 'chat') {
-            return message.body;
-          }
-          switch (message.media_type) {
-            case 'image':
-              return '📷 Imagen';
-            case 'video':
-              return '🎥 Video';
-            case 'audio':
-            case 'ptt':
-              return '🎵 Audio';
-            case 'document':
-              return '📎 Documento';
-            default:
-              return message.body;
-          }
-        };
-
-        // Actualizar último mensaje y contador
         chatToUpdate.last_message = getMessagePreview(messageData);
-        chatToUpdate.timestamp = new Date(messageData.timestamp).toLocaleString();
+        chatToUpdate.timestamp = new Date(messageData.timestamp).toLocaleDateString();
+        chatToUpdate.updated_at = messageData.timestamp;
         chatToUpdate.ack = messageData.ack;
-        chatToUpdate.from_me = messageData.from_me;
+        chatToUpdate.from_me = messageData.from_me?.toString();
 
-        // Comprobar si el chat está seleccionado
-        const isChatCurrentlySelected =
-          (selectedChatId && selectedChatId.id === chatToUpdate.id) ||
-          (tempIdChat && tempIdChat === chatToUpdate.id);
-
-        // Incrementar contador solo si no es el chat seleccionado actualmente
-        if (!isChatCurrentlySelected) {
-          chatToUpdate.unread_message = (chatToUpdate.unread_message || 0) + 1;
+        // Incrementar contador solo si el mensaje no es del usuario actual
+        if (messageData.from_me === false || messageData.from_me === "false") {
+          const currentUnread = chatToUpdate.unread_message || 0;
+          chatToUpdate.unread_message = currentUnread + 1;
         }
 
-        // Mover el chat actualizado al principio de la lista
+        // Mover el chat al principio de la lista
         updatedChats.splice(existingChatIndex, 1);
         updatedChats.unshift(chatToUpdate);
 
         setChats(updatedChats);
+        console.log("Chat actualizado y movido al inicio:", chatToUpdate);
       } else {
         // Crear nuevo chat
+        console.log("Creando nuevo chat para el mensaje");
         const newChat = {
           id: messageData.chat_id,
+          contact_id: messageData.contact_id,
+          name: messageData.contact_name || messageData.number || "Desconocido",
           number: messageData.number,
-          name: messageData.number,
           last_message: getMessagePreview(messageData),
-          timestamp: new Date(messageData.timestamp).toLocaleString(),
-          from_me: messageData.from_me,
+          timestamp: new Date(messageData.timestamp).toLocaleDateString(),
+          updated_at: messageData.timestamp,
+          avatar: messageData.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
+          unread_message: messageData.from_me === false || messageData.from_me === "false" ? 1 : 0,
+          state: "PENDING",
           ack: messageData.ack,
-          // Solo incrementar contador si no es el chat seleccionado
-          unread_message: (selectedChatId?.id === messageData.chat_id ||
-            tempIdChat === messageData.chat_id) ? 0 : 1,
-          state: (tempIdChat && tempIdChat === messageData.chat_id) ? "OPEN" : "PENDING",
-          avatar: "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain"
+          from_me: messageData.from_me?.toString(),
+          tag_id: null,
+          by_user: null
         };
 
-        // Agregar nuevo chat al principio de la lista
-        setChats(prevChats => [newChat, ...prevChats]);
+        setChats(prev => [newChat, ...prev]);
+        console.log("Nuevo chat creado:", newChat);
       }
 
-      // Notificar al componente padre sobre el nuevo mensaje
-      if (messageData) {
-        setMessageDataLocal(messageData);
-        setMessageData(null);
-
-        // Mostrar notificación del navegador si la ventana no está activa
-        if (document.hidden && "Notification" in window && Notification.permission === "granted") {
-          const notificationBody = getMessagePreview(messageData);
-          new Notification("Nuevo mensaje", {
-            body: notificationBody,
-            icon: "./images/logoCRM.png"
-          });
-        }
-      }
+      setMessageDataLocal(messageData);
+      setMessageData(null);
     }
-  }, [messageData, chats, selectedChatId, tempIdChat]);
+  }, [messageData, chats]);
 
-  const loadTags = async () => {
-    try {
-      const response = await callEndpoint(getTags({ page: 1 }));
-      setTags(response.data || []);
-    } catch (error) {
-      console.error("Error obteniendo Tags:", error);
-      setTags([]);
+  // Scroll al inicio cuando se selecciona un chat
+  useEffect(() => {
+    if ((selectedChatId || tempIdChat) && chatListRef.current) {
+      chatListRef.current.scrollTop = 0;
     }
-  };
-
-  const loadChats = async (params = {}, append = false) => {
-    try {
-      let endpoint;
-      let endpointKey = 'chatList';
-      let isContact = false;
-
-      // Si hay búsqueda, ignorar filtros
-      if (searchQuery) {
-        setIsSearching(true);
-        if (/^\d+$/.test(searchQuery)) {
-          endpoint = getContactChatsByPhone(searchQuery);
-          endpointKey = 'contactChatsByPhone';
-          isContact = true;
-        } else {
-          endpoint = getContactChatsByName(searchQuery);
-          endpointKey = 'contactChatsByName';
-          isContact = true;
-        }
-      } else {
-        setIsSearching(false);
-        // Usar los parámetros proporcionados, asegurando que state siempre tenga valor
-        const filterParams = {
-          ...params,
-          state: params.state
-        };
-
-        Object.keys(filterParams).forEach(key => {
-          if (filterParams[key] === null || filterParams[key] === undefined) {
-            delete filterParams[key];
-          }
-        });
-        console.log('Final API parameters:', filterParams);
-        endpoint = getChatList(filterParams);
-      }
-
-
-      const response = await callEndpoint(endpoint, endpointKey);
-      setPaginationInfo({
-        current_page: response.current_page,
-        last_page: response.last_page,
-        total: response.total
-      });
-
-      setHasMoreChats(response.current_page < response.last_page);
-
-      const chatData = response.data || [];
-      console.log("Datos de chats:", chatData);
-      const enrichedChats = await Promise.all(
-        chatData.map(async (chat, index) => {
-          let chatIsContact = isContact;
-
-          if (chat.contact_id) {
-            try {
-              const contactKey = `contact_${chat.contact_id}_${index}`;
-              const contactResponse = await callEndpoint(getContact(chat.contact_id), contactKey);
-              if (!contactResponse) {
-                return {
-                  ...chat,
-                  name: "Unknown Contact",
-                  avatar: "@/assets/images/default-avatar.jpg",
-                  isContact: chatIsContact
-                };
-              } else {
-                return {
-                  ...chat,
-                  idContact: contactResponse.id,
-                  name: contactResponse.name,
-                  number: contactResponse.phone_number,
-                  avatar: contactResponse.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
-                  isContact: chatIsContact
-                };
-              }
-            } catch (error) {
-              console.error("Error fetching contact details for ID:", chat.contact_id, error);
-              return {
-                ...chat,
-                isContact: chatIsContact,
-                profile_picture: chat.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
-              };
-            }
-          }
-          return {
-            ...chat,
-            isContact: chatIsContact,
-            profile_picture: chat.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
-          };
-        })
-      );
-
-      if (append) {
-        setChats(prev => [...prev, ...enrichedChats]);
-        console.log("Chats cargados y añadidos:", enrichedChats);
-      } else {
-        setChats(enrichedChats);
-        console.log("Chats cargados:", enrichedChats);
-      }
-    } catch (error) {
-      console.error("Error loading chats:", error);
-      if (!append) {
-        setChats([]);
-      }
-      setHasMoreChats(false);
-    }
-  };
-
-  const loadMoreChats = useCallback(() => {
-    if (!hasMoreChats || loading) return;
-
-    const nextPage = page + 1;
-    setPage(nextPage);
-    const params = isSearching ? {} : { page: nextPage };
-
-    loadChats(params, true);
-  }, [page, hasMoreChats, loading, searchQuery, isSearching]);
-
-  useEffect(() => {
-    loadTags();
-  }, []);
-
-  useEffect(() => {
-    if (!isSearching) {
-      console.group('Applying Filters');
-      console.log('State:', stateSelected);
-      console.log('Tag:', tagSelected);
-      console.log('Agent:', agentSelected);
-
-      setPage(1);
-      setHasMoreChats(true);
-
-      const filterParams = {
-        page: 1,
-        state: stateSelected || 'OPEN' // Cambiar el valor por defecto a 'OPEN'
-      };
-
-      // Solo incluir tagSelected si tiene valor y no es 0
-      if (tagSelected) {
-        filterParams.id_tag = tagSelected;
-      }
-
-      if (agentSelected) {
-        filterParams.agent_id = agentSelected;
-      }
-
-      console.log('Filter parameters:', filterParams);
-      loadChats(filterParams, false);
-
-      console.groupEnd();
-    }
-  }, [stateSelected, tagSelected, agentSelected, isSearching]);
-
-  useEffect(() => {
-    const handleChatStateChange = async (event) => {
-      const { chatId, newState, previousState } = event.detail;
-      console.log(`Chat ${chatId} changed from ${previousState} to ${newState}`);
-
-      // Si el estado actual filtrado es diferente al nuevo estado del chat
-      if (stateSelected !== newState) {
-        const chatElement = document.querySelector(`[data-chat-id="${chatId}"]`);
-        if (chatElement) {
-          // Aplicar animación de salida
-          chatElement.classList.add('fade-out');
-
-          // Esperar a que termine la animación
-          await new Promise(resolve => setTimeout(resolve, 300));
-
-          // Remover el chat de la lista actual
-          setChats(prevChats => prevChats.filter(chat => chat.id !== chatId));
-        }
-      }
-      // Si el chat cambió al estado que estamos filtrando actualmente
-      else if (previousState !== newState && stateSelected === newState) {
-        // Recargar la lista para incluir el nuevo chat
-        loadChats({ page: 1, state: stateSelected }, false);
-      }
-    };
-
-    window.addEventListener('chatStateChanged', handleChatStateChange);
-    return () => window.removeEventListener('chatStateChanged', handleChatStateChange);
-  }, [stateSelected]);
-
-  // Efecto para manejar el debounce de la búsqueda
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setPage(1);
-      setHasMoreChats(true);
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [selectedChatId, tempIdChat]);
 
   // Verificar permisos al inicio
   if (!hasAbility(ABILITIES.CHATS.VIEW)) {
