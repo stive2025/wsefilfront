@@ -17,13 +17,11 @@ export const useFetchAndLoad = () => {
     const modifiedApiCall = {
       ...apiCall,
       call: apiCall.call.then(response => {
-        // Eliminar este controlador específico del mapa después de completarse
         if (controllersMapRef.current.has(key)) {
           controllersMapRef.current.delete(key);
         }
         return response;
       }).catch(error => {
-        // Eliminar este controlador específico del mapa en caso de error
         if (controllersMapRef.current.has(key)) {
           controllersMapRef.current.delete(key);
         }

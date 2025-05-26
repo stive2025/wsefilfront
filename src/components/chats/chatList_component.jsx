@@ -4,7 +4,6 @@ import { Search, ChevronLeftCircle, ChevronRightCircle, Loader, Check, Clock, Al
 import { ChatInterfaceClick, StateFilter, TagFilter, AgentFilter, WebSocketMessage, TempNewMessage } from "@/contexts/chats.js";
 import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
 import { getChatList, updateChat } from "@/services/chats.js";
-import { getContact, getContactChatsByName, getContactChatsByPhone } from "@/services/contacts.js";
 import { getAgents } from "@/services/agents.js";
 import { getTags } from "@/services/tags.js";
 import Resize from "@/hooks/responsiveHook.jsx";
@@ -349,7 +348,8 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
     );
   } else if (chats.length === 0) {
     return (
-      <div >
+      <div className={`flex justify-center items-center py-4 bg-transparent`}>
+        No hay chats disponibles
       </div>
     );
   }
@@ -427,7 +427,7 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
               <div className="flex-1 min-w-0 m-2">
                 <div className="flex justify-between items-center mb-1">
                   <span className={`font-medium text-sm md:text-base text-[rgb(var(--color-text-primary-${theme}))] truncate`}>
-                    {item.name}
+                    {item.contact_name}
                   </span>
                   <span className={`text-xs text-[rgb(var(--color-text-secondary-${theme}))] flex-shrink-0`}>
                     {item.timestamp || new Date(item.updated_at).toLocaleDateString()}
@@ -461,8 +461,7 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
         })}
 
         {loading && chats.length > 0 && (
-          <div className={`flex justify-center items-center py-4 
-            bg-[rgb(var(--color-bg-${theme}-secondary))]`}>
+          <div className={`flex justify-center items-center py-4 bg-transparent`}>
             <Loader className="animate-spin" size={20} />
           </div>
         )}
@@ -531,36 +530,24 @@ const ChatList = ({ role = "admin" }) => {
 
       let endpoint;
       let endpointKey = 'chatList';
-      let isContact = false;
 
-      // Determinar el endpoint basado en si hay búsqueda
-      if (searchQuery.trim()) {
-        if (/^\d+$/.test(searchQuery.trim())) {
-          endpoint = getContactChatsByPhone(searchQuery.trim());
-          endpointKey = 'contactChatsByPhone';
-        } else {
-          endpoint = getContactChatsByName(searchQuery.trim());
-          endpointKey = 'contactChatsByName';
-        }
-        isContact = true;
-      } else {
-        // Construir parámetros de filtro
-        const filterParams = {
-          page: params.page || 1,
-          state: params.state || stateSelected || 'PENDING'
-        };
+      const filterParams = {
+        page: params.page || 1,
+        state: params.state || stateSelected || 'OPEN',
+        name: searchQuery.trim() || undefined,
+        phone: searchQuery.trim() || undefined,
+      };
 
-        // Agregar filtros opcionales solo si tienen valor
-        if (tagSelected) {
-          filterParams.id_tag = tagSelected;
-        }
-        if (agentSelected) {
-          filterParams.agent_id = agentSelected;
-        }
-
-        console.log('API Parameters:', filterParams);
-        endpoint = getChatList(filterParams);
+      // Agregar filtros opcionales solo si tienen valor
+      if (tagSelected) {
+        filterParams.id_tag = tagSelected;
       }
+      if (agentSelected) {
+        filterParams.agent_id = agentSelected;
+      }
+
+      console.log('API Parameters:', filterParams);
+      endpoint = getChatList(filterParams);
 
       const response = await callEndpoint(endpoint, endpointKey);
 
@@ -575,37 +562,11 @@ const ChatList = ({ role = "admin" }) => {
       const chatData = response.data || [];
       console.log("Datos de chats recibidos:", chatData);
 
-      // Enriquecer chats con información de contactos
       const enrichedChats = await Promise.all(
-        chatData.map(async (chat, index) => {
-          if (chat.contact_id) {
-            try {
-              const contactKey = `contact_${chat.contact_id}_${index}`;
-              const contactResponse = await callEndpoint(getContact(chat.contact_id), contactKey);
-
-              return {
-                ...chat,
-                idContact: contactResponse?.id,
-                name: contactResponse?.name || "Contacto desconocido",
-                number: contactResponse?.phone_number || chat.number,
-                avatar: contactResponse?.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
-                isContact: isContact
-              };
-            } catch (error) {
-              console.error("Error fetching contact details for ID:", chat.contact_id, error);
-              return {
-                ...chat,
-                name: chat.name || "Contacto desconocido",
-                avatar: chat.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
-                isContact: isContact
-              };
-            }
-          }
-
+        chatData.map(async (chat) => {
           return {
             ...chat,
             avatar: chat.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
-            isContact: isContact
           };
         })
       );

@@ -65,14 +65,14 @@ const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, lo
                   id: item.chat.id,
                   idContact: item.id,
                   name: item.name,
-                  photo: item.profile_picture,
+                  photo: item.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
                   number: item.phone_number
                 });
               }else{
                 setSelectedChatId({
                   idContact: item.id,
                   name: item.name,
-                  photo: item.profile_picture,
+                  photo: item.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
                   number: item.phone_number
                 });
               }
