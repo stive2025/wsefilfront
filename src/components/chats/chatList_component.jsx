@@ -410,13 +410,13 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
                   setReadChats(prev => new Set(prev).add(item.id));
                 }
                 setSelectedChatId({
-                  id: item.isContact ? item.chat_id : item.id,
+                  id: item.id,
                   tag_id: item.tag_id,
                   status: item.state,
-                  idContact: item.idContact,
-                  name: item.name,
+                  idContact: item.contact_id,
+                  name: item.contact_name,
                   photo: item.avatar,
-                  number: item.number,
+                  number: item.contact_phone,
                 });
               }}
             >

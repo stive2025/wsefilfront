@@ -21,6 +21,7 @@ const ContactInfo = () => {
 
     useEffect(() => {
         // Only fetch when the modal is open AND we have a contact ID AND user has permission
+        console.log("informacion del chat", selectedChatId);
         if (infoOpen && selectedChatId?.idContact) {
             setIsLoading(true);
             const fetchContact = async () => {
@@ -45,6 +46,13 @@ const ContactInfo = () => {
             setContactFind({});
         }
     }, [infoOpen]);
+
+    useEffect(() => {
+        if (infoOpen) {
+            setInfoOpen(false);
+        }
+    }, [selectedChatId])
+
 
     const variants = {
         hidden: { opacity: 0, x: 100 },
