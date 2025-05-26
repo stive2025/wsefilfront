@@ -13,6 +13,9 @@ import { ABILITIES } from '@/constants/abilities';
 import AbilityGuard from '@/components/common/AbilityGuard';
 import { useAuth } from '@/contexts/authContext';
 import { useTheme } from "@/contexts/themeContext";
+import { getUserLabelColors } from "@/utils/getUserLabelColors";
+
+
 
 // ChatHeader component remains the same
 const ChatHeader = () => {
@@ -286,7 +289,6 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
 
   // El useEffect para manejar los mensajes entrantes
   useEffect(() => {
-    console.log("Incoming messages:", incomingMessages);
     if (incomingMessages && incomingMessages.chat_id) {
       setReadChats(prev => {
         const newSet = new Set(prev);
@@ -298,7 +300,6 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
 
   // useEffect para mantener actualizado el contador en chats leídos
   useEffect(() => {
-    // Verificar y actualizar todos los chats que estén en readChats
     chats.forEach(chat => {
       if (readChats.has(chat.id) && (chat.unread_message > 0 || chat.unreadCount > 0)) {
         handleUpdateChat(chat.id, { unread_message: 0 });
@@ -375,86 +376,99 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
       }
     >
       <div className={`bg-[rgb(var(--color-bg-${theme}-secondary))]`}>
-        {chats.map((item, index) => (
-          <div
-            key={item.id}
-            data-chat-id={item.id}
-            ref={index === chats.length - 1 ? lastChatRef : null}
-            className={`w-full flex items-center space-x-3 p-4 
-              ${theme === 'light'
-                ? isChatSelected(item.id)
-                  ? 'bg-[#e9e6e6]'  // seleccionado claro
-                  : 'bg-[#f9f9f9]'  // no seleccionado claro
-                : isChatSelected(item.id)
-                  ? 'bg-[#2e2f2f]'  // seleccionado oscuro
-                  : 'bg-[#161717]'  // no seleccionado oscuro
-              }
-              hover:bg-[rgb(var(--input-hover-bg-${theme}))] cursor-pointer`}
-            onClick={() => {
-              setTempIdChat(null);
-              // Verificar si el chat está en estado pendiente y actualizarlo
-              if (item.state === "PENDING" && item.state !== "CLOSED") {
-                handleUpdateChat(item.id, { unread_message: 0, state: "OPEN" });
-                setReadChats(prev => new Set(prev).add(item.id));
-              }
-              // Marcar como leído si tiene mensajes no leídos
-              else if (item.unread_message > 0) {
-                handleUpdateChat(item.id, { unread_message: 0 });
-                setReadChats(prev => new Set(prev).add(item.id));
-              }
-              setSelectedChatId({
-                id: item.isContact ? item.chat_id : item.id,
-                tag_id: item.tag_id,
-                status: item.state,
-                idContact: item.idContact,
-                name: item.name,
-                photo: item.avatar,
-                number: item.number,
-              });
-            }}
-          >
-            <div className="relative w-10 h-10 flex-shrink-0">
-              <img
-                src={item.avatar || "@/assets/images/default-avatar.jpg"}
-                alt="Avatar"
-                className="w-full h-full rounded-full object-cover object-center"
-              />
-              {item.online && (
-                <div className={`absolute bottom-0 right-0 w-3 h-3 bg-green-500 
-                  border-2 border-[rgb(var(--color-bg-${theme}-secondary))] rounded-full`}>
-                </div>
-              )}
-            </div>
+        {chats.map((item, index) => {
+          const { bg, text } = getUserLabelColors(item.by_user);
 
-            <div className="flex-1">
-              <div className={`font-medium text-sm md:text-base 
-                text-[rgb(var(--color-text-primary-${theme}))]`}>
-                {item.name}
-              </div>
-              <div className="flex items-center gap-1 overflow-hidden">
-                {item.from_me === "true" && (
-                  <span className="shrink-0">{renderAckStatus(item.ack)}</span>
+          return (
+            <div
+              key={item.id}
+              data-chat-id={item.id}
+              ref={index === chats.length - 1 ? lastChatRef : null}
+              className={`relative w-full flex items-center justify-between p-4 
+        ${theme === 'light'
+                  ? isChatSelected(item.id)
+                    ? 'bg-[#e9e6e6]'
+                    : 'bg-[#f9f9f9]'
+                  : isChatSelected(item.id)
+                    ? 'bg-[#2e2f2f]'
+                    : 'bg-[#161717]'
+                }
+        hover:bg-[rgb(var(--input-hover-bg-${theme}))] cursor-pointer`}
+              onClick={() => {
+                setTempIdChat(null);
+                if (item.state === "PENDING" && item.state !== "CLOSED") {
+                  handleUpdateChat(item.id, { unread_message: 0, state: "OPEN" });
+                  setReadChats(prev => new Set(prev).add(item.id));
+                } else if (item.unread_message > 0) {
+                  handleUpdateChat(item.id, { unread_message: 0 });
+                  setReadChats(prev => new Set(prev).add(item.id));
+                }
+                setSelectedChatId({
+                  id: item.isContact ? item.chat_id : item.id,
+                  tag_id: item.tag_id,
+                  status: item.state,
+                  idContact: item.idContact,
+                  name: item.name,
+                  photo: item.avatar,
+                  number: item.number,
+                });
+              }}
+            >
+              {/* Etiqueta de agente */}
+              <AbilityGuard abilities={[ABILITIES.CHATS.FILTER_BY_AGENT]}>
+                {item.by_user && (
+                  <div className={`absolute top-1 right-1 text-[10px] px-2 py-0.5 rounded-full 
+            ${bg} ${text} font-semibold whitespace-nowrap`}>
+                    {item.by_user}
+                  </div>
                 )}
-                <span className={`overflow-hidden text-ellipsis whitespace-nowrap 
-                  text-[rgb(var(--color-text-secondary-${theme}))]`}>
-                  {item.last_message || getMessagePreview(item)}
-                </span>
+              </AbilityGuard>
+
+              {/* Avatar */}
+              <div className="relative w-10 h-10 flex-shrink-0 mr-3">
+                <img
+                  src={item.avatar || "@/assets/images/default-avatar.jpg"}
+                  alt="Avatar"
+                  className="w-full h-full rounded-full object-cover object-center"
+                />
+              </div>
+
+              {/* Info principal */}
+              <div className="flex-1 min-w-0 m-2">
+                <div className="flex justify-between items-center mb-1">
+                  <span className={`font-medium text-sm md:text-base text-[rgb(var(--color-text-primary-${theme}))] truncate`}>
+                    {item.name}
+                  </span>
+                  <span className={`text-xs text-[rgb(var(--color-text-secondary-${theme}))] flex-shrink-0`}>
+                    {item.timestamp || new Date(item.updated_at).toLocaleDateString()}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center gap-2">
+                  <div className="flex items-center gap-1 overflow-hidden min-w-0">
+                    {item.from_me === "true" && (
+                      <span className="shrink-0">{renderAckStatus(item.ack)}</span>
+                    )}
+                    <span className={`text-sm truncate text-[rgb(var(--color-text-secondary-${theme}))]`}>
+                      {item.last_message || getMessagePreview(item)}
+                    </span>
+                  </div>
+
+                  {/* Burbuja de mensajes no leídos */}
+                  {(item.unread_message > 0 || item.unreadCount > 0) &&
+                    !readChats.has(item.id) &&
+                    !isChatSelected(item.id) && (
+                      <div className={`flex-shrink-0 bg-[rgb(var(--color-primary-${theme}))] 
+                text-[rgb(var(--color-text-primary-${theme}))] rounded-full w-5 h-5 
+                flex items-center justify-center text-xs`}>
+                        {item.unread_message || item.unreadCount}
+                      </div>
+                    )}
+                </div>
               </div>
             </div>
-
-            <div className={`text-xs text-[rgb(var(--color-text-secondary-${theme}))] 
-              flex flex-col items-end`}>
-              <div>{item.timestamp || new Date(item.updated_at).toLocaleDateString()}</div>
-              {(item.unread_message > 0 || item.unreadCount > 0) && !readChats.has(item.id) && !isChatSelected(item.id) && (
-                <div className={`bg-[rgb(var(--color-primary-${theme}))] 
-                  text-[rgb(var(--color-text-primary-${theme}))] 
-                  rounded-full w-5 h-5 flex items-center justify-center mt-1`}>
-                  {item.unread_message || item.unreadCount}
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
+          );
+        })}
 
         {loading && chats.length > 0 && (
           <div className={`flex justify-center items-center py-4 
@@ -550,7 +564,7 @@ const ChatList = ({ role = "admin" }) => {
             case 'document':
               return '📎 Documento';
             default:
-              return message.body || '📎 Archivo';
+              return message.body;
           }
         };
 
@@ -646,7 +660,7 @@ const ChatList = ({ role = "admin" }) => {
         // Usar los parámetros proporcionados, asegurando que state siempre tenga valor
         const filterParams = {
           ...params,
-          state: params.state || 'OPEN'
+          state: params.state
         };
 
         Object.keys(filterParams).forEach(key => {
@@ -714,8 +728,10 @@ const ChatList = ({ role = "admin" }) => {
 
       if (append) {
         setChats(prev => [...prev, ...enrichedChats]);
+        console.log("Chats cargados y añadidos:", enrichedChats);
       } else {
         setChats(enrichedChats);
+        console.log("Chats cargados:", enrichedChats);
       }
     } catch (error) {
       console.error("Error loading chats:", error);
