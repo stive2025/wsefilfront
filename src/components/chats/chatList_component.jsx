@@ -157,6 +157,8 @@ const AgentSelect = ({ role }) => {
   const { agentSelected, setAgentSelected } = useContext(AgentFilter);
   const { theme } = useTheme();
 
+  // Obtener los colores para el agente seleccionado
+ 
   useEffect(() => {
     const loadAgents = async () => {
       if (role == "admin") {
@@ -175,14 +177,20 @@ const AgentSelect = ({ role }) => {
 
   if (role !== "admin") return null;
 
+  const { bg, text } = agentSelected && agents.length 
+    ? getUserLabelColors(agents.find(a => a.id === agentSelected)?.name || '')
+    : { bg: '', text: '' };
+
   return (
     <AbilityGuard abilities={[ABILITIES.CHATS.FILTER_BY_AGENT]} fallback={null}>
       <div className={`cursor-pointer p-4 border-b border-[rgb(var(--color-text-secondary-${theme}))] 
         bg-[rgb(var(--color-bg-${theme}-secondary))]`}>
         <select
-          className={`w-full bg-[rgb(var(--color-bg-${theme}-secondary))] outline-none 
-            ${agentSelected ? `text-[rgb(var(--color-text-primary-${theme}))]` :
-              `text-[rgb(var(--color-text-secondary-${theme}))]`}
+          className={`w-full outline-none px-2 py-1 rounded-md
+            ${agentSelected 
+              ? `${bg} ${text} font-semibold` 
+              : `bg-[rgb(var(--color-bg-${theme}-secondary))] 
+                 text-[rgb(var(--color-text-secondary-${theme}))]`}
             hover:bg-[rgb(var(--input-hover-bg-${theme}))]
             focus:border-[rgb(var(--input-focus-border-${theme}))]`}
           value={agentSelected || ""}
@@ -192,15 +200,23 @@ const AgentSelect = ({ role }) => {
           }}
           disabled={loading}
         >
-          <option value="">
+          <option value="" className={`bg-[rgb(var(--color-bg-${theme}-secondary))] 
+            text-[rgb(var(--color-text-secondary-${theme}))]`}>
             {loading ? "Cargando agentes..." : "Todos los agentes"}
           </option>
           {agents.length > 0 ? (
-            agents.map((agent) => (
-              <option key={agent.id} value={agent.id}>
-                {agent.name}
-              </option>
-            ))
+            agents.map((agent) => {
+              const { bg: optionBg, text: optionText } = getUserLabelColors(agent.name);
+              return (
+                <option 
+                  key={agent.id} 
+                  value={agent.id}
+                  className={`${optionBg} ${optionText} font-semibold`}
+                >
+                  {agent.name}
+                </option>
+              );
+            })
           ) : (
             <option disabled>No hay agentes</option>
           )}
