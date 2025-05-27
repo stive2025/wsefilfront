@@ -101,14 +101,19 @@ const ChatInterface = () => {
                     const audioUrl = URL.createObjectURL(e.data);
                     const fileName = `audio_${new Date().toISOString()}.${getExtension(recorder.mimeType)}`;
 
+                    console.log('Audio grabado:', {
+                        blobUrl: audioUrl,
+                        fileName: fileName,
+                        mimeType: recorder.mimeType,
+                        blobSize: e.data.size
+                    });
 
                     setRecordedAudio({
                         blob: e.data,
                         url: audioUrl,
                         name: fileName,
-                        base64: base64 // Guarda el base64 completo
+                        base64: base64
                     });
-                    stream.getTracks().forEach(track => track.stop());
                 });
 
             } catch (error) {
@@ -124,6 +129,7 @@ const ChatInterface = () => {
     };
 
     const handleMediaError = (element, type) => {
+        console.log(element, type, 'Error loading media:', element.src);
         // Intentar cargar desde la URL del servidor si falló la carga local
         if (!element.src.includes(SERVER_URL) && element.src.includes('/')) {
             const filename = element.src.split('/').pop();
@@ -143,7 +149,11 @@ const ChatInterface = () => {
             }
         }
     };
-
+    const scrollToBottom = useCallback(() => {
+        if (!isScrollingManually.current && messagesContainerRef.current) {
+            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        }
+    }, []);
 
     const loadMessages = async (pageNum = 1, append = false) => {
         if (!selectedChatId) return;
@@ -214,7 +224,7 @@ const ChatInterface = () => {
         const isNearTop = element.scrollTop <= 50;
 
         if (isNearTop && !loadingMoreMessages && hasMoreMessages && !initialLoad) {
-            
+
             setPage(prev => prev + 1);
             loadMessages(page + 1, true);
         }
@@ -238,6 +248,18 @@ const ChatInterface = () => {
         }
     }, [handleScroll]);
 
+
+    useEffect(() => {
+        if (chatMessages && chatMessages.length > 0 && !initialLoad) {
+            const isNewMessage = chatMessages[chatMessages.length - 1]?.is_temp ||
+                chatMessages[chatMessages.length - 1]?.from_me === "true" ||
+                !chatMessages[chatMessages.length - 1]?.from_me;
+
+            if (isNewMessage && !isScrollingManually.current) {
+                scrollToBottom();
+            }
+        }
+    }, [chatMessages, initialLoad]);
 
     useEffect(() => {
         if (messageData) {
@@ -301,6 +323,10 @@ const ChatInterface = () => {
 
                         return prevMessages;
                     });
+
+                    if (isCurrentChat && !isScrollingManually.current) {
+                        setTimeout(scrollToBottom, 100);
+                    }
                 }
 
                 // Si el mensaje es para el chat actualmente abierto y no es un mensaje propio
@@ -463,20 +489,21 @@ const ChatInterface = () => {
 
     // Funciones para mensajes
     const renderMediaContent = (message) => {
+        console.log('Renderizando contenido multimedia:', message)
         let mediaSource;
-        if (message.media_path?.startsWith('blob:')) {
+        if (message.media_path?.startsWith('blob:') && message.type === 'image') {
+            console.log('Usando blob URL:', message.media_path);
             mediaSource = message.media_path;
         } else if (message.filename && message.media_path?.startsWith("files/") || message.filename?.startsWith("files/")) {
+            console.log('Usando filename para construir URL:', message.filename);
             mediaSource = `${SERVER_URL}${message.filename}`;
-
         } else if (message.filename && message.mediaUrl?.startsWith("files/")) {
+            console.log('Usando mediaUrl para construir URL:', message.mediaUrl);
             mediaSource = `${SERVER_URL}${message.mediaUrl}`;
-
         } else if (message.media_path?.startsWith('http')) {
+            console.log('Usando URL completa:', message.media_path);
             mediaSource = message.media_path;
-        }
-        // Si es una ruta relativa, construir la URL completa
-        else if (message.media_path) {
+        } else if (message.media_path && message.from_me === "false") {
             mediaSource = `${SERVER_URL}${message.media_path}`;
         }
 
@@ -512,6 +539,7 @@ const ChatInterface = () => {
 
             case 'ptt':
             case 'audio':
+                console.log('Intentando cargar audio desde:', mediaSource);
                 return (
                     <div className="flex flex-col space-y-2">
                         {message.body && <div className="break-words">{message.body}</div>}
@@ -520,7 +548,14 @@ const ChatInterface = () => {
                                 controls
                                 src={mediaSource}
                                 className="max-w-[200px] h-8"
-                                onError={(e) => handleMediaError(e.target, 'audio')}
+                                onError={(e) => {
+                                    console.error('Error cargando audio:', {
+                                        src: e.target.src,
+                                        error: e.target.error,
+                                        messageId: message.id
+                                    });
+                                    handleMediaError(e.target, 'audio');
+                                }}
                             />
                             {!message.is_temp && (
                                 <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.DOWNLOAD_HISTORY]}>
@@ -743,6 +778,7 @@ const ChatInterface = () => {
 
             // Siempre agregamos el mensaje temporal (comportamiento optimista)
             setChatMessages(prev => prev ? [...prev, newMessage] : [newMessage]);
+            scrollToBottom();
 
             // Limpiar UI
             setMessageText("");
@@ -762,20 +798,25 @@ const ChatInterface = () => {
             };
 
             // Log del payload antes de enviar
-            console.log('Payload a enviar al backend:', {
-                ...messagePayload,
-                mediaItems: filesToSend.length > 0 || audioToSend ? 'Archivos adjuntos' : 'Sin archivos'
-            });
 
             // Procesar archivos
             if (filesToSend.length > 0 || audioToSend) {
                 const mediaItems = [];
 
+                // Modifica la función fileToBase64 para incluir el encabezado correcto
                 const fileToBase64 = (file) => {
                     return new Promise((resolve, reject) => {
                         const reader = new FileReader();
                         reader.readAsDataURL(file);
-                        reader.onload = () => resolve(reader.result.split(',')[1]);
+                        reader.onload = () => {
+                            // El resultado ya incluye el encabezado data:mimetype;base64,
+                            console.log('Archivo convertido a base64:', {
+                                fileName: file.name,
+                                mimeType: file.type,
+                                base64Preview: reader.result.substring(0, 50) + '...' // Log solo el inicio para debug
+                            });
+                            resolve(reader.result); // Enviamos el base64 completo con encabezado
+                        };
                         reader.onerror = reject;
                     });
                 };
@@ -783,10 +824,16 @@ const ChatInterface = () => {
                 // Procesar archivos seleccionados
                 for (const fileObj of filesToSend) {
                     const base64Data = await fileToBase64(fileObj.file);
+                    console.log('Procesando archivo:', {
+                        type: fileObj.type,
+                        mimeType: fileObj.file.type,
+                        fileName: fileObj.file.name
+                    });
+
                     mediaItems.push({
                         type: fileObj.type,
                         media_type: fileObj.file.type,
-                        media: base64Data,
+                        media: base64Data, // Ahora incluye el encabezado completo
                         caption: messageText || '',
                         filename: fileObj.file.name
                     });
@@ -794,16 +841,30 @@ const ChatInterface = () => {
 
                 // Procesar audio grabado
                 if (audioToSend) {
+                    console.log('Procesando audio:', {
+                        type: 'audio',
+                        mimeType: 'audio/webm',
+                        fileName: audioToSend.name
+                    });
+
                     mediaItems.push({
                         type: 'audio',
                         media_type: 'audio/webm',
-                        media: audioToSend.base64,
+                        media: audioToSend.base64, // El audio grabado ya debe incluir el encabezado
                         caption: messageText || '',
                         filename: audioToSend.name
                     });
                 }
 
                 if (mediaItems.length > 0) {
+                    console.log('Enviando archivos multimedia:',
+                        mediaItems.map(item => ({
+                            type: item.type,
+                            mediaType: item.media_type,
+                            filename: item.filename,
+                            hasBase64Header: item.media.startsWith('data:')
+                        }))
+                    );
                     messagePayload.media = JSON.stringify(mediaItems);
                 }
             }
@@ -811,6 +872,10 @@ const ChatInterface = () => {
             const { call, abortController } = sendMessage(messagePayload, (progress) => {
                 setUploadProgress(progress);
             });
+            console.log('Payload a enviar al backend:', {
+                ...messagePayload,
+            });
+
             const response = await callEndpoint({ call, abortController });
 
             if (response) {
@@ -909,6 +974,7 @@ const ChatInterface = () => {
         }
     };
 
+    // Eliminar el scrollToBottom del loadMessages y crear un nuevo useEffect para manejar el scroll
     useEffect(() => {
         // Solo hacer scroll automático cuando cambia el selectedChatId
         if (messagesContainerRef.current && selectedChatId) {

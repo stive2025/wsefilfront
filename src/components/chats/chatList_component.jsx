@@ -242,7 +242,7 @@ const getMessagePreview = (message) => {
     case 'document':
       return '📎 Documento';
     default:
-      return message.body || '📎 Archivo';
+      return message.body;
   }
 };
 
@@ -695,71 +695,81 @@ const ChatList = ({ role = "admin" }) => {
   // Efecto para manejar mensajes WebSocket
   useEffect(() => {
     if (messageData) {
-      console.log("Mensaje normalizado recibido:", messageData);
-      const userData = getUserData();
-      const currentUserId = userData?.id;
+        console.log("Mensaje normalizado recibido:", messageData);
+        const userData = getUserData();
+        const currentUserId = userData?.id;
 
-      if (!currentUserId || messageData.user_id?.toString() !== currentUserId.toString()) {
-        console.log("Mensaje ignorado - user_id no coincide");
-        return;
-      }
-
-      console.log("Procesando mensaje para el usuario actual:", currentUserId);
-
-      const existingChatIndex = chats.findIndex(chat =>
-        chat.id === messageData.chat_id ||
-        (chat.number && chat.number === messageData.number)
-      );
-
-      if (existingChatIndex >= 0) {
-        // Actualizar chat existente
-        const updatedChats = [...chats];
-        const chatToUpdate = { ...updatedChats[existingChatIndex] };
-
-        chatToUpdate.last_message = getMessagePreview(messageData);
-        chatToUpdate.timestamp = new Date(messageData.timestamp).toLocaleDateString();
-        chatToUpdate.updated_at = messageData.timestamp;
-        chatToUpdate.ack = messageData.ack;
-        chatToUpdate.from_me = messageData.from_me?.toString();
-
-        // Incrementar contador solo si el mensaje no es del usuario actual
-        if (messageData.from_me === false || messageData.from_me === "false") {
-          const currentUnread = chatToUpdate.unread_message || 0;
-          chatToUpdate.unread_message = currentUnread + 1;
+        if (!currentUserId || messageData.user_id?.toString() !== currentUserId.toString()) {
+            console.log("Mensaje ignorado - user_id no coincide");
+            return;
         }
 
-        // Mover el chat al principio de la lista
-        updatedChats.splice(existingChatIndex, 1);
-        updatedChats.unshift(chatToUpdate);
+        console.log("Procesando mensaje para el usuario actual:", currentUserId);
 
-        setChats(updatedChats);
-        console.log("Chat actualizado y movido al inicio:", chatToUpdate);
-      } else {
-        // Crear nuevo chat
-        console.log("Creando nuevo chat para el mensaje");
-        const newChat = {
-          id: messageData.chat_id,
-          contact_id: messageData.contact_id,
-          name: messageData.contact_name || messageData.number || "Desconocido",
-          number: messageData.number,
-          last_message: getMessagePreview(messageData),
-          timestamp: new Date(messageData.timestamp).toLocaleDateString(),
-          updated_at: messageData.timestamp,
-          avatar: messageData.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
-          unread_message: messageData.from_me === false || messageData.from_me === "false" ? 1 : 0,
-          state: "PENDING",
-          ack: messageData.ack,
-          from_me: messageData.from_me?.toString(),
-          tag_id: null,
-          by_user: null
-        };
+        const existingChatIndex = chats.findIndex(chat =>
+            chat.id === messageData.chat_id ||
+            (chat.number && chat.number === messageData.number)
+        );
 
-        setChats(prev => [newChat, ...prev]);
-        console.log("Nuevo chat creado:", newChat);
-      }
+        if (existingChatIndex >= 0) {
+            // Actualizar chat existente
+            const updatedChats = [...chats];
+            const chatToUpdate = { ...updatedChats[existingChatIndex] };
 
-      setMessageDataLocal(messageData);
-      setMessageData(null);
+            // Verificar si es una actualización de mensaje o solo de ack
+            const isNewMessage = messageData.type === 'message' || messageData.body || messageData.media_type;
+            
+            // Actualizar propiedades del chat
+            if (isNewMessage) {
+                chatToUpdate.last_message = getMessagePreview(messageData);
+                chatToUpdate.timestamp = new Date(messageData.timestamp).toLocaleDateString();
+                chatToUpdate.updated_at = messageData.timestamp;
+            }
+            chatToUpdate.ack = messageData.ack;
+            chatToUpdate.from_me = messageData.from_me?.toString();
+
+            // Incrementar contador solo si es un nuevo mensaje y no es del usuario actual
+            if (isNewMessage && (messageData.from_me === false || messageData.from_me === "false")) {
+                const currentUnread = chatToUpdate.unread_message || 0;
+                chatToUpdate.unread_message = currentUnread + 1;
+            }
+
+            // Mover el chat al principio solo si es un nuevo mensaje
+            if (isNewMessage) {
+                console.log("Nuevo mensaje - Moviendo chat al inicio:", chatToUpdate);
+                updatedChats.splice(existingChatIndex, 1);
+                updatedChats.unshift(chatToUpdate);
+            } else {
+                console.log("Solo actualización de ACK - Manteniendo posición del chat");
+                updatedChats[existingChatIndex] = chatToUpdate;
+            }
+
+            setChats(updatedChats);
+        } else if (messageData.type === 'message') {
+            // Crear nuevo chat solo si es un mensaje nuevo
+            console.log("Creando nuevo chat para el mensaje");
+            const newChat = {
+                id: messageData.chat_id,
+                contact_id: messageData.contact_id,
+                name: messageData.contact_name || messageData.number || "Desconocido",
+                number: messageData.number,
+                last_message: getMessagePreview(messageData),
+                timestamp: new Date(messageData.timestamp).toLocaleDateString(),
+                updated_at: messageData.timestamp,
+                avatar: messageData.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
+                unread_message: messageData.from_me === false || messageData.from_me === "false" ? 1 : 0,
+                state: "PENDING",
+                ack: messageData.ack,
+                from_me: messageData.from_me?.toString(),
+                tag_id: null,
+                by_user: null
+            };
+
+            setChats(prev => [newChat, ...prev]);
+        }
+
+        setMessageDataLocal(messageData);
+        setMessageData(null);
     }
   }, [messageData, chats]);
 
