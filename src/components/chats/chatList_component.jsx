@@ -158,7 +158,7 @@ const AgentSelect = ({ role }) => {
   const { theme } = useTheme();
 
   // Obtener los colores para el agente seleccionado
- 
+
   useEffect(() => {
     const loadAgents = async () => {
       if (role == "admin") {
@@ -177,7 +177,7 @@ const AgentSelect = ({ role }) => {
 
   if (role !== "admin") return null;
 
-  const { bg, text } = agentSelected && agents.length 
+  const { bg, text } = agentSelected && agents.length
     ? getUserLabelColors(agents.find(a => a.id === agentSelected)?.name || '')
     : { bg: '', text: '' };
 
@@ -187,8 +187,8 @@ const AgentSelect = ({ role }) => {
         bg-[rgb(var(--color-bg-${theme}-secondary))]`}>
         <select
           className={`w-full outline-none px-2 py-1 rounded-md
-            ${agentSelected 
-              ? `${bg} ${text} font-semibold` 
+            ${agentSelected
+              ? `${bg} ${text} font-semibold`
               : `bg-[rgb(var(--color-bg-${theme}-secondary))] 
                  text-[rgb(var(--color-text-secondary-${theme}))]`}
             hover:bg-[rgb(var(--input-hover-bg-${theme}))]
@@ -208,8 +208,8 @@ const AgentSelect = ({ role }) => {
             agents.map((agent) => {
               const { bg: optionBg, text: optionText } = getUserLabelColors(agent.name);
               return (
-                <option 
-                  key={agent.id} 
+                <option
+                  key={agent.id}
                   value={agent.id}
                   className={`${optionBg} ${optionText} font-semibold`}
                 >
@@ -539,22 +539,43 @@ const ChatList = ({ role = "admin" }) => {
 
   // Función principal para cargar chats
   const loadChats = async (params = {}, append = false) => {
-    if (loadingState.isActive) return; // Evitar cargas simultáneas
+    if (loadingState.isActive) return;
 
     try {
       setLoadingState({ type: params.type || 'filter', isActive: true });
 
       let endpoint;
       let endpointKey = 'chatList';
+      const trimmedQuery = searchQuery.trim();
+      const isPhone = /^\+?\d+$/.test(trimmedQuery);
+      const formattedPhone = isPhone 
+        ? trimmedQuery.replace(/^0+/, '') 
+        : undefined;
 
-      const filterParams = {
-        page: params.page || 1,
-        state: params.state || stateSelected || 'OPEN',
-        name: searchQuery.trim() || undefined,
-        phone: searchQuery.trim() || undefined,
-      };
+      // Separar la lógica de filterParams según el tipo de carga
+      let filterParams;
+      
+      if (trimmedQuery) {
+        // Parámetros para búsqueda (sin page)
+        filterParams = {
+          state: params.state || stateSelected || 'OPEN'
+        };
 
-      // Agregar filtros opcionales solo si tienen valor
+        // Agregar parámetros de búsqueda según el tipo
+        if (isPhone) {
+          filterParams.phone = formattedPhone;
+        } else {
+          filterParams.name = trimmedQuery;
+        }
+      } else {
+        // Parámetros para carga normal y filtros (con page)
+        filterParams = {
+          page: params.page || 1,
+          state: params.state || stateSelected || 'OPEN'
+        };
+      }
+
+      // Agregar filtros opcionales comunes
       if (tagSelected) {
         filterParams.id_tag = tagSelected;
       }
@@ -564,9 +585,9 @@ const ChatList = ({ role = "admin" }) => {
 
       console.log('API Parameters:', filterParams);
       endpoint = getChatList(filterParams);
-
+      
       const response = await callEndpoint(endpoint, endpointKey);
-
+      console.log("Respuesta de la API:", response);
       setPaginationInfo({
         current_page: response.current_page || 1,
         last_page: response.last_page || 1,
@@ -669,7 +690,7 @@ const ChatList = ({ role = "admin" }) => {
       resetChatState();
       loadChats({
         page: 1,
-        state: stateSelected || 'PENDING',
+        state: stateSelected || 'OPEN',
         type: 'filter'
       }, false);
     }
@@ -695,81 +716,81 @@ const ChatList = ({ role = "admin" }) => {
   // Efecto para manejar mensajes WebSocket
   useEffect(() => {
     if (messageData) {
-        console.log("Mensaje normalizado recibido:", messageData);
-        const userData = getUserData();
-        const currentUserId = userData?.id;
+      console.log("Mensaje normalizado recibido:", messageData);
+      const userData = getUserData();
+      const currentUserId = userData?.id;
 
-        if (!currentUserId || messageData.user_id?.toString() !== currentUserId.toString()) {
-            console.log("Mensaje ignorado - user_id no coincide");
-            return;
+      if (!currentUserId || messageData.user_id?.toString() !== currentUserId.toString()) {
+        console.log("Mensaje ignorado - user_id no coincide");
+        return;
+      }
+
+      console.log("Procesando mensaje para el usuario actual:", currentUserId);
+
+      const existingChatIndex = chats.findIndex(chat =>
+        chat.id === messageData.chat_id ||
+        (chat.number && chat.number === messageData.number)
+      );
+
+      if (existingChatIndex >= 0) {
+        // Actualizar chat existente
+        const updatedChats = [...chats];
+        const chatToUpdate = { ...updatedChats[existingChatIndex] };
+
+        // Verificar si es una actualización de mensaje o solo de ack
+        const isNewMessage = messageData.type === 'message' || messageData.body || messageData.media_type;
+
+        // Actualizar propiedades del chat
+        if (isNewMessage) {
+          chatToUpdate.last_message = getMessagePreview(messageData);
+          chatToUpdate.timestamp = new Date(messageData.timestamp).toLocaleDateString();
+          chatToUpdate.updated_at = messageData.timestamp;
+        }
+        chatToUpdate.ack = messageData.ack;
+        chatToUpdate.from_me = messageData.from_me?.toString();
+
+        // Incrementar contador solo si es un nuevo mensaje y no es del usuario actual
+        if (isNewMessage && (messageData.from_me === false || messageData.from_me === "false")) {
+          const currentUnread = chatToUpdate.unread_message || 0;
+          chatToUpdate.unread_message = currentUnread + 1;
         }
 
-        console.log("Procesando mensaje para el usuario actual:", currentUserId);
-
-        const existingChatIndex = chats.findIndex(chat =>
-            chat.id === messageData.chat_id ||
-            (chat.number && chat.number === messageData.number)
-        );
-
-        if (existingChatIndex >= 0) {
-            // Actualizar chat existente
-            const updatedChats = [...chats];
-            const chatToUpdate = { ...updatedChats[existingChatIndex] };
-
-            // Verificar si es una actualización de mensaje o solo de ack
-            const isNewMessage = messageData.type === 'message' || messageData.body || messageData.media_type;
-            
-            // Actualizar propiedades del chat
-            if (isNewMessage) {
-                chatToUpdate.last_message = getMessagePreview(messageData);
-                chatToUpdate.timestamp = new Date(messageData.timestamp).toLocaleDateString();
-                chatToUpdate.updated_at = messageData.timestamp;
-            }
-            chatToUpdate.ack = messageData.ack;
-            chatToUpdate.from_me = messageData.from_me?.toString();
-
-            // Incrementar contador solo si es un nuevo mensaje y no es del usuario actual
-            if (isNewMessage && (messageData.from_me === false || messageData.from_me === "false")) {
-                const currentUnread = chatToUpdate.unread_message || 0;
-                chatToUpdate.unread_message = currentUnread + 1;
-            }
-
-            // Mover el chat al principio solo si es un nuevo mensaje
-            if (isNewMessage) {
-                console.log("Nuevo mensaje - Moviendo chat al inicio:", chatToUpdate);
-                updatedChats.splice(existingChatIndex, 1);
-                updatedChats.unshift(chatToUpdate);
-            } else {
-                console.log("Solo actualización de ACK - Manteniendo posición del chat");
-                updatedChats[existingChatIndex] = chatToUpdate;
-            }
-
-            setChats(updatedChats);
-        } else if (messageData.type === 'message') {
-            // Crear nuevo chat solo si es un mensaje nuevo
-            console.log("Creando nuevo chat para el mensaje");
-            const newChat = {
-                id: messageData.chat_id,
-                contact_id: messageData.contact_id,
-                name: messageData.contact_name || messageData.number || "Desconocido",
-                number: messageData.number,
-                last_message: getMessagePreview(messageData),
-                timestamp: new Date(messageData.timestamp).toLocaleDateString(),
-                updated_at: messageData.timestamp,
-                avatar: messageData.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
-                unread_message: messageData.from_me === false || messageData.from_me === "false" ? 1 : 0,
-                state: "PENDING",
-                ack: messageData.ack,
-                from_me: messageData.from_me?.toString(),
-                tag_id: null,
-                by_user: null
-            };
-
-            setChats(prev => [newChat, ...prev]);
+        // Mover el chat al principio solo si es un nuevo mensaje
+        if (isNewMessage) {
+          console.log("Nuevo mensaje - Moviendo chat al inicio:", chatToUpdate);
+          updatedChats.splice(existingChatIndex, 1);
+          updatedChats.unshift(chatToUpdate);
+        } else {
+          console.log("Solo actualización de ACK - Manteniendo posición del chat");
+          updatedChats[existingChatIndex] = chatToUpdate;
         }
 
-        setMessageDataLocal(messageData);
-        setMessageData(null);
+        setChats(updatedChats);
+      } else if (messageData.type === 'message') {
+        // Crear nuevo chat solo si es un mensaje nuevo
+        console.log("Creando nuevo chat para el mensaje");
+        const newChat = {
+          id: messageData.chat_id,
+          contact_id: messageData.contact_id,
+          name: messageData.contact_name || messageData.number || "Desconocido",
+          number: messageData.number,
+          last_message: getMessagePreview(messageData),
+          timestamp: new Date(messageData.timestamp).toLocaleDateString(),
+          updated_at: messageData.timestamp,
+          avatar: messageData.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
+          unread_message: messageData.from_me === false || messageData.from_me === "false" ? 1 : 0,
+          state: "PENDING",
+          ack: messageData.ack,
+          from_me: messageData.from_me?.toString(),
+          tag_id: null,
+          by_user: null
+        };
+
+        setChats(prev => [newChat, ...prev]);
+      }
+
+      setMessageDataLocal(messageData);
+      setMessageData(null);
     }
   }, [messageData, chats]);
 
