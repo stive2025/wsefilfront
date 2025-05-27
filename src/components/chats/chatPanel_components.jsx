@@ -263,13 +263,47 @@ const ChatInterface = () => {
 
     useEffect(() => {
         if (messageData) {
+            // Primero, verificar si es una actualización de ACK
+            const isAckUpdate = messageData.type === 'ack' || 
+                (messageData.ack !== undefined && !messageData.body && !messageData.media_type);
+
+            if (isAckUpdate && selectedChatId) {
+                console.log('Actualizando ACK para mensaje:', messageData);
+                setChatMessages(prevMessages => {
+                    if (!prevMessages) return [];
+
+                    return prevMessages.map(msg => {
+                        // Actualizar ACK si coincide el ID del mensaje
+                        if (msg.id === messageData.id_message_wp || 
+                            msg.id === messageData.id || 
+                            msg.tempSignature === messageData.temp_signature) {
+                            return {
+                                ...msg,
+                                ack: messageData.ack
+                            };
+                        }
+
+                        // Si el mensaje anterior tiene ack=2 y recibimos una actualización de lectura,
+                        // actualizar todos los mensajes previos no leídos a leídos
+                        if (messageData.ack === 3 && msg.ack === 2 && msg.from_me) {
+                            return {
+                                ...msg,
+                                ack: 3
+                            };
+                        }
+
+                        return msg;
+                    });
+                });
+                return;
+            }
+
+            // Continuar con el manejo normal de mensajes
             if (messageData.body || messageData.media_type) {
-                // Determinar el ID del chat que debemos usar para comparar
                 const chatIdToCompare = selectedChatId?.id || '';
                 const shouldUseTemp = !messageData.from_me && !chatIdToCompare && tempIdChat;
                 const relevantChatId = shouldUseTemp ? tempIdChat : messageData.chat_id;
 
-                // Comprobar si este mensaje pertenece al chat actual
                 const isCurrentChat = selectedChatId &&
                     (chatIdToCompare === relevantChatId ||
                         (shouldUseTemp && tempIdChat === relevantChatId) ||
@@ -279,7 +313,7 @@ const ChatInterface = () => {
                     setChatMessages(prevMessages => {
                         if (!prevMessages) return [];
 
-                        // Buscar si existe un mensaje temporal que corresponda
+                        // Buscar mensaje temporal
                         const tempMessageIndex = prevMessages.findIndex(msg =>
                             msg.is_temp &&
                             msg.body === messageData.body &&
@@ -287,20 +321,21 @@ const ChatInterface = () => {
                             (!msg.media_path || msg.media_path === messageData.media_url)
                         );
 
-                        // Si encontramos un mensaje temporal, actualizarlo
                         if (tempMessageIndex !== -1) {
+                            // Actualizar mensaje temporal
                             const newMessages = [...prevMessages];
                             newMessages[tempMessageIndex] = {
                                 ...newMessages[tempMessageIndex],
                                 id: messageData.id_message_wp || messageData.id,
                                 is_temp: false,
                                 ack: messageData.ack || 1,
-                                media_path: messageData.media_url ? `${SERVER_URL}/${messageData.media_url}` : newMessages[tempMessageIndex].media_path
+                                media_path: messageData.media_url ? `${SERVER_URL}/${messageData.media_url}` : newMessages[tempMessageIndex].media_path,
+                                filename: messageData.filename 
                             };
                             return newMessages;
                         }
 
-                        // Si no es un mensaje temporal (es decir, es un mensaje nuevo recibido), agregarlo
+                        // Agregar nuevo mensaje si no es temporal
                         if (!messageData.from_me || isNewChat) {
                             const normalizedMessage = {
                                 id: messageData.id_message_wp || messageData.id,
@@ -324,12 +359,12 @@ const ChatInterface = () => {
                         return prevMessages;
                     });
 
-                    if (isCurrentChat && !isScrollingManually.current) {
+                    if (!isScrollingManually.current) {
                         setTimeout(scrollToBottom, 100);
                     }
                 }
 
-                // Si el mensaje es para el chat actualmente abierto y no es un mensaje propio
+                // Actualizar contador de mensajes no leídos
                 const currentChatId = selectedChatId?.id || tempIdChat;
                 if (currentChatId &&
                     messageData.chat_id === currentChatId &&
@@ -489,19 +524,14 @@ const ChatInterface = () => {
 
     // Funciones para mensajes
     const renderMediaContent = (message) => {
-        console.log('Renderizando contenido multimedia:', message)
         let mediaSource;
         if (message.media_path?.startsWith('blob:') && message.type === 'image') {
-            console.log('Usando blob URL:', message.media_path);
             mediaSource = message.media_path;
         } else if (message.filename && message.media_path?.startsWith("files/") || message.filename?.startsWith("files/")) {
-            console.log('Usando filename para construir URL:', message.filename);
             mediaSource = `${SERVER_URL}${message.filename}`;
         } else if (message.filename && message.mediaUrl?.startsWith("files/")) {
-            console.log('Usando mediaUrl para construir URL:', message.mediaUrl);
             mediaSource = `${SERVER_URL}${message.mediaUrl}`;
         } else if (message.media_path?.startsWith('http')) {
-            console.log('Usando URL completa:', message.media_path);
             mediaSource = message.media_path;
         } else if (message.media_path && message.from_me === "false") {
             mediaSource = `${SERVER_URL}${message.media_path}`;
@@ -539,7 +569,6 @@ const ChatInterface = () => {
 
             case 'ptt':
             case 'audio':
-                console.log('Intentando cargar audio desde:', mediaSource);
                 return (
                     <div className="flex flex-col space-y-2">
                         {message.body && <div className="break-words">{message.body}</div>}

@@ -27,6 +27,18 @@ const WebSocketHook = () => {
         }
 
         const normalizeMessage = (data) => {
+            console.log("Normalizando mensaje:", data);
+            // Si es una actualización de ACK
+            if (data.id_wp && !data.body) {
+                return {
+                    id: data.id_message_wp || data.id,
+                    ack: data.ack,
+                    type: 'ack',
+                    chat_id: data.chat_id,
+                    user_id: data.user_id
+                };
+            }
+
             const baseMessage = {
                 id: data.id_message_wp || data.id || Date.now().toString(),
                 body: data.body || '',
