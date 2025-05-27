@@ -56,7 +56,7 @@ const ContactInfo = () => {
                 sessionStorage.setItem('lastChatId', JSON.stringify(currentChatId));
             }
         }
-    }, [selectedChatId, infoOpen])
+    }, [selectedChatId])
 
 
     const variants = {
