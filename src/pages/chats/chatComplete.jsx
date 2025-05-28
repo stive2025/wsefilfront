@@ -12,6 +12,8 @@ import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
 import { ContactInfoClick, ChatInterfaceClick, SearchInChatClick, NewMessage, ConnectionInfo, WebSocketMessage } from "@/contexts/chats.js";
 import { useTheme } from "@/contexts/themeContext";
 import notificationSound from '/sounds/notification.mp3';
+import { useAuth } from "@/contexts/authContext";
+import { GetCookieItem } from "@/utilities/cookies";
 
 
 
@@ -44,20 +46,46 @@ const ChatComplete = () => {
         };
     }, []);
 
+    const { hasAbility } = useAuth(); // Agregar este hook
+
     useEffect(() => {
         if (messageData) {
             console.log("Nuevo mensaje recibido:", messageData);
             console.log("chat seleccionado:", selectedChatId);
 
+            // Obtener datos del usuario actual
+            const userData = JSON.parse(GetCookieItem('userData'));
+            console.log("Datos del usuario actual:", userData);
+            const currentUserId = userData.id;
+            console.log("ID del usuario actual:", currentUserId);
+            console.log("ID del mensaje:", messageData.user_id);
+
+            // Verificar si el usuario puede recibir la notificación
+            const canReceiveNotification =
+                hasAbility('FILTER.BY.AGENT') || // Si tiene el permiso especial
+                (messageData.user_id?.toString() === currentUserId?.toString()); // O si el mensaje es para este usuario
+
             const shouldPlaySound =
-                messageData.body &&
+                canReceiveNotification && // Agregar esta nueva condición
+                (messageData.body || messageData.data) &&
                 (messageData.from_me === false || messageData.from_me === "false") &&
                 soundEnabled &&
-                (!isTabActive || selectedChatId?.id !== messageData.chat_id)
+                (!isTabActive || selectedChatId?.id !== messageData.chat_id);
+
+            // Logs para debugging
+            console.log("Condiciones de notificación:", {
+                tienePermisoEspecial: hasAbility('FILTER.BY.AGENT'),
+                esParaEsteUsuario: messageData.user_id?.toString() === currentUserId?.toString(),
+                puedeRecibirNotificacion: canReceiveNotification,
+                userId: currentUserId,
+                messageUserId: messageData.user_id
+            });
 
             if (shouldPlaySound) {
                 try {
-                    console.log("Reproduciendo sonido - Chat actual:", selectedChatId?.id, "Mensaje de chat:", messageData.chat_id);
+                    console.log("Reproduciendo sonido - Chat actual:", selectedChatId?.id,
+                        "Mensaje de chat:", messageData.chat_id,
+                        "Usuario:", currentUserId);
                     notificationAudio.current.play().catch(error => {
                         console.log("Error reproduciendo sonido:", error);
                     });
@@ -66,7 +94,7 @@ const ChatComplete = () => {
                 }
             }
         }
-    }, [messageData, soundEnabled, selectedChatId]); // Agregamos selectedChatId a las dependencias
+    }, [messageData, soundEnabled, selectedChatId, hasAbility]); // Agregar hasAbility a las dependencias
 
     // Función para alternar el sonido
     const toggleSound = () => {
