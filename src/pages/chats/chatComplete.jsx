@@ -27,7 +27,7 @@ const ChatComplete = () => {
     const { theme } = useTheme();
 
     const notificationAudio = useRef(new Audio(notificationSound));
-    const [isTabActive, setIsTabActive] = useState(true); // Removemos la coma inicial
+    const [isTabActive, setIsTabActive] = useState(true);
     const [soundEnabled, setSoundEnabled] = useState(
         localStorage.getItem('chatSoundEnabled') !== 'false'
     );
@@ -47,34 +47,17 @@ const ChatComplete = () => {
     useEffect(() => {
         if (messageData) {
             console.log("Nuevo mensaje recibido:", messageData);
-            console.log("Chat seleccionado:", selectedChatId);
-            console.log("Tab activa:", isTabActive);
-            
-            // Lógica actualizada para shouldPlaySound
-            const shouldPlaySound = 
-                messageData.body && 
+            console.log("chat seleccionado:", selectedChatId);
+
+            const shouldPlaySound =
+                messageData.body &&
                 (messageData.from_me === false || messageData.from_me === "false") &&
                 soundEnabled &&
-                (
-                    !isTabActive || // Suena siempre si la página no es visible
-                    !selectedChatId || // Suena si no hay chat seleccionado
-                    messageData.chat_id !== selectedChatId.id // Suena si es de otro chat
-                );
-
-            // Log adicional para debug
-            console.log("Condiciones de sonido:", {
-                tieneBody: messageData.body,
-                noEsMio: messageData.from_me === false,
-                sonidoActivado: soundEnabled,
-                paginaNoVisible: !isTabActive,
-                sinChatSeleccionado: !selectedChatId,
-                chatDiferente: messageData.chat_id !== selectedChatId?.id,
-                deberíaSonar: shouldPlaySound
-            });
+                (!isTabActive || selectedChatId?.id !== messageData.chat_id)
 
             if (shouldPlaySound) {
                 try {
-                    console.log("Reproduciendo sonido - Chat actual:", selectedChatId?.id, "Mensaje de chat:", messageData.chat_id, "Tab activa:", isTabActive);
+                    console.log("Reproduciendo sonido - Chat actual:", selectedChatId?.id, "Mensaje de chat:", messageData.chat_id);
                     notificationAudio.current.play().catch(error => {
                         console.log("Error reproduciendo sonido:", error);
                     });
@@ -83,7 +66,7 @@ const ChatComplete = () => {
                 }
             }
         }
-    }, [messageData, soundEnabled, selectedChatId, isTabActive]); // Agregamos isTabActive a las dependencias
+    }, [messageData, soundEnabled, selectedChatId]); // Agregamos selectedChatId a las dependencias
 
     // Función para alternar el sonido
     const toggleSound = () => {
@@ -138,7 +121,7 @@ const ChatComplete = () => {
             <div className={`flex flex-col h-screen w-full mx-auto 
                 bg-[rgb(var(--color-bg-${theme}))] 
                 text-[rgb(var(--color-text-primary-${theme}))]`}>
-                
+
                 {/* Agregar botón de sonido */}
                 <div className="absolute top-4 right-4 z-50">
                     <button
