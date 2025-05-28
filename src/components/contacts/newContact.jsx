@@ -196,19 +196,22 @@ const NewContact = () => {
 
         const formContactData = {
           "name": `${firstName} ${lastName}`.trim(),
-          "phone_number": formattedPhone
+          "phone_number": formattedPhone,
+          "profile_picture": ""
         };
 
         try {
           const response = await callEndpoint(createContact(formContactData));
-          console.log("Contacto creado ", response);
-          toast.success("Contacto creado con éxito")
-          setContactHandle(true);
+          if (response.status !== 200) {
+            toast.error(response.message)
 
-          // Resetear el formulario
-          setFirstName('');
-          setLastName('');
-          setPhoneNumber('');
+          } else {
+            toast.success(response.message)
+            setContactHandle(true);
+            setFirstName('');
+            setLastName('');
+            setPhoneNumber('');
+          }
 
           const ecuador = countries.find(country => country.label === 'Ecuador');
           if (ecuador) {
@@ -353,7 +356,7 @@ const NewContact = () => {
                       }),
                       option: (base, state) => ({
                         ...base,
-                        backgroundColor: state.isFocused 
+                        backgroundColor: state.isFocused
                           ? `rgb(var(--color-primary-${theme}))`
                           : `rgb(var(--color-bg-${theme}-secondary))`,
                         color: `rgb(var(--color-text-primary-${theme}))`,

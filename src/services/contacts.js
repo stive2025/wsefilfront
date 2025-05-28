@@ -45,6 +45,7 @@ const getContact = (contactId) => {
 };
 
 const createContact = (contactData) => {
+  console.log("Creating contact with data:", contactData);
   const abortController = loadAbort();
   return {
     call: CustomFetch("contacts", {

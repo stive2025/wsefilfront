@@ -4,6 +4,7 @@ import { GetCookieItem, RemoveCookieItem } from "../utilities/cookies.js";
 let baseURL = ENV_VARIABLES.API_URL;
 
 const CustomFetch = async (endpoint, options = {}) => {
+  console.log("CustomFetch called with endpoint:", endpoint);
   const token = GetCookieItem("authToken");
   const headers = {
     "Content-Type": "application/json",
@@ -22,7 +23,7 @@ const CustomFetch = async (endpoint, options = {}) => {
 
   try {
     const response = await fetch(`${baseURL}${endpoint}`, config);
-
+    console.log("Response received:", response);
     if (!response.ok) {
       if (response.status === 401) {
         RemoveCookieItem("authToken");

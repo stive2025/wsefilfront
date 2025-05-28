@@ -11,10 +11,8 @@ import { getCodigoQR } from "@/services/conections.js";
 import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
 import { ContactInfoClick, ChatInterfaceClick, SearchInChatClick, NewMessage, ConnectionInfo, WebSocketMessage } from "@/contexts/chats.js";
 import { useTheme } from "@/contexts/themeContext";
-import notificationSound from '/sounds/notification.mp3';
 import { useAuth } from "@/contexts/authContext";
 import { GetCookieItem } from "@/utilities/cookies";
-
 
 
 const ChatComplete = () => {
@@ -27,8 +25,9 @@ const ChatComplete = () => {
     const isMobile = Resize();
     const [messageData, setMessageData] = useState(null);
     const { theme } = useTheme();
-
-    const notificationAudio = useRef(new Audio(notificationSound));
+    const notificationSound = "https://cdn.pixabay.com/audio/2022/03/15/audio_273c5b6e2f.mp3";
+    const [audioInitialized, setAudioInitialized] = useState(false);
+    const notificationAudio = useRef(null);
     const [isTabActive, setIsTabActive] = useState(true);
     const [soundEnabled, setSoundEnabled] = useState(
         localStorage.getItem('chatSoundEnabled') !== 'false'
@@ -48,9 +47,58 @@ const ChatComplete = () => {
 
     const { hasAbility } = useAuth(); // Agregar este hook
 
+    // Modificar la inicialización del audio y agregar un useEffect para la carga inicial
     useEffect(() => {
-        if (messageData) {
-            console.log("Nuevo mensaje recibido:", messageData);
+        const initAudio = () => {
+            try {
+                if (!notificationAudio.current) {
+                    notificationAudio.current = new Audio(notificationSound);
+                    notificationAudio.current.preload = 'auto';
+                    notificationAudio.current.volume = 1.0;
+                }
+                
+                // Intentar cargar y reproducir el audio (mudo) para inicializarlo
+                const playPromise = notificationAudio.current.play();
+                if (playPromise !== undefined) {
+                    playPromise
+                        .then(() => {
+                            notificationAudio.current.pause();
+                            notificationAudio.current.currentTime = 0;
+                            setAudioInitialized(true);
+                            console.log('Audio inicializado exitosamente');
+                        })
+                        .catch(error => {
+                            console.error('Error en la inicialización del audio:', error);
+                        });
+                }
+            } catch (error) {
+                console.error('Error crítico inicializando audio:', error);
+            }
+        };
+
+        // Intentar inicializar inmediatamente
+        initAudio();
+
+        // También inicializar en la primera interacción del usuario
+        const handleInteraction = () => {
+            if (!audioInitialized) {
+                initAudio();
+            }
+        };
+
+        document.addEventListener('click', handleInteraction);
+        document.addEventListener('keydown', handleInteraction);
+
+        return () => {
+            document.removeEventListener('click', handleInteraction);
+            document.removeEventListener('keydown', handleInteraction);
+        };
+    }, []); // Solo se ejecuta una vez al montar el componente
+
+    // Modificar el useEffect que maneja los mensajes
+    useEffect(() => {
+        if (messageData && notificationAudio.current) {
+            console.log("Nuevo mensaje recibido en complete:", messageData);
             console.log("chat seleccionado:", selectedChatId);
 
             // Obtener datos del usuario actual
@@ -67,7 +115,7 @@ const ChatComplete = () => {
 
             const shouldPlaySound =
                 canReceiveNotification && // Agregar esta nueva condición
-                (messageData.body || messageData.data) &&
+                (messageData.body || messageData.filename) &&
                 (messageData.from_me === false || messageData.from_me === "false") &&
                 soundEnabled &&
                 (!isTabActive || selectedChatId?.id !== messageData.chat_id);
@@ -83,14 +131,16 @@ const ChatComplete = () => {
 
             if (shouldPlaySound) {
                 try {
-                    console.log("Reproduciendo sonido - Chat actual:", selectedChatId?.id,
-                        "Mensaje de chat:", messageData.chat_id,
-                        "Usuario:", currentUserId);
+                    // Reiniciar y reproducir
+                    notificationAudio.current.currentTime = 0;
                     notificationAudio.current.play().catch(error => {
-                        console.log("Error reproduciendo sonido:", error);
+                        console.error('Error reproduciendo sonido:', error);
+                        // Intentar reinicializar si falla
+                        setAudioInitialized(false);
                     });
                 } catch (error) {
-                    console.error("Error al reproducir sonido:", error);
+                    console.error('Error crítico reproduciendo sonido:', error);
+                    setAudioInitialized(false);
                 }
             }
         }
@@ -153,7 +203,16 @@ const ChatComplete = () => {
                 {/* Agregar botón de sonido */}
                 <div className="absolute top-4 right-4 z-50">
                     <button
-                        onClick={toggleSound}
+                        onClick={() => {
+                            toggleSound();
+                            // Intentar inicializar el audio si aún no se ha hecho
+                            if (!audioInitialized) {
+                                notificationAudio.current = new Audio(notificationSound);
+                                notificationAudio.current.preload = 'auto';
+                                notificationAudio.current.volume = 1.0;
+                                setAudioInitialized(true);
+                            }
+                        }}
                         className={`p-2 rounded-full hover:bg-[rgb(var(--color-bg-${theme}-secondary))]
                         transition-colors duration-200`}
                         title={soundEnabled ? "Desactivar sonido" : "Activar sonido"}
