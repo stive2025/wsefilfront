@@ -7,20 +7,25 @@ const getContacts = (params = {}) => {
   // Construir la URL con los parámetros
   let endpoint = "contacts";
   const queryParams = new URLSearchParams();
+  console.log("Params:", queryParams);
 
   // Si hay búsqueda por nombre, solo usamos ese parámetro
   if (params.name) {
+    endpoint = "contacts/chats";
     queryParams.append("name", params.name);
-  }
-  // Si no hay búsqueda por nombre pero hay paginación, usamos solo page
-  else if (params.page) {
+  } else if (params.phone) {
+    endpoint = "contacts/chats";
+    queryParams.append("phone", params.phone);
+  } else if (params.page) {
     queryParams.append("page", params.page);
   }
 
   // Añadir los parámetros a la URL si existen
   const queryString = queryParams.toString();
+  console.log("Query String:", queryString);
   if (queryString) {
     endpoint = `${endpoint}?${queryString}`;
+    console.log("Endpoint with Query String:", endpoint);
   }
 
   return {
@@ -33,27 +38,6 @@ const getContact = (contactId) => {
   const abortController = loadAbort();
   return {
     call: CustomFetch(`contacts/${contactId}`, {
-      signal: abortController.controller.signal,
-    }),
-    abortController,
-  };
-};
-
-
-const getContactChatsByName = (queryParams) => {
-  const abortController = loadAbort();
-  return {
-    call: CustomFetch(`contacts/chats?name=${queryParams}`, {
-      signal: abortController.controller.signal,
-    }),
-    abortController,
-  };
-};
-
-const getContactChatsByPhone = (queryParams) => {
-  const abortController = loadAbort();
-  return {
-    call: CustomFetch(`contacts/chats?phone=${queryParams}`, {
       signal: abortController.controller.signal,
     }),
     abortController,
@@ -128,20 +112,20 @@ const countryPrefixes = {
 const formatPhoneNumber = (number, countryPrefix) => {
   // Eliminar todos los espacios en blanco, guiones, paréntesis y otros caracteres no numéricos
   let cleanNumber = number.replace(/\D/g, "");
-  
+
   // Si no hay código de país, intentamos detectarlo por el patrón del número
   if (!countryPrefix) {
     return detectAndFormatPhoneNumber(cleanNumber);
   }
-  
+
   // Obtenemos información del país según el código
   const prefixInfo = countryPrefixes[countryPrefix.replace(/\+/g, "")];
-  
+
   if (!prefixInfo) {
     // Si no tenemos información del país, devolvemos como está
     return countryPrefix + cleanNumber;
   }
-  
+
   // Eliminamos prefijos específicos según el país
   switch (countryPrefix) {
     case "593": // Ecuador
@@ -158,12 +142,14 @@ const formatPhoneNumber = (number, countryPrefix) => {
       break;
     // Puedes agregar más reglas específicas para otros países aquí
   }
-  
+
   // Asegurarnos de que el número tenga la longitud estándar del país
   if (cleanNumber.length > prefixInfo.standardLength) {
-    cleanNumber = cleanNumber.substring(cleanNumber.length - prefixInfo.standardLength);
+    cleanNumber = cleanNumber.substring(
+      cleanNumber.length - prefixInfo.standardLength
+    );
   }
-  
+
   return countryPrefix + cleanNumber;
 };
 
@@ -211,24 +197,24 @@ const detectAndFormatPhoneNumber = (cleanNumber) => {
 // Función para extraer código de país y número local de un número de teléfono completo
 const splitPhoneNumber = (fullNumber) => {
   if (!fullNumber) return { countryCode: "", phoneNumber: "" };
-  
+
   // Limpiamos el número
   const cleanNumber = fullNumber.replace(/\D/g, "");
-  
+
   // Intentamos extraer el código de país
-  for (const [prefix,] of Object.entries(countryPrefixes)) {
+  for (const [prefix] of Object.entries(countryPrefixes)) {
     if (cleanNumber.startsWith(prefix)) {
       return {
         countryCode: prefix,
-        phoneNumber: cleanNumber.substring(prefix.length)
+        phoneNumber: cleanNumber.substring(prefix.length),
       };
     }
   }
-  
+
   // Si no encontramos un prefijo conocido, asumimos que es un número local
   return {
     countryCode: "",
-    phoneNumber: cleanNumber
+    phoneNumber: cleanNumber,
   };
 };
 
@@ -241,6 +227,4 @@ export {
   formatPhoneNumber,
   splitPhoneNumber,
   countryPrefixes,
-  getContactChatsByName,
-  getContactChatsByPhone
 };

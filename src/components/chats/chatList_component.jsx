@@ -14,6 +14,7 @@ import { useAuth } from '@/contexts/authContext';
 import { useTheme } from "@/contexts/themeContext";
 import { getUserLabelColors } from "@/utils/getUserLabelColors";
 
+
 // ChatHeader component remains the same
 const ChatHeader = () => {
   const { theme } = useTheme();

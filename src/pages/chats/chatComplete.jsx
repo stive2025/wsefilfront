@@ -1,4 +1,4 @@
-import { useEffect, useContext, useState } from "react";
+import { useEffect, useContext, useState, useRef } from "react";
 import ChatInterface from "@/components/chats/chatPanel_components.jsx";
 import ChatList from "@/components/chats/chatList_component.jsx";
 import Resize from "@/hooks/responsiveHook.jsx";
@@ -9,8 +9,11 @@ import ConectionMod from "@/components/mod/conectionMod.jsx";
 import WebSocketHook from "@/hooks/websocketHook.jsx"
 import { getCodigoQR } from "@/services/conections.js";
 import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
-import { ContactInfoClick,  ChatInterfaceClick, SearchInChatClick, NewMessage, ConnectionInfo, WebSocketMessage } from "@/contexts/chats.js";
+import { ContactInfoClick, ChatInterfaceClick, SearchInChatClick, NewMessage, ConnectionInfo, WebSocketMessage } from "@/contexts/chats.js";
 import { useTheme } from "@/contexts/themeContext";
+import notificationSound from '/sounds/notification.mp3';
+
+
 
 const ChatComplete = () => {
     const { callEndpoint } = useFetchAndLoad();
@@ -22,6 +25,50 @@ const ChatComplete = () => {
     const isMobile = Resize();
     const [messageData, setMessageData] = useState(null);
     const { theme } = useTheme();
+
+    const notificationAudio = useRef(new Audio(notificationSound));
+    const [, setIsTabActive] = useState(true);
+    const [soundEnabled, setSoundEnabled] = useState(
+        localStorage.getItem('chatSoundEnabled') !== 'false'
+    );
+
+    // Agregar efecto para manejar la visibilidad de la página
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            setIsTabActive(!document.hidden);
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (messageData) {
+            const shouldPlaySound = 
+                messageData.body && 
+                (messageData.from_me === false || messageData.from_me === "false") &&
+                soundEnabled;
+
+            if (shouldPlaySound) {
+                try {
+                    notificationAudio.current.play().catch(error => {
+                        console.log("Error reproduciendo sonido:", error);
+                    });
+                } catch (error) {
+                    console.error("Error al reproducir sonido:", error);
+                }
+            }
+        }
+    }, [messageData, soundEnabled]);
+
+    // Función para alternar el sonido
+    const toggleSound = () => {
+        const newSoundState = !soundEnabled;
+        setSoundEnabled(newSoundState);
+        localStorage.setItem('chatSoundEnabled', newSoundState);
+    };
 
     // Default value to prevent null errors
     const connectionStatus = isConnected || { sesion: false, name: '', number: '' };
@@ -66,49 +113,62 @@ const ChatComplete = () => {
 
     return (
         <WebSocketMessage.Provider value={{ messageData, setMessageData }}>
-                <div className={`flex flex-col h-screen w-full mx-auto 
+            <div className={`flex flex-col h-screen w-full mx-auto 
                 bg-[rgb(var(--color-bg-${theme}))] 
                 text-[rgb(var(--color-text-primary-${theme}))]`}>
-                    {/* WebSocketHook siempre debe estar presente para manejar la conexión */}
-                    <WebSocketHook />
+                
+                {/* Agregar botón de sonido */}
+                <div className="absolute top-4 right-4 z-50">
+                    <button
+                        onClick={toggleSound}
+                        className={`p-2 rounded-full hover:bg-[rgb(var(--color-bg-${theme}-secondary))]
+                        transition-colors duration-200`}
+                        title={soundEnabled ? "Desactivar sonido" : "Activar sonido"}
+                    >
+                        {soundEnabled ? "🔊" : "🔇"}
+                    </button>
+                </div>
 
-                    {/* Si no hay sesión activa, solo mostrar el modal de conexión */}
-                    {!connectionStatus.sesion ? (
-                        <ConectionMod isOpen={true} />
-                    ) : (
-                        /* Renderizado condicional basado en si hay sesión activa */
-                        isMobile ? (
-                            selectedChatId == null ? (
-                                newMessage ? (
-                                    <ListContacts />
-                                ) : (
-                                    <ChatList />
-                                )
+                {/* WebSocketHook siempre debe estar presente para manejar la conexión */}
+                <WebSocketHook />
+
+                {/* Si no hay sesión activa, solo mostrar el modal de conexión */}
+                {!connectionStatus.sesion ? (
+                    <ConectionMod isOpen={true} />
+                ) : (
+                    /* Renderizado condicional basado en si hay sesión activa */
+                    isMobile ? (
+                        selectedChatId == null ? (
+                            newMessage ? (
+                                <ListContacts />
                             ) : (
-                                <>
-                                    {infoOpen ? (
-                                        <ContactInfo />
-                                    ) : searchInChat ? (
-                                        <SearchInChat />
-                                    ) : (
-                                        <ChatInterface />
-                                    )}
-                                </>
+                                <ChatList />
                             )
                         ) : (
-                            <div className={`h-screen w-full 
+                            <>
+                                {infoOpen ? (
+                                    <ContactInfo />
+                                ) : searchInChat ? (
+                                    <SearchInChat />
+                                ) : (
+                                    <ChatInterface />
+                                )}
+                            </>
+                        )
+                    ) : (
+                        <div className={`h-screen w-full 
                             bg-[rgb(var(--color-bg-${theme}))] 
                             text-[rgb(var(--color-text-primary-${theme}))]
                             ${searchInChat || infoOpen ? "grid grid-cols-3" : "grid grid-cols-[35%_65%]"}`}
-                            >
-                                {newMessage ? <ListContacts /> : <ChatList />}
-                                <ChatInterface />
-                                {infoOpen && <ContactInfo />}
-                                {searchInChat && <SearchInChat />}
-                            </div>
-                        )
-                    )}
-                </div>
+                        >
+                            {newMessage ? <ListContacts /> : <ChatList />}
+                            <ChatInterface />
+                            {infoOpen && <ContactInfo />}
+                            {searchInChat && <SearchInChat />}
+                        </div>
+                    )
+                )}
+            </div>
         </WebSocketMessage.Provider>
     );
 };
