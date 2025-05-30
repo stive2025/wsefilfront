@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useState, useEffect, useRef, useCallback, useContext } from "react";
-import { Search, ChevronLeftCircle, ChevronRightCircle, Loader, Check, Clock, AlertTriangle } from "lucide-react";
+import { Search, ChevronLeftCircle, ChevronRightCircle, Loader, Check, Clock, AlertTriangle, Eye } from "lucide-react";
 import { ChatInterfaceClick, StateFilter, TagFilter, AgentFilter, WebSocketMessage, TempNewMessage } from "@/contexts/chats.js";
 import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
 import { getChatList, updateChat } from "@/services/chats.js";
@@ -13,8 +13,37 @@ import AbilityGuard from '@/components/common/AbilityGuard';
 import { useAuth } from '@/contexts/authContext';
 import { useTheme } from "@/contexts/themeContext";
 import { getUserLabelColors } from "@/utils/getUserLabelColors";
+//import { GetCookieItem } from "@/utilities/cookies";
 
+const formatTimestamp = (timestamp) => {
+  const messageDate = new Date(timestamp);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
 
+  // Resetear horas para comparación de fechas
+  const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const yesterdayDateOnly = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+  const messageDateOnly = new Date(messageDate.getFullYear(), messageDate.getMonth(), messageDate.getDate());
+
+  if (messageDateOnly.getTime() === todayDateOnly.getTime()) {
+    // Hoy - mostrar solo hora
+    return messageDate.toLocaleTimeString('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+  } else if (messageDateOnly.getTime() === yesterdayDateOnly.getTime()) {
+    // Ayer - mostrar "Ayer"
+    return 'Ayer';
+  } else {
+    // Días anteriores - mostrar fecha
+    return messageDate.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit'
+    });
+  }
+};
 // ChatHeader component remains the same
 const ChatHeader = () => {
   const { theme } = useTheme();
@@ -256,6 +285,7 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
   const { callEndpoint } = useFetchAndLoad();
   const [readChats, setReadChats] = useState(new Set());
   const { theme } = useTheme();
+  //const userId = GetCookieItem("userData") ? JSON.parse(GetCookieItem("userData")).id : null;
 
   const renderAckStatus = (ackStatus) => {
     switch (ackStatus) {
@@ -299,7 +329,60 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
     }
   };
 
-  // El useEffect para manejar los mensajes entrantes
+  // Función para marcar chat como leído
+  const markChatAsRead = async (chatId) => {
+    try {
+      await handleUpdateChat(chatId, { unread_message: 0 });
+      setReadChats(prev => new Set(prev).add(chatId));
+    } catch (error) {
+      console.error("Error marcando chat como leído", error);
+    }
+  };
+
+  // Función para manejar el click normal del chat (marca como leído)
+  const handleChatClick = (item) => {
+    setTempIdChat(null);
+    const updates = {};
+
+    if (item.state === "PENDING" && item.state !== "CLOSED") {
+      updates.state = "OPEN";
+    }
+
+    if (item.unread_message > 0) {
+      markChatAsRead(item.id);
+    }
+
+    if (Object.keys(updates).length > 0) {
+      handleUpdateChat(item.id, updates);
+    }
+
+    setSelectedChatId({
+      id: item.id,
+      tag_id: item.tag_id,
+      status: item.state,
+      idContact: item.contact_id,
+      name: item.contact_name,
+      photo: item.avatar,
+      number: item.contact_phone,
+    });
+  };
+
+  // Función para manejar el click del ojo (solo visualizar, no marca como leído)
+  const handleEyeClick = (e, item) => {
+    e.stopPropagation();
+    setTempIdChat(null);
+    setSelectedChatId({
+      id: item.id,
+      tag_id: item.tag_id,
+      status: item.state,
+      idContact: item.contact_id,
+      name: item.contact_name,
+      photo: item.avatar,
+      number: item.contact_phone,
+    });
+  };
+
+  // Manejar mensajes entrantes
   useEffect(() => {
     if (incomingMessages && incomingMessages.chat_id) {
       setReadChats(prev => {
@@ -310,15 +393,24 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
     }
   }, [incomingMessages]);
 
-  // useEffect para mantener actualizado el contador en chats leídos
+  // Sincronizar estado de lectura con el backend
   useEffect(() => {
-    chats.forEach(chat => {
-      if (readChats.has(chat.id) && (chat.unread_message > 0 || chat.unreadCount > 0)) {
-        handleUpdateChat(chat.id, { unread_message: 0 });
-        console.log(`Actualizando contador de mensajes no leídos a 0 para chat ${chat.id}`);
+    const syncReadStatus = async () => {
+      const chatsToUpdate = chats.filter(chat =>
+        readChats.has(chat.id) &&
+        (chat.unread_message > 0 || chat.unreadCount > 0) &&
+        !isChatSelected(chat.id)
+      );
+
+      for (const chat of chatsToUpdate) {
+        await handleUpdateChat(chat.id, { unread_message: 0 });
       }
-    });
-  }, [chats, readChats]);
+    };
+
+    if (readChats.size > 0) {
+      syncReadStatus();
+    }
+  }, [readChats]);
 
   // Infinity scroll logic
   useEffect(() => {
@@ -346,7 +438,6 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
     };
   }, [loading, hasMoreChats, loadMoreChats, chats.length]);
 
-  // Helper function to check if a chat is currently selected
   const isChatSelected = (chatId) => {
     if (selectedChatId && selectedChatId.id === chatId) {
       return true;
@@ -401,25 +492,7 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
                     : 'bg-[#161717]'
                 }
         hover:bg-[rgb(var(--input-hover-bg-${theme}))] cursor-pointer`}
-              onClick={() => {
-                setTempIdChat(null);
-                if (item.state === "PENDING" && item.state !== "CLOSED") {
-                  handleUpdateChat(item.id, { unread_message: 0, state: "OPEN" });
-                  setReadChats(prev => new Set(prev).add(item.id));
-                } else if (item.unread_message > 0) {
-                  handleUpdateChat(item.id, { unread_message: 0 });
-                  setReadChats(prev => new Set(prev).add(item.id));
-                }
-                setSelectedChatId({
-                  id: item.id,
-                  tag_id: item.tag_id,
-                  status: item.state,
-                  idContact: item.contact_id,
-                  name: item.contact_name,
-                  photo: item.avatar,
-                  number: item.contact_phone,
-                });
-              }}
+              onClick={() => handleChatClick(item)}
             >
               {/* Etiqueta de agente */}
               <AbilityGuard abilities={[ABILITIES.CHATS.FILTER_BY_AGENT]}>
@@ -446,9 +519,25 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
                   <span className={`font-medium text-sm md:text-base text-[rgb(var(--color-text-primary-${theme}))] truncate`}>
                     {item.contact_name}
                   </span>
-                  <span className={`text-xs text-[rgb(var(--color-text-secondary-${theme}))] flex-shrink-0`}>
-                    {item.timestamp || new Date(item.updated_at).toLocaleDateString()}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs text-[rgb(var(--color-text-secondary-${theme}))] flex-shrink-0`}>
+                      {formatTimestamp(item.updated_at || item.timestamp)}
+                    </span>
+
+                    {/* Botón Eye - Solo visible para usuarios con permiso FILTER_BY_AGENT */}
+                    <AbilityGuard abilities={[ABILITIES.CHATS.FILTER_BY_AGENT]} fallback={null}>
+                      <button
+                        onClick={(e) => handleEyeClick(e, item)}
+                        className={`p-1 rounded-full hover:bg-[rgb(var(--input-hover-bg-${theme}))] 
+                          text-[rgb(var(--color-text-secondary-${theme}))]
+                          hover:text-[rgb(var(--color-primary-${theme}))]
+                          transition-colors duration-200`}
+                        title="Ver chat sin marcar como leído"
+                      >
+                        <Eye size={16} />
+                      </button>
+                    </AbilityGuard>
+                  </div>
                 </div>
 
                 <div className="flex justify-between items-center gap-2">
@@ -464,10 +553,10 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
                   {/* Burbuja de mensajes no leídos */}
                   {(item.unread_message > 0 || item.unreadCount > 0) &&
                     !readChats.has(item.id) &&
-                    !isChatSelected(item.id) && (
+                    (selectedChatId?.id !== item.id || tempIdChat !== item.id) && (
                       <div className={`flex-shrink-0 bg-[rgb(var(--color-primary-${theme}))] 
-                text-[rgb(var(--color-text-primary-${theme}))] rounded-full w-5 h-5 
-                flex items-center justify-center text-xs`}>
+      text-[rgb(var(--color-text-primary-${theme}))] rounded-full w-5 h-5 
+      flex items-center justify-center text-xs`}>
                         {item.unread_message || item.unreadCount}
                       </div>
                     )}
@@ -486,7 +575,6 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
     </AbilityGuard>
   );
 };
-
 // Updated ChatList component with proper handling of filters and search
 const ChatList = ({ role = "admin" }) => {
   const isMobile = Resize();
@@ -549,13 +637,13 @@ const ChatList = ({ role = "admin" }) => {
       let endpointKey = 'chatList';
       const trimmedQuery = searchQuery.trim();
       const isPhone = /^\+?\d+$/.test(trimmedQuery);
-      const formattedPhone = isPhone 
-        ? trimmedQuery.replace(/^0+/, '') 
+      const formattedPhone = isPhone
+        ? trimmedQuery.replace(/^0+/, '')
         : undefined;
 
       // Separar la lógica de filterParams según el tipo de carga
       let filterParams;
-      
+
       if (trimmedQuery) {
         // Parámetros para búsqueda (sin page)
         filterParams = {
@@ -586,7 +674,7 @@ const ChatList = ({ role = "admin" }) => {
 
       console.log('API Parameters:', filterParams);
       endpoint = getChatList(filterParams);
-      
+
       const response = await callEndpoint(endpoint, endpointKey);
       console.log("Respuesta de la API:", response);
       setPaginationInfo({
