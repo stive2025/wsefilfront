@@ -633,49 +633,33 @@ const ChatList = ({ role = "admin" }) => {
     try {
       setLoadingState({ type: params.type || 'filter', isActive: true });
 
-      let endpoint;
-      let endpointKey = 'chatList';
       const trimmedQuery = searchQuery.trim();
       const isPhone = /^\+?\d+$/.test(trimmedQuery);
-      const formattedPhone = isPhone
-        ? trimmedQuery.replace(/^0+/, '')
-        : undefined;
 
-      // Separar la lógica de filterParams según el tipo de carga
-      let filterParams;
+      // Siempre incluir parámetros base
+      const filterParams = {
+        page: params.page || 1,
+        state: params.state || stateSelected || 'OPEN'
+      };
 
+      // Agregar filtros opcionales
+      if (tagSelected) filterParams.id_tag = tagSelected;
+      if (agentSelected) filterParams.agent_id = agentSelected;
+
+      // Manejar búsqueda por nombre o teléfono
       if (trimmedQuery) {
-        // Parámetros para búsqueda (sin page)
-        filterParams = {
-          state: params.state || stateSelected || 'OPEN'
-        };
-
-        // Agregar parámetros de búsqueda según el tipo
         if (isPhone) {
-          filterParams.phone = formattedPhone;
+          filterParams.phone = trimmedQuery.replace(/^0+/, '');
         } else {
           filterParams.name = trimmedQuery;
         }
-      } else {
-        // Parámetros para carga normal y filtros (con page)
-        filterParams = {
-          page: params.page || 1,
-          state: params.state || stateSelected || 'OPEN'
-        };
-      }
 
-      // Agregar filtros opcionales comunes
-      if (tagSelected) {
-        filterParams.id_tag = tagSelected;
-      }
-      if (agentSelected) {
-        filterParams.agent_id = agentSelected;
+        // Cuando hay búsqueda, ignoramos la paginación
+        delete filterParams.page;
       }
 
       console.log('API Parameters:', filterParams);
-      endpoint = getChatList(filterParams);
-
-      const response = await callEndpoint(endpoint, endpointKey);
+      const response = await callEndpoint(getChatList(filterParams), 'chatList');;
       console.log("Respuesta de la API:", response);
       setPaginationInfo({
         current_page: response.current_page || 1,
