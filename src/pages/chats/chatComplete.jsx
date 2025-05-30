@@ -13,6 +13,7 @@ import { ContactInfoClick, ChatInterfaceClick, SearchInChatClick, NewMessage, Co
 import { useTheme } from "@/contexts/themeContext";
 import { useAuth } from "@/contexts/authContext";
 import { GetCookieItem } from "@/utilities/cookies";
+import { ABILITIES } from "@/constants/abilities.js";
 
 
 const ChatComplete = () => {
@@ -110,7 +111,7 @@ const ChatComplete = () => {
 
             // Verificar si el usuario puede recibir la notificación
             const canReceiveNotification =
-                hasAbility('FILTER.BY.AGENT') || // Si tiene el permiso especial
+                hasAbility(ABILITIES.CHATS.FILTER_BY_AGENT) || // Si tiene el permiso especial
                 (messageData.user_id?.toString() === currentUserId?.toString()); // O si el mensaje es para este usuario
 
             const shouldPlaySound =
@@ -122,7 +123,7 @@ const ChatComplete = () => {
 
             // Logs para debugging
             console.log("Condiciones de notificación:", {
-                tienePermisoEspecial: hasAbility('FILTER.BY.AGENT'),
+                tienePermisoEspecial: hasAbility(ABILITIES.CHATS.FILTER_BY_AGENT),
                 esParaEsteUsuario: messageData.user_id?.toString() === currentUserId?.toString(),
                 puedeRecibirNotificacion: canReceiveNotification,
                 userId: currentUserId,

@@ -789,13 +789,15 @@ const ChatList = ({ role = "admin" }) => {
   // Efecto para manejar mensajes WebSocket
   useEffect(() => {
     if (messageData) {
-      console.log("Mensaje normalizado recibido:", messageData);
       const userData = getUserData();
       const currentUserId = userData?.id;
+      const canProcessMessage = 
+          hasAbility(ABILITIES.CHATS.FILTER_BY_AGENT) || 
+          messageData.user_id?.toString() === currentUserId?.toString();
 
-      if (!currentUserId || messageData.user_id?.toString() !== currentUserId.toString()) {
-        console.log("Mensaje ignorado - user_id no coincide");
-        return;
+      if (!canProcessMessage) {
+          console.log("Mensaje ignorado en ChatList - no tiene permisos o no es propietario");
+          return;
       }
 
       console.log("Procesando mensaje para el usuario actual:", currentUserId);
@@ -865,7 +867,7 @@ const ChatList = ({ role = "admin" }) => {
       setMessageDataLocal(messageData);
       setMessageData(null);
     }
-  }, [messageData, chats]);
+  }, [messageData, chats, hasAbility]);
 
   // Scroll al inicio cuando se selecciona un chat
   useEffect(() => {

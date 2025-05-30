@@ -21,10 +21,15 @@ const WebSocketHook = () => {
 
         const userData = JSON.parse(userDataString);
         const userId = userData.id;
+        const abilities = userData.abilities || [];
+        
         if (!userId) {
             console.error("No se encontró ID de usuario en las cookies");
             return;
         }
+
+        // Verificar si el usuario tiene permisos para ver todos los chats
+        const canViewAllChats = abilities.includes("chats.filter.agent");
 
         const normalizeMessage = (data) => {
             console.log("Normalizando mensaje:", data);
@@ -97,6 +102,32 @@ const WebSocketHook = () => {
             };
         };
 
+        // Función para verificar si un mensaje debe ser procesado según los permisos
+        const shouldProcessMessage = (data) => {
+            // Si es información de estado de sesión (CONNECTED/DISCONNECTED), siempre procesar
+            if (data.status || data.estatus) {
+                return true;
+            }
+
+            // Si el usuario puede ver todos los chats, procesar siempre
+            if (canViewAllChats) {
+                return true;
+            }
+
+            // Si no tiene permisos especiales, solo procesar mensajes propios
+            // Verificar tanto user_id del mensaje como del propietario del chat
+            if (data.user_id && data.user_id.toString() === userId.toString()) {
+                return true;
+            }
+
+            // Si el mensaje es de/para un chat asignado al usuario actual
+            if (data.assigned_user_id && data.assigned_user_id.toString() === userId.toString()) {
+                return true;
+            }
+
+            return false;
+        };
+
         const connectWebSocket = () => {
             if (reconnectTimeout) clearTimeout(reconnectTimeout);
             if (conn) {
@@ -137,8 +168,14 @@ const WebSocketHook = () => {
                     if (lastMessageRef.current === messageId) return;
                     lastMessageRef.current = messageId;
 
+                    // Verificar si este mensaje debe ser procesado según los permisos
+                    if (!shouldProcessMessage(data)) {
+                        console.log("Mensaje filtrado por permisos:", data);
+                        return;
+                    }
+
                     if (data.user_id?.toString() === userId.toString()) {
-                        // Estado de sesión
+                        // Estado de sesión - esta lógica se mantiene igual
                         if (data.status === "DISCONNECTED" || data.estatus === "DISCONNECTED") {
                             setIsConnected({
                                 sesion: false,
@@ -159,16 +196,18 @@ const WebSocketHook = () => {
                                 userId
                             });
                         }
-
-                        // Siempre enviar el mensaje original completo
-                        setMessageData(data);
-
-                        // Si hay mensaje o media, normalizar
-                        if (data.body !== undefined || data.media_type || (data.media && data.media.length > 0)) {
-                            const normalizedMessage = normalizeMessage(data);
-                            setMessageData(normalizedMessage);
-                        }
                     }
+
+                    // Procesar mensaje solo si pasa el filtro de permisos
+                    // Siempre enviar el mensaje original completo
+                    setMessageData(data);
+
+                    // Si hay mensaje o media, normalizar
+                    if (data.body !== undefined || data.media_type || (data.media && data.media.length > 0)) {
+                        const normalizedMessage = normalizeMessage(data);
+                        setMessageData(normalizedMessage);
+                    }
+
                 } catch (err) {
                     console.error("❌ Error procesando mensaje WebSocket:", err);
                 }
