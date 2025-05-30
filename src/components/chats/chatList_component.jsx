@@ -873,7 +873,22 @@ const ChatList = ({ role = "admin" }) => {
       chatListRef.current.scrollTop = 0;
     }
   }, [selectedChatId, tempIdChat]);
+  useEffect(() => {
+    const handleChatStateChange = (event) => {
+      const { chatId, shouldRemove } = event.detail;
 
+      if (shouldRemove) {
+        // La animación ya se habrá aplicado en el componente que disparó el evento
+        // Solo necesitamos actualizar el estado después de que termine la animación
+        setTimeout(() => {
+          setChats(prevChats => prevChats.filter(chat => chat.id !== chatId));
+        }, 300);
+      }
+    };
+
+    window.addEventListener('chatStateChanged', handleChatStateChange);
+    return () => window.removeEventListener('chatStateChanged', handleChatStateChange);
+  }, [setChats]);
   // Verificar permisos al inicio
   if (!hasAbility(ABILITIES.CHATS.VIEW)) {
     return (
@@ -882,6 +897,8 @@ const ChatList = ({ role = "admin" }) => {
       </div>
     );
   }
+
+
 
   return isMobile ? (
     <div className="w-full  sm:w-80 border-r border-gray-700 flex flex-col text-white h-screen">

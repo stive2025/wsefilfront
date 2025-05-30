@@ -42,7 +42,7 @@ const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, lo
 
   if (!contacts || !contacts.length) {
     return <div className={`p-4 text-[rgb(var(--color-text-secondary-${theme}))]`}>No hay contactos disponibles</div>;
-  }else{
+  } else {
     console.log("Contacts:", contacts);
   }
 
@@ -102,17 +102,22 @@ const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, lo
             <div className="flex">
               <AbilityGuard abilities={[ABILITIES.CONTACTS.EDIT]}>
                 <button
-                  className={`mr-2 text-[rgb(var(--color-text-secondary-${theme}))] 
-                  hover:text-[rgb(var(--color-primary-${theme}))]`}
+                  className={`mr-2 p-2 rounded-md transition-colors duration-200 
+    bg-[rgb(var(--color-primary-${theme}))] 
+    hover:bg-[rgb(var(--color-secondary-${theme}))] 
+    text-white shadow-sm cursor-pointer`}
                   onClick={() => onFindContact(item.id)}
                 >
                   <Pencil size={16} />
                 </button>
               </AbilityGuard>
+
               <AbilityGuard abilities={[ABILITIES.CONTACTS.DELETE]}>
                 <button
-                  className={`text-[rgb(var(--color-text-secondary-${theme}))] 
-                  hover:text-[rgb(var(--color-primary-${theme}))]`}
+                  className={`p-2 rounded-md transition-colors duration-200 
+    bg-[rgb(var(--color-secondary-${theme}))] 
+    hover:bg-[rgb(var(--color-primary-${theme}))] 
+    text-white shadow-sm cursor-pointer`}
                   onClick={() => onDeleteContact(item.id)}
                   disabled={isDeleting}
                 >
@@ -246,7 +251,7 @@ const ListContacts = () => {
     try {
       setContacts([]); // Limpiar contactos existentes
       setError(null); // Limpiar error anterior
-      
+
       const params = {
         name: name
       };
@@ -274,7 +279,7 @@ const ListContacts = () => {
       const params = {
         phone: phone
       };
-      
+
       const contactsCall = getContacts(params);
       const response = await callEndpoint(contactsCall);
       console.log("Response from fetchContactsByPhone:", response);
@@ -295,14 +300,14 @@ const ListContacts = () => {
   const handleContactsResponse = (response, reset, page) => {
     try {
       console.log("Response from API:", response);
-      
+
       if (!response || !response.data) {
         throw new Error("Respuesta inválida de la API");
       }
 
       const newContacts = response.data;
       console.log("New Contacts:", newContacts);
-      
+
       setError(null); // Limpiar cualquier error previo
       setTotalItems(response.total || 0);
       console.log("Total Items:", response.total);
@@ -332,8 +337,8 @@ const ListContacts = () => {
     if (error.name !== 'AbortError') {
       console.error("Error cargando contactos:", error);
       // Mensaje de error más específico
-      const errorMessage = error.response?.data?.message || 
-                          "No se pudieron cargar los contactos";
+      const errorMessage = error.response?.data?.message ||
+        "No se pudieron cargar los contactos";
       setError(errorMessage);
       setContacts([]); // Asegurarse de limpiar los contactos en caso de error
     }

@@ -34,35 +34,25 @@ const ChatResolved = ({ isOpen, onClose }) => {
 
   const handleClose = async () => {
     try {
-      const previousState = selectedChatId.status;
-      const chatElement = document.querySelector(`[data-chat-id="${selectedChatId.id}"]`);
-      
-      // Actualizar estado en el servidor
-      await handleUpdateChat(selectedChatId.id, { state: "CLOSED" });
-      
-      // Aplicar animación
-      if (chatElement) {
-        chatElement.classList.add('fade-out');
-        await new Promise(resolve => setTimeout(resolve, 300));
-      }
-      
-      // Disparar evento
-      const event = new CustomEvent('chatStateChanged', {
-        detail: {
-          chatId: selectedChatId.id,
-          newState: "CLOSED",
-          previousState: previousState,
-          shouldRemove: true
+        // 1. Primero hacer la actualización en el servidor
+        await handleUpdateChat(selectedChatId.id, { state: "CLOSED" });
+
+        // 2. Encontrar y animar el elemento del chat
+        const chatElement = document.querySelector(`[data-chat-id="${selectedChatId.id}"]`);
+        if (chatElement) {
+            chatElement.style.animation = 'slideOutAndFade 0.3s ease-out forwards';
+            
+            // 3. Esperar a que termine la animación antes de ocultarlo
+            await new Promise(resolve => setTimeout(resolve, 300));
+            chatElement.style.display = 'none';
         }
-      });
-      window.dispatchEvent(event);
-      
-      setSelectedChatId(null);
-      onClose();
-      toast.success("Chat finalizado exitosamente");
+
+        setSelectedChatId(null);
+        onClose();
+        toast.success("Chat finalizado exitosamente");
     } catch (error) {
-      toast.error("Error al finalizar el chat");
-      console.error("Error:", error);
+        toast.error("Error al finalizar el chat");
+        console.error("Error:", error);
     }
   };
 
