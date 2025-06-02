@@ -13,6 +13,9 @@ import { useTheme } from "@/contexts/themeContext";
 // Componentes reutilizables
 const SearchInput = ({ searchTerm, onSearchChange }) => {
   const { theme } = useTheme();
+const handleClear = () => {
+  onSearchChange('');
+};
 
   return (
     <AbilityGuard abilities={[ABILITIES.CONTACTS.SEARCH]} fallback={
@@ -29,6 +32,19 @@ const SearchInput = ({ searchTerm, onSearchChange }) => {
             onChange={(e) => onSearchChange(e.target.value)}
           />
           <Search className={`absolute left-1 text-[rgb(var(--color-text-secondary-${theme}))]`} size={18} />
+         {searchTerm && (
+            <button
+              onClick={handleClear}
+              className={`absolute right-2 p-1 rounded-full
+                text-[rgb(var(--color-text-secondary-${theme}))]
+                hover:bg-[rgb(var(--input-hover-bg-${theme}))]
+                hover:text-[rgb(var(--color-primary-${theme}))]
+                transition-colors duration-200`}
+              title="Limpiar búsqueda"
+            >
+              <span className="text-xl leading-none">&times;</span>
+            </button>
+          )}
         </div>
       </div>
     </AbilityGuard>

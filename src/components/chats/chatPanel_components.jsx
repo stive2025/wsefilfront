@@ -69,9 +69,6 @@ const ChatInterface = () => {
     const [hasMoreMessages, setHasMoreMessages] = useState(true);
     const [loadingMoreMessages, setLoadingMoreMessages] = useState(false);
     const [initialLoad, setInitialLoad] = useState(true);
-    const [showFormatHelp, setShowFormatHelp] = useState(false);
-
-
     const formatMessage = (text) => {
         if (!text) return '';
 
@@ -1357,7 +1354,7 @@ const ChatInterface = () => {
                                     }}
                                 />
                             </AbilityGuard>
-                            <div className="flex space-x-2">
+                            <div className="flex space-x-2 ">
                                 <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.SEND_MEDIA]}>
                                     <div className="relative">
                                         <input
@@ -1421,27 +1418,7 @@ const ChatInterface = () => {
                                         <Send size={20} />
                                     )}
                                 </button>
-                                <button
-                                    type="button"
-                                    className="absolute right-2 top-2 text-gray-400 hover:text-gray-300"
-                                    onClick={() => setShowFormatHelp(!showFormatHelp)}
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                                    </svg>
-                                </button>
 
-                                {showFormatHelp && (
-                                    <div className="absolute right-0 bottom-full mb-2 p-2 bg-gray-800 rounded-lg shadow-lg text-sm">
-                                        <h4 className="font-bold mb-2">Formato de texto:</h4>
-                                        <ul className="space-y-1">
-                                            <li><code>*texto*</code> = <strong>negrita</strong></li>
-                                            <li><code>_texto_</code> = <em>cursiva</em></li>
-                                            <li><code>~texto~</code> = <del>tachado</del></li>
-                                            <li><code>```texto```</code> = <code>monoespaciado</code></li>
-                                        </ul>
-                                    </div>
-                                )}
                             </div>
                         </div>
 

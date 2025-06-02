@@ -163,6 +163,10 @@ const SearchInChat = () => {
         return date.toLocaleString();
     };
 
+    const handleClear = () => {
+        setSearchText('');
+    };
+
     return (
         <motion.div
             className={`w-full mt-10 
@@ -183,10 +187,10 @@ const SearchInChat = () => {
                     border-b border-[rgb(var(--color-text-secondary-${theme}))]
                     flex items-center z-10 p-2`}>
                     <span className="mr-2 text-xl font-bold cursor-pointer">
-                        <button 
+                        <button
                             className={`text-[rgb(var(--color-text-primary-${theme}))] 
                                 cursor-pointer rounded-full p-2 
-                                hover:bg-[rgb(var(--input-hover-bg-${theme}))]`} 
+                                hover:bg-[rgb(var(--input-hover-bg-${theme}))]`}
                             onClick={() => setSearchInChat(prev => !prev)}>
                             <X size={20} />
                         </button>
@@ -201,30 +205,44 @@ const SearchInChat = () => {
                             type="text"
                             placeholder="Buscar"
                             className={`w-full bg-[rgb(var(--color-bg-${theme}-secondary))] 
-                                rounded-lg pl-8 pr-10 py-2 
-                                text-[rgb(var(--color-text-primary-${theme}))]
-                                placeholder-[rgb(var(--color-text-secondary-${theme}))]
-                                hover:bg-[rgb(var(--input-hover-bg-${theme}))]
-                                focus:border-[rgb(var(--input-focus-border-${theme}))]
-                                outline-none`}
+      rounded-lg pl-8 pr-24 py-2  /* más padding right para los 3 botones */
+      text-[rgb(var(--color-text-primary-${theme}))]
+      placeholder-[rgb(var(--color-text-secondary-${theme}))]
+      hover:bg-[rgb(var(--input-hover-bg-${theme}))]
+      focus:border-[rgb(var(--input-focus-border-${theme}))]
+      outline-none`}
                             value={searchText}
                             onChange={(e) => setSearchText(e.target.value)}
                             onKeyPress={handleKeyPress}
                         />
                         <Search className={`absolute left-2 text-[rgb(var(--color-text-secondary-${theme}))]`} size={18} />
+
                         <div className="absolute right-2 flex items-center gap-2">
+                            {searchText && (
+                                <button
+                                    onClick={handleClear}
+                                    className={`p-1 rounded-full
+          text-[rgb(var(--color-text-secondary-${theme}))]
+          hover:bg-[rgb(var(--input-hover-bg-${theme}))]
+          hover:text-[rgb(var(--color-primary-${theme}))]
+          transition-colors duration-200`}
+                                    title="Limpiar búsqueda"
+                                >
+                                    <span className="text-xl leading-none">&times;</span>
+                                </button>
+                            )}
                             <button
                                 className={`text-[rgb(var(--color-text-primary-${theme}))] 
-                                    cursor-pointer rounded-full p-1 
-                                    hover:bg-[rgb(var(--input-hover-bg-${theme}))]`}
+        cursor-pointer rounded-full p-1 
+        hover:bg-[rgb(var(--input-hover-bg-${theme}))]`}
                                 onClick={() => setShowDatePicker(!showDatePicker)}
                             >
                                 <Calendar className={`text-[rgb(var(--color-text-secondary-${theme}))]`} size={18} />
                             </button>
                             <button
                                 className={`text-[rgb(var(--color-text-primary-${theme}))] 
-                                    cursor-pointer rounded-full p-1 
-                                    hover:bg-[rgb(var(--input-hover-bg-${theme}))]`}
+        cursor-pointer rounded-full p-1 
+        hover:bg-[rgb(var(--input-hover-bg-${theme}))]`}
                                 onClick={handleSearch}
                             >
                                 <ArrowRight className={`text-[rgb(var(--color-text-secondary-${theme}))]`} size={18} />
