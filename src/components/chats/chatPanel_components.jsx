@@ -69,6 +69,28 @@ const ChatInterface = () => {
     const [hasMoreMessages, setHasMoreMessages] = useState(true);
     const [loadingMoreMessages, setLoadingMoreMessages] = useState(false);
     const [initialLoad, setInitialLoad] = useState(true);
+    const [showFormatHelp, setShowFormatHelp] = useState(false);
+
+
+    const formatMessage = (text) => {
+        if (!text) return '';
+
+        return text
+            // Reemplazar saltos de línea con <br>
+            .split('\n')
+            .map(line => {
+                return line
+                    // Negrita: *texto* -> <strong>texto</strong>
+                    .replace(/\*([^*]+)\*/g, '<strong>$1</strong>')
+                    // Cursiva: _texto_ -> <em>texto</em>
+                    .replace(/_([^_]+)_/g, '<em>$1</em>')
+                    // Tachado: ~texto~ -> <del>texto</del>
+                    .replace(/~([^~]+)~/g, '<del>$1</del>')
+                    // Monoespaciado: ```texto``` -> <code>texto</code>
+                    .replace(/```([^`]+)```/g, '<code class="bg-gray-800 px-1 rounded">$1</code>');
+            })
+            .join('<br>');
+    };
 
     const handleMicClick = async () => {
         if (isRecording) {
@@ -263,19 +285,33 @@ const ChatInterface = () => {
 
     useEffect(() => {
         if (messageData) {
+            // Obtener el ID del chat actualmente seleccionado
+            const currentChatId = selectedChatId?.id;
+            const isNewChatTemp = isNewChat && tempIdChat;
+
+            // Validar si el mensaje pertenece al chat actual
+            const messageMatchesChat =
+                messageData.chat_id === currentChatId ||
+                (isNewChatTemp && messageData.chat_id === tempIdChat);
+
+            // Si el mensaje no pertenece al chat actual, ignorarlo
+            if (!messageMatchesChat) {
+                return;
+            }
+
             // Primero, verificar si es una actualización de ACK
-            const isAckUpdate = messageData.type === 'ack' || 
+            const isAckUpdate = messageData.type === 'ack' ||
                 (messageData.ack !== undefined && !messageData.body && !messageData.media_type);
 
-            if (isAckUpdate && selectedChatId) {
+            if (isAckUpdate) {
                 console.log('Actualizando ACK para mensaje:', messageData);
                 setChatMessages(prevMessages => {
                     if (!prevMessages) return [];
 
                     return prevMessages.map(msg => {
                         // Actualizar ACK si coincide el ID del mensaje
-                        if (msg.id === messageData.id_message_wp || 
-                            msg.id === messageData.id || 
+                        if (msg.id === messageData.id_message_wp ||
+                            msg.id === messageData.id ||
                             msg.tempSignature === messageData.temp_signature) {
                             return {
                                 ...msg,
@@ -300,72 +336,60 @@ const ChatInterface = () => {
 
             // Continuar con el manejo normal de mensajes
             if (messageData.body || messageData.media_type) {
-                const chatIdToCompare = selectedChatId?.id || '';
-                const shouldUseTemp = !messageData.from_me && !chatIdToCompare && tempIdChat;
-                const relevantChatId = shouldUseTemp ? tempIdChat : messageData.chat_id;
+                setChatMessages(prevMessages => {
+                    if (!prevMessages) return [];
 
-                const isCurrentChat = selectedChatId &&
-                    (chatIdToCompare === relevantChatId ||
-                        (shouldUseTemp && tempIdChat === relevantChatId) ||
-                        (isNewChat && !messageData.from_me));
+                    // Buscar mensaje temporal
+                    const tempMessageIndex = prevMessages.findIndex(msg =>
+                        msg.is_temp &&
+                        msg.body === messageData.body &&
+                        msg.from_me === (messageData.from_me === true || messageData.from_me === "true") &&
+                        (!msg.media_path || msg.media_path === messageData.media_url)
+                    );
 
-                if (isCurrentChat) {
-                    setChatMessages(prevMessages => {
-                        if (!prevMessages) return [];
-
-                        // Buscar mensaje temporal
-                        const tempMessageIndex = prevMessages.findIndex(msg =>
-                            msg.is_temp &&
-                            msg.body === messageData.body &&
-                            msg.from_me === (messageData.from_me === true || messageData.from_me === "true") &&
-                            (!msg.media_path || msg.media_path === messageData.media_url)
-                        );
-
-                        if (tempMessageIndex !== -1) {
-                            // Actualizar mensaje temporal
-                            const newMessages = [...prevMessages];
-                            newMessages[tempMessageIndex] = {
-                                ...newMessages[tempMessageIndex],
-                                id: messageData.id_message_wp || messageData.id,
-                                is_temp: false,
-                                ack: messageData.ack || 1,
-                                media_path: messageData.media_url ? `${SERVER_URL}/${messageData.media_url}` : newMessages[tempMessageIndex].media_path,
-                                filename: messageData.filename 
-                            };
-                            return newMessages;
-                        }
-
-                        // Agregar nuevo mensaje si no es temporal
-                        if (!messageData.from_me || isNewChat) {
-                            const normalizedMessage = {
-                                id: messageData.id_message_wp || messageData.id,
-                                body: messageData.body || '',
-                                from_me: messageData.from_me === true || messageData.from_me === "true",
-                                media_type: messageData.media_type || 'chat',
-                                media_path: messageData.media_url ? `${SERVER_URL}/${messageData.media_url}` : '',
-                                media_url: messageData.media_url ? `${SERVER_URL}/${messageData.media_url}` : '',
-                                data: messageData.data || '',
-                                filename: messageData.filename || '',
-                                filetype: messageData.filetype || '',
-                                fileformat: messageData.fileformat || '',
-                                is_private: messageData.is_private || 0,
-                                created_at: messageData.created_at || new Date().toISOString(),
-                                ack: messageData.ack || 0,
-                                is_temp: false
-                            };
-                            return [...prevMessages, normalizedMessage];
-                        }
-
-                        return prevMessages;
-                    });
-
-                    if (!isScrollingManually.current) {
-                        setTimeout(scrollToBottom, 100);
+                    if (tempMessageIndex !== -1) {
+                        // Actualizar mensaje temporal
+                        const newMessages = [...prevMessages];
+                        newMessages[tempMessageIndex] = {
+                            ...newMessages[tempMessageIndex],
+                            id: messageData.id_message_wp || messageData.id,
+                            is_temp: false,
+                            ack: messageData.ack || 1,
+                            media_path: messageData.media_url ? `${SERVER_URL}/${messageData.media_url}` : newMessages[tempMessageIndex].media_path,
+                            filename: messageData.filename
+                        };
+                        return newMessages;
                     }
+
+                    // Agregar nuevo mensaje si no es temporal
+                    if (!messageData.from_me || isNewChat) {
+                        const normalizedMessage = {
+                            id: messageData.id_message_wp || messageData.id,
+                            body: messageData.body || '',
+                            from_me: messageData.from_me === true || messageData.from_me === "true",
+                            media_type: messageData.media_type || 'chat',
+                            media_path: messageData.media_url ? `${SERVER_URL}/${messageData.media_url}` : '',
+                            media_url: messageData.media_url ? `${SERVER_URL}/${messageData.media_url}` : '',
+                            data: messageData.data || '',
+                            filename: messageData.filename || '',
+                            filetype: messageData.filetype || '',
+                            fileformat: messageData.fileformat || '',
+                            is_private: messageData.is_private || 0,
+                            created_at: messageData.created_at || new Date().toISOString(),
+                            ack: messageData.ack || 0,
+                            is_temp: false
+                        };
+                        return [...prevMessages, normalizedMessage];
+                    }
+
+                    return prevMessages;
+                });
+
+                if (!isScrollingManually.current) {
+                    setTimeout(scrollToBottom, 100);
                 }
 
                 // Actualizar contador de mensajes no leídos
-                const currentChatId = selectedChatId?.id || tempIdChat;
                 if (currentChatId &&
                     messageData.chat_id === currentChatId &&
                     !messageData.from_me) {
@@ -541,7 +565,10 @@ const ChatInterface = () => {
             case 'image':
                 return (
                     <div className="relative group">
-                        {message.body && <div className="mb-2 break-words">{message.body}</div>}
+                        {message.body && <div
+                            className="mb-2 break-words"
+                            dangerouslySetInnerHTML={{ __html: formatMessage(message.body) }}
+                        />}
                         <img
                             src={mediaSource}
                             alt={message.filename || "Image"}
@@ -571,7 +598,10 @@ const ChatInterface = () => {
             case 'audio':
                 return (
                     <div className="flex flex-col space-y-2">
-                        {message.body && <div className="break-words">{message.body}</div>}
+                        {message.body && <div
+                            className="mb-2 break-words"
+                            dangerouslySetInnerHTML={{ __html: formatMessage(message.body) }}
+                        />}
                         <div className="flex items-center space-x-2">
                             <audio
                                 controls
@@ -603,7 +633,10 @@ const ChatInterface = () => {
             case 'video':
                 return (
                     <div className="relative group">
-                        {message.body && <div className="mb-2 break-words">{message.body}</div>}
+                        {message.body && <div
+                            className="mb-2 break-words"
+                            dangerouslySetInnerHTML={{ __html: formatMessage(message.body) }}
+                        />}
                         <video
                             controls
                             src={mediaSource}
@@ -628,7 +661,10 @@ const ChatInterface = () => {
             case 'document':
                 return (
                     <div className="flex flex-col space-y-2">
-                        {message.body && <div className="break-words">{message.body}</div>}
+                        {message.body && <div
+                            className="mb-2 break-words"
+                            dangerouslySetInnerHTML={{ __html: formatMessage(message.body) }}
+                        />}
                         <div className="flex items-center space-x-2">
                             <File size={20} />
                             <span className="truncate max-w-[200px]">{message.filename}</span>
@@ -647,7 +683,9 @@ const ChatInterface = () => {
                 );
 
             default:
-                return message.body || '';
+                return message.body ? (
+                    <div dangerouslySetInnerHTML={{ __html: formatMessage(message.body) }} />
+                ) : '';
         }
     };
 
@@ -1383,6 +1421,27 @@ const ChatInterface = () => {
                                         <Send size={20} />
                                     )}
                                 </button>
+                                <button
+                                    type="button"
+                                    className="absolute right-2 top-2 text-gray-400 hover:text-gray-300"
+                                    onClick={() => setShowFormatHelp(!showFormatHelp)}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                    </svg>
+                                </button>
+
+                                {showFormatHelp && (
+                                    <div className="absolute right-0 bottom-full mb-2 p-2 bg-gray-800 rounded-lg shadow-lg text-sm">
+                                        <h4 className="font-bold mb-2">Formato de texto:</h4>
+                                        <ul className="space-y-1">
+                                            <li><code>*texto*</code> = <strong>negrita</strong></li>
+                                            <li><code>_texto_</code> = <em>cursiva</em></li>
+                                            <li><code>~texto~</code> = <del>tachado</del></li>
+                                            <li><code>```texto```</code> = <code>monoespaciado</code></li>
+                                        </ul>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
