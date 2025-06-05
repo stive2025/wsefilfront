@@ -24,16 +24,20 @@ const NewContact = () => {
   const { setContactNew } = useContext(NewContactForm);
   const { theme } = useTheme();
 
+
   const [firstName, setFirstName] = useState('');
+  const [relatedSync, setRelatedSync] = useState('');
   const [lastName, setLastName] = useState('');
   const [idContact, setIdContact] = useState('');
-  const [error, setError] = useState(null);
+  const [, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const [phoneError, setPhoneError] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [, setCountryCode] = useState(null);
   const [countries, setCountries] = useState([]);
   const [selectedCountry, setSelectedCountry] = useState(null);
+  const [, setCountEdits] = useState(0); // Campo para control de ediciones
+  const [canEdit, setCanEdit] = useState(true); // Estado para controlar si se puede editar
 
   const isFormValid = firstName.trim() && lastName.trim() && phoneNumber.trim() && selectedCountry?.value;
 
@@ -48,10 +52,26 @@ const NewContact = () => {
     const fetchCountries = async () => {
       try {
         const response = await fetch('https://restcountries.com/v3.1/all');
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
         const data = await response.json();
+
+        // Validar que data sea un array
+        if (!Array.isArray(data)) {
+          console.error('La respuesta de la API no es un array:', data);
+          return;
+        }
 
         const filteredData = data
           .map(country => {
+            // Validar que el país tenga la estructura esperada
+            if (!country || !country.name || !country.name.common) {
+              return null;
+            }
+
             const callingCode = country.idd && country.idd.root && country.idd.suffixes
               ? `${country.idd.root.replace('+', '')}${country.idd.suffixes[0]}`
               : '';
@@ -59,11 +79,10 @@ const NewContact = () => {
             return {
               label: country.name.common,
               value: callingCode,
-              flag: country.flags.svg,
               callingCode: callingCode,
             };
           })
-          .filter(country => country.value)
+          .filter(country => country && country.value) // Filtrar países nulos y sin código
           .sort((a, b) => a.label.localeCompare(b.label));
 
         setCountries(filteredData);
@@ -78,6 +97,24 @@ const NewContact = () => {
         }
       } catch (error) {
         console.error('Error al cargar países: ', error);
+        const fallbackCountries = [
+          { label: 'Ecuador', value: '593', callingCode: '593' },
+          { label: 'Colombia', value: '57', callingCode: '57' },
+          { label: 'Perú', value: '51', callingCode: '51' },
+          { label: 'Estados Unidos', value: '1', callingCode: '1' },
+          { label: 'México', value: '52', callingCode: '52' },
+        ];
+
+        setCountries(fallbackCountries);
+
+        // Establecer Ecuador por defecto
+        if (!selectedCountry && !contactFind) {
+          const ecuador = fallbackCountries.find(country => country.label === 'Ecuador');
+          if (ecuador) {
+            setSelectedCountry(ecuador);
+            setCountryCode(ecuador.value);
+          }
+        }
       }
     };
 
@@ -88,6 +125,19 @@ const NewContact = () => {
   useEffect(() => {
     if (contactFind && countries.length > 0) {
       console.log("Contacto a editar ", contactFind);
+
+      // Verificar el estado de count_edits
+      const currentCountEdits = contactFind.count_edits || 0;
+      setCountEdits(currentCountEdits);
+
+      // Si count_edits es 1 o mayor, no se puede editar
+      if (currentCountEdits >= 1) {
+        setCanEdit(false);
+        toast.error("Este contacto ya ha sido editado y no puede modificarse nuevamente");
+        return;
+      } else {
+        setCanEdit(true);
+      }
 
       const nameParts = contactFind.name ? contactFind.name.split(' ') : ['', ''];
       const fName = nameParts[0] || '';
@@ -169,6 +219,8 @@ const NewContact = () => {
     setLastName('');
     setPhoneNumber('');
     setPhoneError('');
+    setCountEdits(0);
+    setCanEdit(true);
 
     const ecuador = countries.find(country => country.label === 'Ecuador');
     if (ecuador) {
@@ -197,7 +249,9 @@ const NewContact = () => {
         const formContactData = {
           "name": `${firstName} ${lastName}`.trim(),
           "phone_number": formattedPhone,
-          "profile_picture": ""
+          "profile_picture": "",
+          "count_edits": 0,// Inicializar en 0 para nuevos contactos
+          "sync_id": relatedSync || null
         };
 
         try {
@@ -211,6 +265,7 @@ const NewContact = () => {
             setFirstName('');
             setLastName('');
             setPhoneNumber('');
+            setCountEdits(0);
           }
 
           const ecuador = countries.find(country => country.label === 'Ecuador');
@@ -233,7 +288,7 @@ const NewContact = () => {
 
   const handleUpdateContact = useCallback(
     async () => {
-      if (isFormValid) {
+      if (isFormValid && canEdit) {
         setError(null);
         setPhoneError('');
 
@@ -241,14 +296,23 @@ const NewContact = () => {
 
         const formContactData = {
           "name": `${firstName} ${lastName}`.trim(),
-          "phone_number": formattedPhone
+          "phone_number": formattedPhone,
+          "count_edits": 1, // Establecer en 1 al actualizar
+          "sync_id": relatedSync || null
         };
 
         try {
           const response = await callEndpoint(updateContact(idContact, formContactData));
           toast.success("Contacto actualizado con éxito")
           console.log("Contacto actualizado ", response);
-          setSuccess("Contacto actualizado con éxito");
+
+          if (response.status !== 200) {
+            setError(response.message || "Error al actualizar el contacto");
+            toast.error(response.message || "Error al actualizar el contacto");
+          } else {
+            setSuccess("Contacto actualizado con éxito");
+            toast.error(response.message || "Contacto actualizado con éxito");
+          }
           setContactHandle(true);
           setContactFind(null);
 
@@ -256,6 +320,9 @@ const NewContact = () => {
           setFirstName('');
           setLastName('');
           setPhoneNumber('');
+          setCountEdits(0);
+          setRelatedSync('');
+          setCanEdit(true);
 
           const ecuador = countries.find(country => country.label === 'Ecuador');
           if (ecuador) {
@@ -266,13 +333,13 @@ const NewContact = () => {
             setCountryCode('');
           }
         } catch (error) {
-          toast.error("Error actualizando contacto")
-          console.error("Error actualizando contacto ", error);
           setError("Error al actualizar el contacto: " + (error.message || "Verifica la conexión"));
         }
+      } else if (!canEdit) {
+        toast.error("Este contacto ya ha sido editado y no puede modificarse nuevamente");
       }
     },
-    [firstName, lastName, phoneNumber, isFormValid, callEndpoint, idContact, setContactFind, setContactHandle, selectedCountry, countries]
+    [firstName, lastName, phoneNumber, isFormValid, callEndpoint, idContact, setContactFind, setContactHandle, selectedCountry, countries, canEdit]
   );
 
   // Determinamos si debemos mostrar el formulario:
@@ -297,7 +364,6 @@ const NewContact = () => {
             <User size={20} className={`text-[rgb(var(--color-secondary-${theme}))] mr-4`} />
             <h1 className={`text-xl font-normal text-[rgb(var(--color-text-primary-${theme}))]`}>{contactFind ? 'Editar Contacto' : 'Nuevo Contacto'}</h1>
           </div>
-
           {/* Form */}
           <div className="p-4 flex-1 flex flex-col space-y-6">
             {/* First Name */}
@@ -307,7 +373,8 @@ const NewContact = () => {
                 placeholder="Nombres"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                className={`w-full bg-transparent text-[rgb(var(--color-text-primary-${theme}))] outline-none`}
+                disabled={contactFind && !canEdit}
+                className={`w-full bg-transparent text-[rgb(var(--color-text-primary-${theme}))] outline-none ${contactFind && !canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
               />
             </div>
 
@@ -318,7 +385,8 @@ const NewContact = () => {
                 placeholder="Apellidos"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
-                className={`w-full bg-transparent text-[rgb(var(--color-text-primary-${theme}))] outline-none`}
+                disabled={contactFind && !canEdit}
+                className={`w-full bg-transparent text-[rgb(var(--color-text-primary-${theme}))] outline-none ${contactFind && !canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
               />
             </div>
 
@@ -332,15 +400,14 @@ const NewContact = () => {
                     options={countries.map(country => ({
                       label: (
                         <div className="flex items-center space-x-2">
-                          <img src={country.flag} alt={country.label} className="w-5 h-5" />
                           <span>+{country.callingCode} {country.label}</span>
                         </div>
                       ),
                       value: country.value,
-                      flag: country.flag,
                       callingCode: country.callingCode,
                     }))}
                     placeholder="Código de país"
+                    isDisabled={contactFind && !canEdit}
                     className={`text-[rgb(var(--color-text-primary-${theme}))]`}
                     openMenuOnClick={false}
                     openMenuOnFocus={true}
@@ -349,6 +416,7 @@ const NewContact = () => {
                         ...base,
                         backgroundColor: `rgb(var(--color-bg-${theme}-secondary))`,
                         borderColor: `rgb(var(--color-text-secondary-${theme}))`,
+                        opacity: contactFind && !canEdit ? 0.5 : 1,
                       }),
                       menu: (base) => ({
                         ...base,
@@ -378,7 +446,8 @@ const NewContact = () => {
                     placeholder="Número de teléfono"
                     value={phoneNumber}
                     onChange={handlePhoneChange}
-                    className={`w-full p-2 bg-[rgb(var(--color-bg-${theme}-secondary))] text-[rgb(var(--color-text-primary-${theme}))] rounded-md`}
+                    disabled={contactFind && !canEdit}
+                    className={`w-full p-2 bg-[rgb(var(--color-bg-${theme}-secondary))] text-[rgb(var(--color-text-primary-${theme}))] rounded-md ${contactFind && !canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
                   />
                 </div>
               </div>
@@ -390,18 +459,16 @@ const NewContact = () => {
               )}
             </div>
 
-            {/* Success and Error Messages */}
-            {error && (
-              <div className="text-red-500 text-sm">
-                {error}
-              </div>
-            )}
-
-            {success && (
-              <div className="text-green-500 text-sm">
-                {success}
-              </div>
-            )}
+            <div className="w-1/2">
+              <input
+                type="text"
+                placeholder="Credito Relacionado"
+                value={relatedSync}
+                onChange={(e) => setRelatedSync(e.target.value)}
+                disabled={contactFind && !canEdit}
+                className={`w-full p-2 bg-[rgb(var(--color-bg-${theme}-secondary))] text-[rgb(var(--color-text-primary-${theme}))] rounded-md ${contactFind && !canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
+              />
+            </div>
 
             {/* Save Button - solo visible con permisos específicos */}
             <div>
@@ -410,10 +477,10 @@ const NewContact = () => {
                   <div className='flex space-x-4'>
                     <button
                       onClick={handleUpdateContact}
-                      disabled={!isFormValid || loading}
+                      disabled={!isFormValid || loading || !canEdit}
                       className={`py-2 px-4 rounded bg-[rgb(var(--color-primary-${theme}))] text-[rgb(var(--color-text-primary-${theme}))] transition-colors duration-300 hover:bg-[rgb(var(--color-secondary-${theme}))] disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
-                      {loading ? 'Guardando...' : 'Actualizar'}
+                      {loading ? 'Guardando...' : canEdit ? 'Actualizar' : 'No editable'}
                     </button>
                     <button
                       onClick={handleCancelEdit}
