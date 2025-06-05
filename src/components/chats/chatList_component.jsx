@@ -500,7 +500,7 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
               data-chat-id={item.id}
               ref={index === chats.length - 1 ? lastChatRef : null}
               className={`relative w-full flex items-center justify-between p-4 
-        ${theme === 'light'
+                ${theme === 'light'
                   ? isChatSelected(item.id)
                     ? 'bg-[#e9e6e6]'
                     : 'bg-[#f9f9f9]'
@@ -508,20 +508,33 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
                     ? 'bg-[#2e2f2f]'
                     : 'bg-[#161717]'
                 }
-        hover:bg-[rgb(var(--input-hover-bg-${theme}))] cursor-pointer`}
+                hover:bg-[rgb(var(--input-hover-bg-${theme}))] cursor-pointer`}
               onClick={() => handleChatClick(item)}
             >
               {/* Etiqueta de agente */}
               <AbilityGuard abilities={[ABILITIES.CHATS.FILTER_BY_AGENT]}>
                 {item.by_user && (
                   <div className={`absolute top-1 right-1 text-[10px] px-2 py-0.5 rounded-full 
-            ${bg} ${text} font-semibold whitespace-nowrap`}>
+                    ${bg} ${text} font-semibold whitespace-nowrap`}>
                     {item.by_user}
                   </div>
                 )}
               </AbilityGuard>
 
-              {/* Avatar */}
+              {/* Tag del chat */}
+              {item.tag_name && (
+                <div 
+                  className="absolute top-1 left-1 text-[10px] px-2 py-0.5 rounded-full font-semibold whitespace-nowrap"
+                  style={{
+                    backgroundColor: item.tag_color || '#666',
+                    color: item.tag_color ? '#fff' : '#fff'
+                  }}
+                >
+                  {item.tag_name}
+                </div>
+              )}
+
+              {/* Info del chat (resto del contenido) */}
               <div className="relative w-10 h-10 flex-shrink-0 mr-3">
                 <img
                   src={item.avatar || "@/assets/images/default-avatar.jpg"}
@@ -530,10 +543,10 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
                 />
               </div>
 
-              {/* Info principal */}
               <div className="flex-1 min-w-0 m-2">
                 <div className="flex justify-between items-center mb-1">
-                  <span className={`font-medium text-sm md:text-base text-[rgb(var(--color-text-primary-${theme}))] truncate`}>
+                  <span className={`font-medium text-sm md:text-base text-[rgb(var(--color-text-primary-${theme}))] truncate 
+                    ${item.tag_name ? 'mt-4' : ''}`}>
                     {item.contact_name}
                   </span>
                   <div className="flex items-center gap-2">

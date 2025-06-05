@@ -3,7 +3,7 @@ import {
     Send, Search, MessageSquareShare, SquarePlus,
     Mic, Paperclip, X, ArrowLeft, File,
     Volume2, PlayCircle, Download, EyeOff, Loader, Clock, Check, AlertTriangle,
-    RefreshCcw
+    RefreshCcw, Eye
 } from "lucide-react";
 import { ABILITIES } from '@/constants/abilities';
 import AbilityGuard from '@/components/common/AbilityGuard';
@@ -17,11 +17,16 @@ import { TagClick, ResolveClick, SearchInChatClick, TempNewMessage, ChatInterfac
 import { useContext } from "react";
 import { useLocation } from "react-router-dom";
 import { getChat, updateChat } from "@/services/chats.js";
-import { sendMessage } from "@/services/messages.js";
+import { sendMessage, sendPrivateMessage } from "@/services/messages.js";
 import toast from "react-hot-toast";
 import { useTheme } from "@/contexts/themeContext";
+import { GetCookieItem } from "@/utilities/cookies";
+import { getUserLabelColors } from "@/utils/getUserLabelColors";
+
 
 const ChatInterface = () => {
+
+
 
     const isScrollingManually = useRef(false);
     const scrollTimeoutRef = useRef(null);
@@ -45,6 +50,7 @@ const ChatInterface = () => {
     const [fileSizeError, setFileSizeError] = useState("");
     const [isDragging, setIsDragging] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
+    const [isPrivateMessage, setIsPrivateMessage] = useState(false);
     // Estados para gestionar mensajes y archivos
     const [messageText, setMessageText] = useState("");
     const [selectedFiles, setSelectedFiles] = useState([]);
@@ -142,6 +148,12 @@ const ChatInterface = () => {
         }
     };
 
+    // 1. Primero, asegurémonos que handleIsPrivate está funcionando correctamente
+    const handleIsPrivate = () => {
+        setIsPrivateMessage(prev => !prev);
+        toast.success(`Mensaje ${!isPrivateMessage ? 'privado' : 'público'} activado`);
+        console.log('Estado mensaje privado:', !isPrivateMessage); // Para debug
+    }
 
     const getExtension = (mimeType) => {
         return mimeType.split("/")[1] || "webm";
@@ -681,18 +693,31 @@ const ChatInterface = () => {
 
             default:
                 return message.body ? (
-                    <div dangerouslySetInnerHTML={{ __html: formatMessage(message.body) }} />
+                    <>
+                        <div dangerouslySetInnerHTML={{ __html: formatMessage(message.body) }} />
+                    </>
                 ) : '';
         }
     };
 
+    // Modificar la función que maneja la visualización del mensaje para incluir el estilo privado
     const renderMessageContent = (message, prevMessageDate) => {
-        const { created_at } = message;
+        const { created_at, created_by } = message;
         const isSelf = message.from_me === "true";
-        const isPrivate = message.is_private;
+        const isPrivate = message.is_private === 1;
         const messageTime = formatMessageTime(created_at);
         const messageDate = formatMessageDate(created_at);
         const showDateSeparator = prevMessageDate !== messageDate && created_at;
+        const { bg, text } = created_by ? getUserLabelColors(created_by) : { bg: '', text: '' };
+
+        const getBackgroundColor = () => {
+            if (isPrivate) {
+                return isSelf ? '#2b95ef' : '#6f7375';
+            }
+            return theme === 'light'
+                ? (isSelf ? '#d9fdd3' : `rgb(var(--color-bg-${theme}-secondary))`)
+                : (isSelf ? '#144d37' : `rgb(var(--color-bg-${theme}-secondary))`);
+        };
 
         return (
             <>
@@ -703,20 +728,23 @@ const ChatInterface = () => {
                         </div>
                     </div>
                 )}
-                <div key={message.id} className={`flex ${isPrivate === 1 ? "justify-center" : isSelf ? "justify-end" : "justify-start"} w-full mb-2`}>
-                    <div className={`flex ${isSelf && !isPrivate ? "flex-row-reverse" : "flex-row"} items-start space-x-2 ${isPrivate === 1 ? "max-w-[70%]" : "max-w-[60%]"} w-auto`}>
+                <div className={`flex ${isSelf ? "justify-end" : "justify-start"} w-full mb-2`}>
+                    <div className={`flex ${isSelf ? "flex-row-reverse" : "flex-row"} items-start space-x-2 max-w-[60%] w-auto`}>
                         <div
-                            className={`${isPrivate === 1
-                                ? `bg-[rgb(var(--color-primary-${theme}))] mx-auto rounded-lg`
-                                : isSelf
-                                    ? `${theme === 'light'
-                                        ? 'bg-[#d9fdd3]'
-                                        : 'bg-[#144d37]'} rounded-l-lg rounded-br-lg ml-auto`
-                                    : `bg-[rgb(var(--color-bg-${theme}-secondary))] rounded-r-lg rounded-bl-lg mr-auto`
-                                } p-3 w-full max-w-full break-words whitespace-pre-wrap flex flex-col`}
+                            className={`p-3 w-full max-w-full break-words whitespace-pre-wrap flex flex-col rounded-lg
+                                ${isSelf ? 'rounded-l-lg rounded-br-lg ml-auto' : 'rounded-r-lg rounded-bl-lg mr-auto'}`}
+                            style={{ backgroundColor: getBackgroundColor() }}
                         >
-                            {isPrivate === 1 && (
-                                <div className="flex items-center justify-center mb-2 text-gray-300">
+                            {/* Mostrar created_by para mensajes propios o mensajes privados */}
+                            {(isSelf || isPrivate) && created_by && (
+                                <div className={`${bg} ${text} text-xs rounded-full px-2 py-0.5 mb-1 w-fit`}>
+                                    {created_by}
+                                </div>
+                            )}
+
+                            {/* Indicador de mensaje privado */}
+                            {isPrivate && (
+                                <div className={`flex items-center ${isSelf ? "justify-end" : "justify-start"} mb-2 text-gray-300`}>
                                     <EyeOff className="w-4 h-4 mr-1" />
                                     <span className="text-xs">Mensaje Privado</span>
                                 </div>
@@ -803,6 +831,7 @@ const ChatInterface = () => {
     };
 
 
+    // Modificar handleSendMessage para manejar correctamente mensajes privados
     const handleSendMessage = async () => {
         if ((messageText.trim() === "" && selectedFiles.length === 0 && !recordedAudio) ||
             sendingMessage ||
@@ -817,7 +846,7 @@ const ChatInterface = () => {
             setSendingMessage(true);
             setUploadProgress(0);
 
-            // Crear mensaje temporal (siempre lo mostramos, incluso en nuevos chats)
+            // Crear mensaje temporal con el atributo is_private
             const newMessage = {
                 id: tempId,
                 body: messageText,
@@ -825,6 +854,7 @@ const ChatInterface = () => {
                 created_at: new Date().toISOString(),
                 ack: 0,
                 is_temp: true,
+                is_private: isPrivateMessage ? 1 : 0, // Asegurar que is_private se incluya
                 tempSignature: tempSignature,
             };
 
@@ -846,22 +876,47 @@ const ChatInterface = () => {
 
             // Limpiar UI
             setMessageText("");
+            const userData = JSON.parse(GetCookieItem('userData'));
+            const currentUser = userData ? userData.id : null;
             const filesToSend = [...selectedFiles];
             const audioToSend = recordedAudio;
             setSelectedFiles([]);
             setRecordedAudio(null);
 
-            // Preparar payload
-            const messagePayload = {
-                number: selectedChatId.number || "",
-                body: messageText,
-                from_me: true,
-                ...(selectedChatId.id || tempIdChat ? { chat_id: selectedChatId.id || tempIdChat } : {}),
-                ...(selectedChatId.idContact && { contact_id: selectedChatId.idContact }),
-                tempSignature: tempSignature
-            };
+            let messagePayload;
 
-            // Log del payload antes de enviar
+            if (isPrivateMessage) {
+                messagePayload = {
+                    id_message_wp: tempId,
+                    body: messageText,
+                    ack: 0,
+                    from_me: "yes",
+                    to: selectedChatId.number || "",           // destinatario
+                    media_type: "chat",
+                    timestamp: Math.floor(Date.now() / 1000).toString(),
+                    is_private: 1,
+                    state: "G_TEST",
+                    user_id: currentUser.id,
+                    chat_id: selectedChatId.id || tempIdChat
+                };
+            } else {
+                messagePayload = {
+                    number: selectedChatId.number || "",
+                    body: messageText,
+                    is_private: isPrivateMessage ? 1 : 0,
+                    from_me: true,
+                    ...(selectedChatId.id || tempIdChat ? { chat_id: selectedChatId.id || tempIdChat } : {}),
+                    ...(selectedChatId.idContact && { contact_id: selectedChatId.idContact }),
+                    tempSignature: tempSignature
+                };
+            }
+
+
+
+            // Agregar log para verificar el payload
+            console.log('Enviando mensaje con payload:', {
+                ...messagePayload,
+            });
 
             // Procesar archivos
             if (filesToSend.length > 0 || audioToSend) {
@@ -933,15 +988,13 @@ const ChatInterface = () => {
                 }
             }
 
-            const { call, abortController } = sendMessage(messagePayload, (progress) => {
-                setUploadProgress(progress);
-            });
-            console.log('Payload a enviar al backend:', {
-                ...messagePayload,
-            });
+            const { call, abortController } = isPrivateMessage
+                ? sendPrivateMessage(messagePayload, progress => setUploadProgress(progress)) // ▶️
+                : sendMessage(messagePayload, progress => setUploadProgress(progress));
 
+            // 4. (sin cambios) dispara la petición y actualiza el mensaje temporal
+            console.log("Payload a enviar:", messagePayload);
             const response = await callEndpoint({ call, abortController });
-
             if (response) {
                 // Actualizar mensaje temporal con datos del servidor
                 setChatMessages(prev => {
@@ -958,14 +1011,15 @@ const ChatInterface = () => {
                                 filename: mediaData?.filename || msg.filename
                             };
                         }
-                        return msg;
+                        return msg; // Retorna el mensaje original si no coincide
                     });
                 });
+            }
 
-                if (response.chat_id) {
-                    setTempIdChat(response.chat_id);
-                    setIsNewChat(false);
-                }
+
+            if (response.chat_id) {
+                setTempIdChat(response.chat_id);
+                setIsNewChat(false);
             }
         } catch (error) {
             setChatMessages(prev => {
@@ -1199,21 +1253,22 @@ const ChatInterface = () => {
                     {/* Messages Area */}
                     <div
                         ref={messagesContainerRef}
-                        className={`flex-1 overflow-y-auto p-4 space-y-2 scrollbar-hide`}
+                        className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-hide"
                         style={{
                             backgroundImage: theme === 'dark'
                                 ? "url('https://i.pinimg.com/736x/cd/3d/62/cd3d628f57875af792c07d6ad262391c.jpg')"
-                                : "url('https://i.pinimg.com/originals/2b/45/cf/2b45cfec4c0d3c56aed4ccd30b61bd3a.jpg')",
-                            backgroundSize: "cover",
-                            backgroundPosition: "center",
-                            backgroundRepeat: "no-repeat"
+                                : "url('https://i.pinimg.com/originals/2b/45/cf/2b45cff1cf6a03a91a7e7fdb9c9fbd5a.jpg')",
+                            backgroundSize: 'cover',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'center'
                         }}
                     >
-                        {loadingMoreMessages && (
-                            <div className="flex justify-center py-2">
+                        {isLoading && (
+                            <div className="flex justify-center py-4">
                                 <Loader className="animate-spin" size={20} />
                             </div>
                         )}
+
                         {isNewChat && !hasMessages ? (
                             <div className="flex flex-col justify-center items-center h-full opacity-50">
                                 <p>Nuevo chat con {selectedChatId.name || selectedChatId.number}</p>
@@ -1385,6 +1440,19 @@ const ChatInterface = () => {
                                         </button>
                                     </div>
                                 </AbilityGuard>
+                                <button
+                                    className={`p-2 rounded-full transition-colors duration-200
+                                        ${isPrivateMessage
+                                            ? 'bg-[#2b95ef] text-white hover:bg-[#1a7fd9]'
+                                            : `bg-[rgb(var(--color-bg-${theme}-secondary))] 
+                                               text-[rgb(var(--color-text-secondary-${theme}))]
+                                               hover:bg-[rgb(var(--input-hover-bg-${theme}))]`}
+                                    active:bg-[rgb(var(--color-primary-${theme}))]`}
+                                    onClick={handleIsPrivate}
+                                    disabled={isChatClosed}
+                                >
+                                    {isPrivateMessage ? <EyeOff size={20} /> : <Eye size={20} />}
+                                </button>
 
                                 <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.SEND_MEDIA]}>
                                     <button
