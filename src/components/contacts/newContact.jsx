@@ -151,6 +151,7 @@ const NewContact = () => {
       setLastName(lName);
       setPhoneNumber(extractedNumber);
       setPhoneError('');
+      setRelatedSync(contactFind.sync_id || ''); // Add this line to load sync_id
 
       if (extractedCode) {
         const matchedCountry = countries.find(country => country.value === extractedCode);
@@ -220,6 +221,7 @@ const NewContact = () => {
     setPhoneNumber('');
     setPhoneError('');
     setCountEdits(0);
+    setRelatedSync('');
     setCanEdit(true);
 
     const ecuador = countries.find(country => country.label === 'Ecuador');
@@ -238,6 +240,28 @@ const NewContact = () => {
     validatePhoneNumber(value);
   };
 
+  // Agregar esta función auxiliar después de los estados
+  const resetForm = () => {
+    setFirstName('');
+    setLastName('');
+    setPhoneNumber('');
+    setPhoneError('');
+    setCountEdits(0);
+    setCanEdit(true);
+    setRelatedSync('');
+    setError(null);
+    
+    // Restablecer país por defecto (Ecuador)
+    const ecuador = countries.find(country => country.label === 'Ecuador');
+    if (ecuador) {
+      setSelectedCountry(ecuador);
+      setCountryCode(ecuador.value);
+    } else {
+      setSelectedCountry(null);
+      setCountryCode('');
+    }
+  };
+
   const handleCreateContact = useCallback(
     async () => {
       if (isFormValid) {
@@ -250,40 +274,27 @@ const NewContact = () => {
           "name": `${firstName} ${lastName}`.trim(),
           "phone_number": formattedPhone,
           "profile_picture": "",
-          "count_edits": 0,// Inicializar en 0 para nuevos contactos
+          "count_edits": 0, // Explicitly set to 0
           "sync_id": relatedSync || null
         };
 
         try {
           const response = await callEndpoint(createContact(formContactData));
           if (response.status !== 200) {
-            toast.error(response.message)
-
+            toast.error(response.message);
           } else {
-            toast.success(response.message)
+            toast.success(response.message);
             setContactHandle(true);
-            setFirstName('');
-            setLastName('');
-            setPhoneNumber('');
-            setCountEdits(0);
-          }
-
-          const ecuador = countries.find(country => country.label === 'Ecuador');
-          if (ecuador) {
-            setSelectedCountry(ecuador);
-            setCountryCode(ecuador.value);
-          } else {
-            setSelectedCountry(null);
-            setCountryCode('');
+            resetForm(); // This will clear all fields
           }
         } catch (error) {
-          toast.error("Error creando contacto")
+          toast.error("Error creando contacto");
           console.error("Error creando contacto ", error);
           setError("Error al crear el contacto: " + (error.message || "Verifica la conexión"));
         }
       }
     },
-    [firstName, lastName, phoneNumber, isFormValid, callEndpoint, setContactHandle, selectedCountry, countries]
+    [firstName, lastName, phoneNumber, isFormValid, callEndpoint, setContactHandle, selectedCountry, relatedSync]
   );
 
   const handleUpdateContact = useCallback(
@@ -297,49 +308,31 @@ const NewContact = () => {
         const formContactData = {
           "name": `${firstName} ${lastName}`.trim(),
           "phone_number": formattedPhone,
-          "count_edits": 1, // Establecer en 1 al actualizar
+          "count_edits": 1,
           "sync_id": relatedSync || null
         };
 
         try {
           const response = await callEndpoint(updateContact(idContact, formContactData));
-          toast.success("Contacto actualizado con éxito")
-          console.log("Contacto actualizado ", response);
-
+          
           if (response.status !== 200) {
             setError(response.message || "Error al actualizar el contacto");
             toast.error(response.message || "Error al actualizar el contacto");
           } else {
-            setSuccess("Contacto actualizado con éxito");
-            toast.error(response.message || "Contacto actualizado con éxito");
-          }
-          setContactHandle(true);
-          setContactFind(null);
-
-          // Resetear el formulario
-          setFirstName('');
-          setLastName('');
-          setPhoneNumber('');
-          setCountEdits(0);
-          setRelatedSync('');
-          setCanEdit(true);
-
-          const ecuador = countries.find(country => country.label === 'Ecuador');
-          if (ecuador) {
-            setSelectedCountry(ecuador);
-            setCountryCode(ecuador.value);
-          } else {
-            setSelectedCountry(null);
-            setCountryCode('');
+            toast.success("Contacto actualizado con éxito");
+            setContactHandle(true);
+            setContactFind(null);
+            resetForm(); // Usar la función auxiliar
           }
         } catch (error) {
           setError("Error al actualizar el contacto: " + (error.message || "Verifica la conexión"));
+          toast.error("Error al actualizar el contacto");
         }
       } else if (!canEdit) {
         toast.error("Este contacto ya ha sido editado y no puede modificarse nuevamente");
       }
     },
-    [firstName, lastName, phoneNumber, isFormValid, callEndpoint, idContact, setContactFind, setContactHandle, selectedCountry, countries, canEdit]
+    [firstName, lastName, phoneNumber, isFormValid, callEndpoint, idContact, setContactFind, setContactHandle, selectedCountry, countries, canEdit, relatedSync]
   );
 
   // Determinamos si debemos mostrar el formulario:

@@ -584,7 +584,7 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
                   {(item.unread_message > 0 || item.unreadCount > 0) &&
                     !readChats.has(item.id) &&
                     (selectedChatId?.id !== item.id || tempIdChat !== item.id) && (
-                      <div className={`flex-shrink-0 bg-[rgb(var(--color-primary-${theme}))] 
+                      <div className={`flex-shrink-0 ${item.is_private ? 'bg-red-500' : `bg-[rgb(var(--color-primary-${theme}))]`} 
       text-[rgb(var(--color-text-primary-${theme}))] rounded-full w-5 h-5 
       flex items-center justify-center text-xs`}>
                         {item.unread_message || item.unreadCount}
