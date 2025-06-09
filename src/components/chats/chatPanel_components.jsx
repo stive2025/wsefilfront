@@ -1102,6 +1102,45 @@ const ChatInterface = () => {
         }
     }, [selectedChatId]); // Solo depende de selectedChatId
 
+    // Primero, agregamos el manejador de eventos para el pegado
+    const handlePaste = (e) => {
+        const clipboardItems = e.clipboardData.items;
+        const imageItems = Array.from(clipboardItems).filter(
+            item => item.type.indexOf('image') !== -1
+        );
+
+        if (imageItems.length === 0) return;
+
+        e.preventDefault();
+
+        // Validar límite de archivos
+        if (selectedFiles.length >= 5) {
+            toast.error('Máximo 5 archivos permitidos');
+            return;
+        }
+
+        imageItems.forEach(imageItem => {
+            // Obtener el blob directamente sin crear un nuevo File
+            const blob = imageItem.getAsFile();
+            
+            // Validar tamaño
+            if (blob.size > FILE_SIZE_LIMIT) {
+                toast.error('La imagen excede el límite de 2MB');
+                return;
+            }
+
+            // Crear objeto de archivo para la interfaz
+            const newFile = {
+                file: blob, // Usar el blob directamente
+                previewUrl: URL.createObjectURL(blob),
+                type: 'image'
+            };
+
+            setSelectedFiles(prev => [...prev, newFile]);
+            toast.success('Imagen agregada correctamente');
+        });
+    };
+
     if (shouldShowChat && isLoading) {
         return (
             <div className={`flex flex-col h-screen w-full 
@@ -1375,6 +1414,7 @@ const ChatInterface = () => {
                         onDragOver={handleDragOver}
                         onDragLeave={handleDragLeave}
                         onDrop={handleDrop}
+                        onPaste={handlePaste} // Agregamos el manejador aquí también
                     >
                         <div className="flex items-center space-x-2">
                             <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.SEND_TEXT]}>
