@@ -1095,6 +1095,7 @@ const ChatInterface = () => {
     // Eliminar el scrollToBottom del loadMessages y crear un nuevo useEffect para manejar el scroll
     useEffect(() => {
         // Solo hacer scroll automático cuando cambia el selectedChatId
+        setIsPrivateMessage(false);
         if (messagesContainerRef.current && selectedChatId) {
             setTimeout(() => {
                 messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
