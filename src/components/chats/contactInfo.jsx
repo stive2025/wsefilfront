@@ -21,6 +21,7 @@ const ContactInfo = () => {
 
     useEffect(() => {
         // Only fetch when the modal is open AND we have a contact ID AND user has permission
+        console.log("informacion del chat", selectedChatId);
         if (infoOpen && selectedChatId?.idContact) {
             setIsLoading(true);
             const fetchContact = async () => {
@@ -28,6 +29,7 @@ const ContactInfo = () => {
                     const contactCall = getContact(selectedChatId.idContact);
                     const response = await callEndpoint(contactCall);
                     setContactFind(response);
+                    console.log("Contacto encontrado:", response);
                 } catch (error) {
                     if (error.name !== "AbortError") {
                         console.error("Error buscando contacto:", error);
@@ -45,6 +47,8 @@ const ContactInfo = () => {
             setContactFind({});
         }
     }, [infoOpen]);
+
+
 
     const variants = {
         hidden: { opacity: 0, x: 100 },
@@ -247,23 +251,11 @@ const ContactInfo = () => {
                             <div className={`bg-[rgb(var(--color-bg-${theme}-secondary))] rounded-lg`}>
                                 <h3 className="px-4 py-3 border-b border-gray-700 font-medium">Información de Crédito</h3>
 
-                                {contactFind.creditoInfo && contactFind.creditoInfo.length > 0 ? (
+                                {contactFind.sync_id? (
                                     <div className="p-3">
                                         <div className="flex justify-between mb-2">
                                             <span className="text-sm text-gray-400">Nro. Crédito:</span>
-                                            <span>{contactFind.creditoInfo[0].idcredit || "N/A"}</span>
-                                        </div>
-                                        <div className="flex justify-between mb-2">
-                                            <span className="text-sm text-gray-400">Garante:</span>
-                                            <span>{contactFind.creditoInfo[0].garante || "N/A"}</span>
-                                        </div>
-                                        <div className="flex justify-between mb-2">
-                                            <span className="text-sm text-gray-400">Monto:</span>
-                                            <span>{contactFind.creditoInfo[0].mont || "N/A"}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-sm text-gray-400">Fecha de pago:</span>
-                                            <span>{contactFind.creditoInfo[0].payDate || "N/A"}</span>
+                                            <span>{contactFind.sync_id|| "N/A"}</span>
                                         </div>
                                     </div>
                                 ) : (

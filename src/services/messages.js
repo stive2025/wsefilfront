@@ -14,6 +14,19 @@ const sendMessage = (messageData) => {
   };
 }
 
+
+const sendPrivateMessage = (messageData) => {
+  const abortController = loadAbort();
+  return {
+    call: CustomFetch("messages", {
+      method: "POST",
+      body: JSON.stringify(messageData),
+      signal: abortController.controller.signal,
+    }),
+    abortController,
+  };
+}
+
 const searchMessages = (searchData, idChat) => {
   const abortController = loadAbort();
   return {
@@ -26,4 +39,4 @@ const searchMessages = (searchData, idChat) => {
   };
 }
 
-export {sendMessage, searchMessages};
+export {sendMessage, searchMessages,sendPrivateMessage};

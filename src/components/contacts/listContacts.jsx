@@ -13,7 +13,10 @@ import { useTheme } from "@/contexts/themeContext";
 // Componentes reutilizables
 const SearchInput = ({ searchTerm, onSearchChange }) => {
   const { theme } = useTheme();
-  
+const handleClear = () => {
+  onSearchChange('');
+};
+
   return (
     <AbilityGuard abilities={[ABILITIES.CONTACTS.SEARCH]} fallback={
       <div className={`p-2 bg-[rgb(var(--color-bg-${theme}-secondary))]`}></div>
@@ -29,11 +32,24 @@ const SearchInput = ({ searchTerm, onSearchChange }) => {
             onChange={(e) => onSearchChange(e.target.value)}
           />
           <Search className={`absolute left-1 text-[rgb(var(--color-text-secondary-${theme}))]`} size={18} />
+         {searchTerm && (
+            <button
+              onClick={handleClear}
+              className={`absolute right-2 p-1 rounded-full
+                text-[rgb(var(--color-text-secondary-${theme}))]
+                hover:bg-[rgb(var(--input-hover-bg-${theme}))]
+                hover:text-[rgb(var(--color-primary-${theme}))]
+                transition-colors duration-200`}
+              title="Limpiar búsqueda"
+            >
+              <span className="text-xl leading-none">&times;</span>
+            </button>
+          )}
         </div>
       </div>
     </AbilityGuard>
   );
-};    
+};
 
 const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, loadingMore, lastContactRef, setSelectedChatId, setNewMessage }) => {
   const navigate = useNavigate();
@@ -42,6 +58,8 @@ const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, lo
 
   if (!contacts || !contacts.length) {
     return <div className={`p-4 text-[rgb(var(--color-text-secondary-${theme}))]`}>No hay contactos disponibles</div>;
+  } else {
+    console.log("Contacts:", contacts);
   }
 
   return (
@@ -60,23 +78,23 @@ const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, lo
                 navigate("/chatList");
               }
               console.log("Contacto seleccionado:", item);
-              if(item.chat){
+              if (item.chat) {
                 setSelectedChatId({
                   id: item.chat.id,
                   idContact: item.id,
                   name: item.name,
-                  photo: item.profile_picture,
+                  photo: item.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
                   number: item.phone_number
                 });
-              }else{
+              } else {
                 setSelectedChatId({
                   idContact: item.id,
                   name: item.name,
-                  photo: item.profile_picture,
+                  photo: item.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
                   number: item.phone_number
                 });
               }
-              
+
               setNewMessage(false);
             }}
           >
@@ -100,17 +118,22 @@ const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, lo
             <div className="flex">
               <AbilityGuard abilities={[ABILITIES.CONTACTS.EDIT]}>
                 <button
-                  className={`mr-2 text-[rgb(var(--color-text-secondary-${theme}))] 
-                  hover:text-[rgb(var(--color-primary-${theme}))]`}
+                  className={`mr-2 p-2 rounded-md transition-colors duration-200 
+    bg-[rgb(var(--color-primary-${theme}))] 
+    hover:bg-[rgb(var(--color-secondary-${theme}))] 
+    text-white shadow-sm cursor-pointer`}
                   onClick={() => onFindContact(item.id)}
                 >
                   <Pencil size={16} />
                 </button>
               </AbilityGuard>
+
               <AbilityGuard abilities={[ABILITIES.CONTACTS.DELETE]}>
                 <button
-                  className={`text-[rgb(var(--color-text-secondary-${theme}))] 
-                  hover:text-[rgb(var(--color-primary-${theme}))]`}
+                  className={`p-2 rounded-md transition-colors duration-200 
+    bg-[rgb(var(--color-secondary-${theme}))] 
+    hover:bg-[rgb(var(--color-primary-${theme}))] 
+    text-white shadow-sm cursor-pointer`}
                   onClick={() => onDeleteContact(item.id)}
                   disabled={isDeleting}
                 >
@@ -185,10 +208,17 @@ const ListContacts = () => {
     }
 
     setSearchTimeout(setTimeout(() => {
-      // Si el término de búsqueda está vacío, volvemos al modo de paginación normal
+      const isPhone = /^\+?\d+$/.test(searchTerm);
+      const formattedPhone = isPhone
+        ? searchTerm.replace(/^0+/, '')
+        : undefined;
+
       if (!searchTerm) {
         setIsSearchMode(false);
         fetchContacts(1, true);
+      } else if (isPhone) {
+        setIsSearchMode(true);
+        fetchContactsByPhone(formattedPhone);
       } else {
         setIsSearchMode(true);
         fetchContactsByName(searchTerm);
@@ -203,11 +233,8 @@ const ListContacts = () => {
   // Función para obtener contactos por paginación
   const fetchContacts = async (page = 1, reset = false) => {
     try {
-      // Evitar múltiples solicitudes simultáneas
       if ((loading && !reset) || (loadingMore && !reset)) return;
 
-      // Si estamos reseteando, activamos el estado de carga principal
-      // Si estamos cargando más, activamos loadingMore
       if (reset) {
         setContacts([]);
         setCurrentPage(1);
@@ -238,19 +265,47 @@ const ListContacts = () => {
   // Función para buscar contactos por nombre
   const fetchContactsByName = async (name) => {
     try {
-      setContacts([]);
+      setContacts([]); // Limpiar contactos existentes
+      setError(null); // Limpiar error anterior
 
-      // Construir parámetros para la llamada API - solo búsqueda por nombre
       const params = {
         name: name
       };
 
-      // Llamar a getContacts() con los parámetros
       const contactsCall = getContacts(params);
       const response = await callEndpoint(contactsCall);
 
-      // Procesar la respuesta
-      handleContactsResponse(response, true, 1);
+      if (response && response.data) {
+        handleContactsResponse(response, true, 1);
+      } else {
+        setContacts([]);
+        setError("No se encontraron contactos");
+      }
+
+    } catch (error) {
+      handleApiError(error);
+    }
+  };
+
+  const fetchContactsByPhone = async (phone) => {
+    try {
+      setContacts([]); // Limpiar contactos existentes
+      setError(null); // Limpiar error anterior
+
+      const params = {
+        phone: phone
+      };
+
+      const contactsCall = getContacts(params);
+      const response = await callEndpoint(contactsCall);
+      console.log("Response from fetchContactsByPhone:", response);
+
+      if (response && response.data) {
+        handleContactsResponse(response, true, 1);
+      } else {
+        setContacts([]);
+        setError("No se encontraron contactos");
+      }
 
     } catch (error) {
       handleApiError(error);
@@ -259,31 +314,49 @@ const ListContacts = () => {
 
   // Función auxiliar para manejar las respuestas de contactos
   const handleContactsResponse = (response, reset, page) => {
-    const newContacts = response.data || [];
-    setTotalItems(response.total || 0);
+    try {
+      console.log("Response from API:", response);
 
-    if (reset) {
-      setContacts(newContacts);
-    } else {
-      // Verificar duplicados antes de añadir
-      const existingIds = contacts.map(contact => contact.id);
-      const uniqueNewContacts = newContacts.filter(contact => !existingIds.includes(contact.id));
-      setContacts(prev => [...prev, ...uniqueNewContacts]);
+      if (!response || !response.data) {
+        throw new Error("Respuesta inválida de la API");
+      }
+
+      const newContacts = response.data;
+      console.log("New Contacts:", newContacts);
+
+      setError(null); // Limpiar cualquier error previo
+      setTotalItems(response.total || 0);
+      console.log("Total Items:", response.total);
+
+      if (reset) {
+        console.log("Resetting contacts");
+        setContacts(newContacts);
+      } else {
+        console.log("Appending new contacts");
+        const existingIds = contacts.map(contact => contact.id);
+        const uniqueNewContacts = newContacts.filter(contact => !existingIds.includes(contact.id));
+        setContacts(prev => [...prev, ...uniqueNewContacts]);
+      }
+
+      setCurrentPage(page);
+      setHasMore(response.next_page_url !== null);
+
+    } catch (error) {
+      console.error("Error en handleContactsResponse:", error);
+      setError("Error al procesar los datos de contactos");
+      setContacts([]);
     }
-
-    // Actualizar estado de paginación
-    setCurrentPage(page);
-
-    // Verificar si hay más páginas disponibles
-    setHasMore(response.next_page_url !== null);
   };
 
   // Función auxiliar para manejar errores de API
   const handleApiError = (error) => {
-    // Solo actualizar el estado de error si no es un error de abort
     if (error.name !== 'AbortError') {
       console.error("Error cargando contactos:", error);
-      setError("No se pudieron cargar los contactos");
+      // Mensaje de error más específico
+      const errorMessage = error.response?.data?.message ||
+        "No se pudieron cargar los contactos";
+      setError(errorMessage);
+      setContacts([]); // Asegurarse de limpiar los contactos en caso de error
     }
   };
 
@@ -353,7 +426,7 @@ const ListContacts = () => {
           <div className="flex flex-col flex-shrink-0 mt-14">
             {location.pathname === "/chatList" && (
               <div className="flex items-center p-2">
-                <button 
+                <button
                   className={`text-[rgb(var(--color-text-primary-${theme}))] rounded-full cursor-pointer 
                   hover:bg-[rgb(var(--color-bg-${theme}))] active:bg-[rgb(var(--color-primary-${theme}))] p-1`}
                   onClick={() => setNewMessage(null)}
@@ -411,7 +484,7 @@ const ListContacts = () => {
           <div className="flex flex-col flex-shrink-0">
             {location.pathname === "/chatList" && (
               <div className="flex items-center p-2">
-                <button 
+                <button
                   className={`text-[rgb(var(--color-text-primary-${theme}))] rounded-full cursor-pointer 
                   hover:bg-[rgb(var(--color-bg-${theme}))] active:bg-[rgb(var(--color-primary-${theme}))] p-1`}
                   onClick={() => setNewMessage(null)}

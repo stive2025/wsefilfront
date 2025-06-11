@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
     Send, Search, MessageSquareShare, SquarePlus,
-    Mic, Paperclip, X, ArrowLeft, File, Image,
+    Mic, Paperclip, X, ArrowLeft, File,
     Volume2, PlayCircle, Download, EyeOff, Loader, Clock, Check, AlertTriangle,
-    RefreshCcw
+    RefreshCcw, Eye
 } from "lucide-react";
 import { ABILITIES } from '@/constants/abilities';
 import AbilityGuard from '@/components/common/AbilityGuard';
@@ -17,11 +17,21 @@ import { TagClick, ResolveClick, SearchInChatClick, TempNewMessage, ChatInterfac
 import { useContext } from "react";
 import { useLocation } from "react-router-dom";
 import { getChat, updateChat } from "@/services/chats.js";
-import { sendMessage } from "@/services/messages.js";
+import { sendMessage, sendPrivateMessage } from "@/services/messages.js";
 import toast from "react-hot-toast";
 import { useTheme } from "@/contexts/themeContext";
+import { GetCookieItem } from "@/utilities/cookies";
+import { getUserLabelColors } from "@/utils/getUserLabelColors";
+
 
 const ChatInterface = () => {
+
+
+
+    const isScrollingManually = useRef(false);
+    const scrollTimeoutRef = useRef(null);
+    const scrollPositionRef = useRef(null);
+    const SERVER_URL = 'http://193.46.198.228:8085/back/public/';
     const isMobile = Resize();
     const location = useLocation();
     const [menuOpen, setMenuOpen] = useState(false);
@@ -35,155 +45,370 @@ const ChatInterface = () => {
     const { callEndpoint } = useFetchAndLoad();
     const { messageData } = useContext(WebSocketMessage);
     const { theme } = useTheme();
-
     // File size limit in bytes (2MB = 2 * 1024 * 1024)
     const FILE_SIZE_LIMIT = 2 * 1024 * 1024;
     const [fileSizeError, setFileSizeError] = useState("");
     const [isDragging, setIsDragging] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
-
+    const [isPrivateMessage, setIsPrivateMessage] = useState(false);
     // Estados para gestionar mensajes y archivos
     const [messageText, setMessageText] = useState("");
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [isRecording, setIsRecording] = useState(false);
     const [recordedAudio, setRecordedAudio] = useState(null);
-    const [chatMessages, setChatMessages] = useState(null);
+    const [chatMessages, setChatMessages] = useState([]);
     const [sendingMessage, setSendingMessage] = useState(false);
     const [isNewChat, setIsNewChat] = useState(false);
     const [reopeningChat, setReopeningChat] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
-
+    const [record_stream, setStream] = useState(null);  // Reemplaza mediaRecorderRef
     // Referencias
     const fileInputRef = useRef(null);
-    const mediaRecorderRef = useRef(null);
-    const audioChunksRef = useRef([]);
+    //const audioChunksRef = useRef([]);
     const messagesContainerRef = useRef(null);
-
     // Determinar si el chat está cerrado
     const isChatClosed = selectedChatId?.status === "CLOSED";
     const shouldShowChat = selectedChatId && (selectedChatId.id || selectedChatId.idContact || selectedChatId.number);
     const hasMessages = chatMessages && chatMessages.length > 0;
 
-    // Efectos
-    useEffect(() => {
-        const loadMessages = async () => {
-            setIsLoading(true);
+    const [page, setPage] = useState(1);
+    const [hasMoreMessages, setHasMoreMessages] = useState(true);
+    const [loadingMoreMessages, setLoadingMoreMessages] = useState(false);
+    const [initialLoad, setInitialLoad] = useState(true);
+    const formatMessage = (text) => {
+        if (!text) return '';
 
-            if (selectedChatId && selectedChatId.id) {
-                try {
-                    const response = await callEndpoint(getChat(selectedChatId.id));
-                    setChatMessages(response.messages);
-                    setSelectedChatId(prev => ({
-                        ...prev,
-                        status: response.state || prev.state
-                    }));
-                    setIsNewChat(false);
-                } catch (error) {
-                    console.error("Error cargando mensajes:", error);
-                    setChatMessages([]);
-                    toast.error("Error al cargar los mensajes del chat");
-                }
-            } else if (selectedChatId && selectedChatId.idContact) {
+        return text
+            // Reemplazar saltos de línea con <br>
+            .split('\n')
+            .map(line => {
+                return line
+                    // Negrita: *texto* -> <strong>texto</strong>
+                    .replace(/\*([^*]+)\*/g, '<strong>$1</strong>')
+                    // Cursiva: _texto_ -> <em>texto</em>
+                    .replace(/_([^_]+)_/g, '<em>$1</em>')
+                    // Tachado: ~texto~ -> <del>texto</del>
+                    .replace(/~([^~]+)~/g, '<del>$1</del>')
+                    // Monoespaciado: ```texto``` -> <code>texto</code>
+                    .replace(/```([^`]+)```/g, '<code class="bg-gray-800 px-1 rounded">$1</code>');
+            })
+            .join('<br>');
+    };
+
+    const handleMicClick = async () => {
+        if (isRecording) {
+            if (record_stream) {
+                record_stream.stop();
+                setIsRecording(false);
+            }
+        } else {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const recorder = new MediaRecorder(stream);
+
+                recorder.start();
+                setStream(recorder);
+                setIsRecording(true);
+
+                const blobToBase64 = (blob) => {
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                            resolve(reader.result);
+                        };
+                        reader.onerror = reject;
+                        reader.readAsDataURL(blob);
+                    });
+                };
+
+                recorder.addEventListener('dataavailable', async (e) => {
+                    const base64 = await blobToBase64(e.data);
+                    const audioUrl = URL.createObjectURL(e.data);
+                    const fileName = `audio_${new Date().toISOString()}.${getExtension(recorder.mimeType)}`;
+
+                    console.log('Audio grabado:', {
+                        blobUrl: audioUrl,
+                        fileName: fileName,
+                        mimeType: recorder.mimeType,
+                        blobSize: e.data.size
+                    });
+
+                    setRecordedAudio({
+                        blob: e.data,
+                        url: audioUrl,
+                        name: fileName,
+                        base64: base64
+                    });
+                });
+
+            } catch (error) {
+                console.error("Error accessing microphone:", error);
+                alert("Couldn't access microphone. Please check permissions.");
+            }
+        }
+    };
+
+    // 1. Primero, asegurémonos que handleIsPrivate está funcionando correctamente
+    const handleIsPrivate = () => {
+        setIsPrivateMessage(prev => !prev);
+        toast.success(`Mensaje ${!isPrivateMessage ? 'privado' : 'público'} activado`);
+        console.log('Estado mensaje privado:', !isPrivateMessage); // Para debug
+    }
+
+    const getExtension = (mimeType) => {
+        return mimeType.split("/")[1] || "webm";
+    };
+
+    const handleMediaError = (element, type) => {
+        console.log(element, type, 'Error loading media:', element.src);
+        // Intentar cargar desde la URL del servidor si falló la carga local
+        if (!element.src.includes(SERVER_URL) && element.src.includes('/')) {
+            const filename = element.src.split('/').pop();
+            const newUrl = `${SERVER_URL}/${filename}`;
+            element.src = newUrl;
+        } else {
+            // Si ya estábamos usando la URL del servidor o falló también, mostrar error
+            const container = element.parentElement;
+            if (container) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'text-red-500 p-2 rounded bg-red-100 dark:bg-red-900 text-sm';
+                errorDiv.textContent = `Error cargando ${type}`;
+
+                // Reemplazar el elemento multimedia con el mensaje de error
+                container.innerHTML = '';
+                container.appendChild(errorDiv);
+            }
+        }
+    };
+    const scrollToBottom = useCallback(() => {
+        if (!isScrollingManually.current && messagesContainerRef.current) {
+            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        }
+    }, []);
+
+    const loadMessages = async (pageNum = 1, append = false) => {
+        if (!selectedChatId) return;
+
+        try {
+            if (pageNum === 1) {
+                setIsLoading(true);
+                isScrollingManually.current = false; // Resetear el flag manual al cargar nuevo chat
+
+            } else {
+                setLoadingMoreMessages(true);
+            }
+
+            // Si es un nuevo chat (tiene idContact pero no id)
+            if (selectedChatId.idContact && !selectedChatId.id) {
                 setChatMessages([]);
                 setIsNewChat(true);
                 setSelectedChatId(prev => ({
                     ...prev,
                     status: "OPEN"
                 }));
-            } else {
-                setChatMessages(null);
-                setIsNewChat(false);
+                return;
             }
 
-            setIsLoading(false);
-        };
+            // Si es un chat existente
+            if (selectedChatId.id) {
+                const response = await callEndpoint(getChat(selectedChatId.id, pageNum));
+                const newMessages = response.messages.data || [];
+                setHasMoreMessages(newMessages.length > 0);
 
-        loadMessages();
+                if (append) {
+                    // Cuando cargamos más mensajes (paginación), los agregamos al principio
+                    setChatMessages(prev => [...newMessages.reverse(), ...(prev || [])]);
+                    return
+                } else {
+                    // Carga inicial, invertimos el orden para que los más recientes queden abajo
+                    setChatMessages(newMessages.reverse());
+                    setSelectedChatId(prev => ({
+                        ...prev,
+                        status: response.state || prev.state
+                    }));
+                    setIsNewChat(false);
+                }
+            }
+        } catch (error) {
+            console.error("Error cargando mensajes:", error);
+            if (!append) {
+                setChatMessages([]);
+                toast.error("Error al cargar los mensajes del chat");
+            }
+        } finally {
+            setIsLoading(false);
+            setLoadingMoreMessages(false);
+            setInitialLoad(false);
+        }
+    };
+
+    // Agregar función para manejar el scroll
+    const handleScroll = useCallback((e) => {
+        if (scrollTimeoutRef.current) {
+            clearTimeout(scrollTimeoutRef.current);
+        }
+
+        const element = e.target;
+        scrollPositionRef.current = element.scrollTop;
+
+        // Determinar si el usuario está cerca del top (con un margen de 50px)
+        const isNearTop = element.scrollTop <= 50;
+
+        if (isNearTop && !loadingMoreMessages && hasMoreMessages && !initialLoad) {
+
+            setPage(prev => prev + 1);
+            loadMessages(page + 1, true);
+        }
+    }, [loadingMoreMessages, hasMoreMessages, page, initialLoad]);
+
+
+    // Efecto INICIAL
+    useEffect(() => {
+        setPage(1);
+        setHasMoreMessages(true);
+        setInitialLoad(true);
+        isScrollingManually.current = false;
+        loadMessages(1, false);
     }, [selectedChatId?.id]);
 
     useEffect(() => {
-        if (chatMessages && chatMessages.length > 0) {
-            scrollToBottom();
+        const messagesContainer = messagesContainerRef.current;
+        if (messagesContainer) {
+            messagesContainer.addEventListener('scroll', handleScroll);
+            return () => messagesContainer.removeEventListener('scroll', handleScroll);
         }
-    }, [chatMessages]);
+    }, [handleScroll]);
+
 
     useEffect(() => {
-        if (messageData && messageData.body) {
-            // Ignorar mensajes que ya fueron mostrados por el flujo optimista
-            const isDuplicate = chatMessages?.some(msg =>
-                (msg.id === messageData.id) || // Mensaje ya existe con ID real
-                (msg.is_temp && msg.body === messageData.body &&
-                    msg.from_me === (messageData.from_me ? "true" : "false") &&
-                    (!msg.media_path || msg.media_path === messageData.media_url)) // Mismo contenido
-            );
+        if (chatMessages && chatMessages.length > 0 && !initialLoad) {
+            const isNewMessage = chatMessages[chatMessages.length - 1]?.is_temp ||
+                chatMessages[chatMessages.length - 1]?.from_me === "true" ||
+                !chatMessages[chatMessages.length - 1]?.from_me;
 
-            if (isDuplicate) return;
-
-            // Determinar el ID del chat que debemos usar para comparar
-            const chatIdToCompare = selectedChatId?.id || '';
-            const shouldUseTemp = !messageData.from_me && !chatIdToCompare && tempIdChat;
-            const relevantChatId = shouldUseTemp ? tempIdChat : messageData.chat_id;
-
-            // Comprobar si este mensaje pertenece al chat actual
-            const isCurrentChat = selectedChatId &&
-                (chatIdToCompare === relevantChatId ||
-                    (shouldUseTemp && tempIdChat === relevantChatId));
-
-            if (isCurrentChat) {
-                setChatMessages(prevMessages => {
-                    // Si es un mensaje nuestro (from_me) y tenemos un mensaje temporal, reemplazarlo
-                    if (messageData.from_me) {
-                        const tempMessageIndex = prevMessages?.findIndex(msg =>
-                            msg.is_temp &&
-                            msg.body === messageData.body &&
-                            (!msg.media_path || msg.media_path === messageData.media_url)
-                        );
-
-                        if (tempMessageIndex !== -1 && tempMessageIndex !== undefined) {
-                            const newMessages = [...prevMessages];
-                            newMessages[tempMessageIndex] = {
-                                ...newMessages[tempMessageIndex],
-                                id: messageData.id,
-                                is_temp: false,
-                                ack: messageData.ack || 1,
-                                ...(messageData.media_url && { media_path: messageData.media_url })
-                            };
-                            return newMessages;
-                        }
-                    }
-
-                    // Si no es un mensaje nuestro o no encontramos el temporal, agregar nuevo
-                    const newMessage = {
-                        id: messageData.id,
-                        body: messageData.body,
-                        from_me: messageData.from_me ? "true" : "false",
-                        media_type: messageData.media_type || 'chat',
-                        media_path: messageData.media_url || '',
-                        is_private: messageData.is_private || 0,
-                        created_at: messageData.created_at || new Date().toISOString(),
-                        ack: messageData.ack || 0
-                    };
-
-                    return prevMessages ? [...prevMessages, newMessage] : [newMessage];
-                });
-
-                setTimeout(scrollToBottom, 100);
-            }
-
-            // Si el mensaje es para el chat actualmente abierto y no es un mensaje propio
-            const currentChatId = selectedChatId?.id || tempIdChat;
-
-            if (
-                currentChatId &&
-                messageData.chat_id === currentChatId &&
-                !messageData.from_me
-            ) {
-                handleUpdateChat(currentChatId, { unread_message: 0 });
+            if (isNewMessage && !isScrollingManually.current) {
+                scrollToBottom();
             }
         }
-    }, [messageData, selectedChatId, tempIdChat]);
+    }, [chatMessages, initialLoad]);
 
-    
+    useEffect(() => {
+        if (messageData) {
+            // Obtener el ID del chat actualmente seleccionado
+            const currentChatId = selectedChatId?.id;
+            const isNewChatTemp = isNewChat && tempIdChat;
+
+            // Validar si el mensaje pertenece al chat actual
+            const messageMatchesChat =
+                messageData.chat_id === currentChatId ||
+                (isNewChatTemp && messageData.chat_id === tempIdChat);
+
+            // Si el mensaje no pertenece al chat actual, ignorarlo
+            if (!messageMatchesChat) {
+                return;
+            }
+
+            // Primero, verificar si es una actualización de ACK
+            const isAckUpdate = messageData.type === 'ack' ||
+                (messageData.ack !== undefined && !messageData.body && !messageData.media_type);
+
+            if (isAckUpdate) {
+                console.log('Actualizando ACK para mensaje:', messageData);
+                setChatMessages(prevMessages => {
+                    if (!prevMessages) return [];
+
+                    return prevMessages.map(msg => {
+                        // Actualizar ACK si coincide el ID del mensaje
+                        if (msg.id === messageData.id_message_wp ||
+                            msg.id === messageData.id ||
+                            msg.tempSignature === messageData.temp_signature) {
+                            return {
+                                ...msg,
+                                ack: messageData.ack
+                            };
+                        }
+
+                        // Si el mensaje anterior tiene ack=2 y recibimos una actualización de lectura,
+                        // actualizar todos los mensajes previos no leídos a leídos
+                        if (messageData.ack === 3 && msg.ack === 2 && msg.from_me) {
+                            return {
+                                ...msg,
+                                ack: 3
+                            };
+                        }
+
+                        return msg;
+                    });
+                });
+                return;
+            }
+
+            // Continuar con el manejo normal de mensajes
+            if (messageData.body || messageData.media_type) {
+                setChatMessages(prevMessages => {
+                    if (!prevMessages) return [];
+
+                    // Buscar mensaje temporal
+                    const tempMessageIndex = prevMessages.findIndex(msg =>
+                        msg.is_temp &&
+                        msg.body === messageData.body &&
+                        msg.from_me === (messageData.from_me === true || messageData.from_me === "true") &&
+                        (!msg.media_path || msg.media_path === messageData.media_url)
+                    );
+
+                    if (tempMessageIndex !== -1) {
+                        // Actualizar mensaje temporal
+                        const newMessages = [...prevMessages];
+                        newMessages[tempMessageIndex] = {
+                            ...newMessages[tempMessageIndex],
+                            id: messageData.id_message_wp || messageData.id,
+                            is_temp: false,
+                            ack: messageData.ack || 1,
+                            media_path: messageData.media_url ? `${SERVER_URL}/${messageData.media_url}` : newMessages[tempMessageIndex].media_path,
+                            filename: messageData.filename
+                        };
+                        return newMessages;
+                    }
+
+                    // Agregar nuevo mensaje si no es temporal
+                    if (!messageData.from_me || isNewChat) {
+                        const normalizedMessage = {
+                            id: messageData.id_message_wp || messageData.id,
+                            body: messageData.body || '',
+                            from_me: messageData.from_me === true || messageData.from_me === "true",
+                            media_type: messageData.media_type || 'chat',
+                            media_path: messageData.media_url ? `${SERVER_URL}/${messageData.media_url}` : '',
+                            media_url: messageData.media_url ? `${SERVER_URL}/${messageData.media_url}` : '',
+                            data: messageData.data || '',
+                            filename: messageData.filename || '',
+                            filetype: messageData.filetype || '',
+                            fileformat: messageData.fileformat || '',
+                            is_private: messageData.is_private || 0,
+                            created_at: messageData.created_at || new Date().toISOString(),
+                            ack: messageData.ack || 0,
+                            is_temp: false
+                        };
+                        return [...prevMessages, normalizedMessage];
+                    }
+
+                    return prevMessages;
+                });
+
+                if (!isScrollingManually.current) {
+                    setTimeout(scrollToBottom, 100);
+                }
+
+                // Actualizar contador de mensajes no leídos
+                if (currentChatId &&
+                    messageData.chat_id === currentChatId &&
+                    !messageData.from_me) {
+                    handleUpdateChat(currentChatId, { unread_message: 0 });
+                }
+            }
+        }
+    }, [messageData, selectedChatId, tempIdChat, isNewChat]);
+
+
     useEffect(() => {
         return () => {
             selectedFiles.forEach(file => URL.revokeObjectURL(file.previewUrl));
@@ -201,11 +426,7 @@ const ChatInterface = () => {
 
 
     // Funciones de ayuda
-    const scrollToBottom = () => {
-        if (messagesContainerRef.current) {
-            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-        }
-    };
+
 
     const formatMessageTime = (timestamp) => {
         if (!timestamp) return "";
@@ -326,78 +547,177 @@ const ChatInterface = () => {
         });
     };
 
-    const handleMicClick = async () => {
-        if (isRecording) {
-            if (mediaRecorderRef.current) {
-                mediaRecorderRef.current.stop();
-                setIsRecording(false);
-            }
-        } else {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                const mediaRecorder = new MediaRecorder(stream);
-
-                audioChunksRef.current = [];
-
-                mediaRecorder.ondataavailable = (e) => {
-                    if (e.data.size > 0) {
-                        audioChunksRef.current.push(e.data);
-                    }
-                };
-
-                mediaRecorder.onstop = () => {
-                    const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-                    const totalCurrentSize = selectedFiles.reduce((total, file) => total + file.file.size, 0);
-
-                    if (totalCurrentSize + audioBlob.size > FILE_SIZE_LIMIT) {
-                        setFileSizeError("La suma de los archivos multimedia no debe superar los 2MB.");
-                        setTimeout(() => setFileSizeError(""), 5000);
-                        stream.getTracks().forEach(track => track.stop());
-                        return;
-                    }
-
-                    if (audioBlob.size > FILE_SIZE_LIMIT) {
-                        setFileSizeError("La grabación de audio excede el límite de 2MB.");
-                        setTimeout(() => setFileSizeError(""), 5000);
-                        stream.getTracks().forEach(track => track.stop());
-                        return;
-                    }
-
-                    const audioUrl = URL.createObjectURL(audioBlob);
-                    setRecordedAudio({
-                        blob: audioBlob,
-                        url: audioUrl,
-                        name: `audio_${new Date().toISOString()}.wav`
-                    });
-
-                    stream.getTracks().forEach(track => track.stop());
-                };
-
-                mediaRecorderRef.current = mediaRecorder;
-                mediaRecorder.start();
-                setIsRecording(true);
-            } catch (error) {
-                console.error("Error al acceder al micrófono:", error);
-                alert("No se pudo acceder al micrófono. Verifica los permisos.");
-            }
-        }
-    };
-
-    const removeAudio = () => {
+    const removeRecordedAudio = () => {
         if (recordedAudio) {
             URL.revokeObjectURL(recordedAudio.url);
             setRecordedAudio(null);
         }
     };
 
+
     // Funciones para mensajes
+    const renderMediaContent = (message) => {
+        let mediaSource;
+        if (message.media_path?.startsWith('blob:') && message.type === 'image') {
+            mediaSource = message.media_path;
+        } else if (message.filename && message.media_path?.startsWith("files/") || message.filename?.startsWith("files/")) {
+            mediaSource = `${SERVER_URL}${message.filename}`;
+        } else if (message.filename && message.mediaUrl?.startsWith("files/")) {
+            mediaSource = `${SERVER_URL}${message.mediaUrl}`;
+        } else if (message.media_path?.startsWith('http')) {
+            mediaSource = message.media_path;
+        } else if (message.media_path && message.from_me === "false") {
+            mediaSource = `${SERVER_URL}${message.media_path}`;
+        }
+
+        switch (message.media_type) {
+            case 'image':
+                return (
+                    <div className="relative group">
+                        {message.body && <div
+                            className="mb-2 break-words"
+                            dangerouslySetInnerHTML={{ __html: formatMessage(message.body) }}
+                        />}
+                        <img
+                            src={mediaSource}
+                            alt={message.filename || "Image"}
+                            className="max-w-full max-h-48 rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => handleMediaPreview(mediaSource, message.media_type)}
+                            onError={(e) => handleMediaError(e.target, 'imagen')}
+                        />
+                        {!message.is_temp && (
+                            <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.DOWNLOAD_HISTORY]}>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDownload(mediaSource, message.filename);
+                                        }}
+                                        className="bg-teal-600 rounded-full p-1"
+                                    >
+                                        <Download size={16} color="white" />
+                                    </button>
+                                </AbilityGuard>
+                            </div>
+                        )}
+                    </div>
+                );
+
+            case 'ptt':
+            case 'audio':
+                return (
+                    <div className="flex flex-col space-y-2">
+                        {message.body && <div
+                            className="mb-2 break-words"
+                            dangerouslySetInnerHTML={{ __html: formatMessage(message.body) }}
+                        />}
+                        <div className="flex items-center space-x-2">
+                            <audio
+                                controls
+                                src={mediaSource}
+                                className="max-w-[200px] h-8"
+                                onError={(e) => {
+                                    console.error('Error cargando audio:', {
+                                        src: e.target.src,
+                                        error: e.target.error,
+                                        messageId: message.id
+                                    });
+                                    handleMediaError(e.target, 'audio');
+                                }}
+                            />
+                            {!message.is_temp && (
+                                <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.DOWNLOAD_HISTORY]}>
+                                    <button
+                                        onClick={() => handleDownload(mediaSource, message.filename)}
+                                        className="text-white hover:text-gray-300"
+                                    >
+                                        <Download size={20} />
+                                    </button>
+                                </AbilityGuard>
+                            )}
+                        </div>
+                    </div>
+                );
+
+            case 'video':
+                return (
+                    <div className="relative group">
+                        {message.body && <div
+                            className="mb-2 break-words"
+                            dangerouslySetInnerHTML={{ __html: formatMessage(message.body) }}
+                        />}
+                        <video
+                            controls
+                            src={mediaSource}
+                            className="max-w-full max-h-48 rounded-lg"
+                            onError={(e) => handleMediaError(e.target, 'video')}
+                        />
+                        {!message.is_temp && (
+                            <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.DOWNLOAD_HISTORY]}>
+                                    <button
+                                        onClick={() => handleDownload(mediaSource, message.filename)}
+                                        className="bg-teal-600 rounded-full p-1"
+                                    >
+                                        <Download size={16} color="white" />
+                                    </button>
+                                </AbilityGuard>
+                            </div>
+                        )}
+                    </div>
+                );
+
+            case 'document':
+                return (
+                    <div className="flex flex-col space-y-2">
+                        {message.body && <div
+                            className="mb-2 break-words"
+                            dangerouslySetInnerHTML={{ __html: formatMessage(message.body) }}
+                        />}
+                        <div className="flex items-center space-x-2">
+                            <File size={20} />
+                            <span className="truncate max-w-[200px]">{message.filename}</span>
+                            {!message.is_temp && (
+                                <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.DOWNLOAD_HISTORY]}>
+                                    <button
+                                        onClick={() => handleDownload(mediaSource, message.filename)}
+                                        className="text-white hover:text-gray-300"
+                                    >
+                                        <Download size={20} />
+                                    </button>
+                                </AbilityGuard>
+                            )}
+                        </div>
+                    </div>
+                );
+
+            default:
+                return message.body ? (
+                    <>
+                        <div dangerouslySetInnerHTML={{ __html: formatMessage(message.body) }} />
+                    </>
+                ) : '';
+        }
+    };
+
+    // Modificar la función que maneja la visualización del mensaje para incluir el estilo privado
     const renderMessageContent = (message, prevMessageDate) => {
-        const { media_type, body, media_path, created_at, is_temp } = message;
+        const { created_at, created_by } = message;
         const isSelf = message.from_me === "true";
-        const isPrivate = message.is_private;
+        const isPrivate = message.is_private === 1;
         const messageTime = formatMessageTime(created_at);
         const messageDate = formatMessageDate(created_at);
         const showDateSeparator = prevMessageDate !== messageDate && created_at;
+        const { bg, text } = created_by ? getUserLabelColors(created_by) : { bg: '', text: '' };
+
+        const getBackgroundColor = () => {
+            if (isPrivate) {
+                return isSelf ? '#2b95ef' : '#6f7375';
+            }
+            return theme === 'light'
+                ? (isSelf ? '#d9fdd3' : `rgb(var(--color-bg-${theme}-secondary))`)
+                : (isSelf ? '#144d37' : `rgb(var(--color-bg-${theme}-secondary))`);
+        };
 
         return (
             <>
@@ -408,20 +728,23 @@ const ChatInterface = () => {
                         </div>
                     </div>
                 )}
-                <div key={message.id} className={`flex ${isPrivate === 1 ? "justify-center" : isSelf ? "justify-end" : "justify-start"} w-full mb-2`}>
-                    <div className={`flex ${isSelf && !isPrivate ? "flex-row-reverse" : "flex-row"} items-start space-x-2 ${isPrivate === 1 ? "max-w-[70%]" : "max-w-[60%]"} w-auto`}>
+                <div className={`flex ${isSelf ? "justify-end" : "justify-start"} w-full mb-2`}>
+                    <div className={`flex ${isSelf ? "flex-row-reverse" : "flex-row"} items-start space-x-2 max-w-[60%] w-auto`}>
                         <div
-                            className={`${isPrivate === 1
-                                ? `bg-[rgb(var(--color-primary-${theme}))] mx-auto rounded-lg`
-                                : isSelf
-                                    ? `${theme === 'light'
-                                        ? 'bg-[#d9fdd3]'
-                                        : 'bg-[#144d37]'} rounded-l-lg rounded-br-lg ml-auto`
-                                    : `bg-[rgb(var(--color-bg-${theme}-secondary))] rounded-r-lg rounded-bl-lg mr-auto`
-                                } p-3 w-full max-w-full break-words whitespace-pre-wrap flex flex-col`}
+                            className={`p-3 w-full max-w-full break-words whitespace-pre-wrap flex flex-col rounded-lg
+                                ${isSelf ? 'rounded-l-lg rounded-br-lg ml-auto' : 'rounded-r-lg rounded-bl-lg mr-auto'}`}
+                            style={{ backgroundColor: getBackgroundColor() }}
                         >
-                            {isPrivate === 1 && (
-                                <div className="flex items-center justify-center mb-2 text-gray-300">
+                            {/* Mostrar created_by para mensajes propios o mensajes privados */}
+                            {(isSelf || isPrivate) && created_by && (
+                                <div className={`${bg} ${text} text-xs rounded-full px-2 py-0.5 mb-1 w-fit`}>
+                                    {created_by}
+                                </div>
+                            )}
+
+                            {/* Indicador de mensaje privado */}
+                            {isPrivate && (
+                                <div className={`flex items-center ${isSelf ? "justify-end" : "justify-start"} mb-2 text-gray-300`}>
                                     <EyeOff className="w-4 h-4 mr-1" />
                                     <span className="text-xs">Mensaje Privado</span>
                                 </div>
@@ -429,96 +752,7 @@ const ChatInterface = () => {
 
                             <div className="flex items-center space-x-2">
                                 <div className="flex-1 min-w-0">
-                                    {media_path && media_path !== 'no' ? (
-                                        media_type === 'url' ? (
-                                            <a
-                                                href={media_path}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="underline overflow-hidden text-ellipsis"
-                                            >
-                                                {media_path}
-                                            </a>
-                                        ) : media_type === 'image' ? (
-                                            <div className="relative group">
-                                                {body && <div className="mb-2">{body}</div>}
-                                                <img
-                                                    src={media_path}
-                                                    alt="Preview"
-                                                    className="max-w-full max-h-48 rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                                                    onClick={() => handleMediaPreview(media_path, media_type)}
-                                                />
-                                                {is_temp && (
-                                                    <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
-                                                        <Loader size={20} className="animate-spin" />
-                                                    </div>
-                                                )}
-                                                <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-2">
-                                                    <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.DOWNLOAD_HISTORY]}>
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleDownload(media_path);
-                                                            }}
-                                                            className="bg-teal-600 rounded-full p-1"
-                                                        >
-                                                            <Download size={16} color="white" />
-                                                        </button>
-                                                    </AbilityGuard>
-                                                </div>
-                                            </div>
-                                        ) : media_type === 'audio' ? (
-                                            <div className="flex items-center space-x-2">
-                                                <audio
-                                                    controls
-                                                    src={media_path}
-                                                    className="h-8"
-                                                />
-                                                {is_temp && <Loader size={16} className="animate-spin ml-2" />}
-                                                {!is_temp && (
-                                                    <button
-                                                        onClick={() => handleDownload(media_path)}
-                                                        className="text-white hover:text-gray-300"
-                                                    >
-                                                        <Download size={20} />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center space-x-2">
-                                                    {media_type === 'video' ? (
-                                                        <PlayCircle size={20} />
-                                                    ) : (
-                                                        <File size={20} />
-                                                    )}
-                                                    <span className="truncate max-w-[calc(100%-60px)]">
-                                                        {media_path.split('/').pop()}
-                                                    </span>
-                                                </div>
-                                                {!is_temp && (
-                                                    <div className="flex space-x-2 flex-shrink-0">
-                                                        {media_type === 'video' && (
-                                                            <button
-                                                                onClick={() => handleMediaPreview(media_path, media_type)}
-                                                                className="text-white hover:text-gray-300"
-                                                            >
-                                                                <Image size={20} />
-                                                            </button>
-                                                        )}
-                                                        <button
-                                                            onClick={() => handleDownload(media_path)}
-                                                            className="text-white hover:text-gray-300"
-                                                        >
-                                                            <Download size={20} />
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )
-                                    ) : (
-                                        <>{body}</>
-                                    )}
+                                    {renderMediaContent(message)}
                                 </div>
                             </div>
 
@@ -542,10 +776,13 @@ const ChatInterface = () => {
     };
 
     const renderMessagesWithDateSeparators = () => {
-        if (!chatMessages || chatMessages.length === 0) return null;
+        if (!Array.isArray(chatMessages) || chatMessages.length === 0) {
+            return null;
+        }
 
         let lastMessageDate = "";
 
+        // Renderizamos los mensajes en orden directo (más antiguos arriba, más recientes abajo)
         return chatMessages.map((message, index) => {
             const messageDate = formatMessageDate(message.created_at);
             const currentElement = renderMessageContent(message, lastMessageDate);
@@ -558,28 +795,58 @@ const ChatInterface = () => {
         setMediaPreview({ path: mediaPath, type: mediaType });
     };
 
-    const handleDownload = (mediaPath) => {
-        const link = document.createElement('a');
-        link.href = mediaPath;
-        link.download = mediaPath.split('/').pop();
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    const dataURLtoBlob = (dataUrl) => {
+        const arr = dataUrl.split(',');
+        const mime = arr[0].match(/:(.*?);/)[1];
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new Blob([u8arr], { type: mime });
     };
 
+    const handleDownload = (url, filename) => {
+        // Si tenemos data (base64), crear y descargar blob
+        if (url.startsWith('data:')) {
+            const blob = dataURLtoBlob(url);
+            const blobUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(blobUrl);
+        } else {
+            // Si es una URL normal, descargar directamente
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    };
+
+
+    // Modificar handleSendMessage para manejar correctamente mensajes privados
     const handleSendMessage = async () => {
         if ((messageText.trim() === "" && selectedFiles.length === 0 && !recordedAudio) ||
             sendingMessage ||
             isChatClosed) {
             return;
         }
-        // Crear mensaje temporal con ID único basado en contenido
+
         const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        const tempSignature = `${messageText}-${selectedFiles.length}-${!!recordedAudio}`;
+        const tempSignature = tempId;
 
         try {
             setSendingMessage(true);
             setUploadProgress(0);
+
+            // Crear mensaje temporal con el atributo is_private
             const newMessage = {
                 id: tempId,
                 body: messageText,
@@ -587,149 +854,178 @@ const ChatInterface = () => {
                 created_at: new Date().toISOString(),
                 ack: 0,
                 is_temp: true,
+                is_private: isPrivateMessage ? 1 : 0, // Asegurar que is_private se incluya
                 tempSignature: tempSignature,
-                // Firma para identificar duplicados
             };
 
-            // Agregar información multimedia si existe
+            // Manejar archivos multimedia temporales
             if (selectedFiles[0]) {
-                newMessage.media_type = selectedFiles[0].type;
-                newMessage.media_path = selectedFiles[0].previewUrl;
+                const file = selectedFiles[0];
+                newMessage.media_type = file.type;
+                newMessage.filename = file.file.name;
+                newMessage.media_path = file.previewUrl;
             } else if (recordedAudio) {
                 newMessage.media_type = 'audio';
+                newMessage.filename = recordedAudio.name;
                 newMessage.media_path = recordedAudio.url;
             }
 
+            // Siempre agregamos el mensaje temporal (comportamiento optimista)
             setChatMessages(prev => prev ? [...prev, newMessage] : [newMessage]);
             scrollToBottom();
 
-            // Limpiar UI inmediatamente
+            // Limpiar UI
             setMessageText("");
+            const userData = JSON.parse(GetCookieItem('userData'));
+            const currentUser = userData ? userData.id : null;
             const filesToSend = [...selectedFiles];
             const audioToSend = recordedAudio;
             setSelectedFiles([]);
             setRecordedAudio(null);
 
-            // Preparar payload para el servidor
-            const messagePayload = {
-                number: selectedChatId.number || "",
-                body: messageText,
-                from_me: true,
-                ...(selectedChatId.id || tempIdChat ? { chat_id: selectedChatId.id || tempIdChat } : {}),
-                ...(selectedChatId.idContact && { contact_id: selectedChatId.idContact }),
-                tempSignature: tempSignature // Incluir la firma en el payload al servidor
-            };
+            let messagePayload;
 
-            // Procesar archivos para enviar al servidor
+            if (isPrivateMessage) {
+                messagePayload = {
+                    id_message_wp: tempId,
+                    body: messageText,
+                    ack: 0,
+                    from_me: "yes",
+                    to: selectedChatId.number || "",           // destinatario
+                    media_type: "chat",
+                    timestamp: Math.floor(Date.now() / 1000).toString(),
+                    is_private: 1,
+                    state: "G_TEST",
+                    user_id: currentUser.id,
+                    chat_id: selectedChatId.id || tempIdChat
+                };
+            } else {
+                messagePayload = {
+                    number: selectedChatId.number || "",
+                    body: messageText,
+                    is_private: isPrivateMessage ? 1 : 0,
+                    from_me: true,
+                    ...(selectedChatId.id || tempIdChat ? { chat_id: selectedChatId.id || tempIdChat } : {}),
+                    ...(selectedChatId.idContact && { contact_id: selectedChatId.idContact }),
+                    tempSignature: tempSignature
+                };
+            }
+
+
+
+            // Agregar log para verificar el payload
+            console.log('Enviando mensaje con payload:', {
+                ...messagePayload,
+            });
+
+            // Procesar archivos
             if (filesToSend.length > 0 || audioToSend) {
                 const mediaItems = [];
 
+                // Modifica la función fileToBase64 para incluir el encabezado correcto
                 const fileToBase64 = (file) => {
                     return new Promise((resolve, reject) => {
                         const reader = new FileReader();
                         reader.readAsDataURL(file);
-                        reader.onload = () => resolve(reader.result.split(',')[1]);
-                        reader.onerror = error => reject(error);
+                        reader.onload = () => {
+                            // El resultado ya incluye el encabezado data:mimetype;base64,
+                            console.log('Archivo convertido a base64:', {
+                                fileName: file.name,
+                                mimeType: file.type,
+                                base64Preview: reader.result.substring(0, 50) + '...' // Log solo el inicio para debug
+                            });
+                            resolve(reader.result); // Enviamos el base64 completo con encabezado
+                        };
+                        reader.onerror = reject;
                     });
                 };
 
                 // Procesar archivos seleccionados
                 for (const fileObj of filesToSend) {
-                    try {
-                        const base64Data = await fileToBase64(fileObj.file);
-                        mediaItems.push({
-                            type: fileObj.type,
-                            media: base64Data,
-                            caption: messageText || '',
-                            ...(fileObj.type === 'document' && { filename: fileObj.file.name })
-                        });
-                    } catch (error) {
-                        console.error(`Error procesando archivo ${fileObj.file.name}:`, error);
-                        continue;
-                    }
+                    const base64Data = await fileToBase64(fileObj.file);
+                    console.log('Procesando archivo:', {
+                        type: fileObj.type,
+                        mimeType: fileObj.file.type,
+                        fileName: fileObj.file.name
+                    });
+
+                    mediaItems.push({
+                        type: fileObj.type,
+                        media_type: fileObj.file.type,
+                        media: base64Data, // Ahora incluye el encabezado completo
+                        caption: messageText || '',
+                        filename: fileObj.file.name
+                    });
                 }
 
                 // Procesar audio grabado
                 if (audioToSend) {
-                    try {
-                        const audioBase64 = await fileToBase64(audioToSend.blob);
-                        mediaItems.push({
-                            type: 'audio',
-                            media: audioBase64,
-                            caption: messageText || '',
-                            filename: 'audio_message.wav'
-                        });
-                    } catch (error) {
-                        console.error("Error procesando audio grabado:", error);
-                    }
+                    console.log('Procesando audio:', {
+                        type: 'audio',
+                        mimeType: 'audio/webm',
+                        fileName: audioToSend.name
+                    });
+
+                    mediaItems.push({
+                        type: 'audio',
+                        media_type: 'audio/webm',
+                        media: audioToSend.base64, // El audio grabado ya debe incluir el encabezado
+                        caption: messageText || '',
+                        filename: audioToSend.name
+                    });
                 }
 
                 if (mediaItems.length > 0) {
+                    console.log('Enviando archivos multimedia:',
+                        mediaItems.map(item => ({
+                            type: item.type,
+                            mediaType: item.media_type,
+                            filename: item.filename,
+                            hasBase64Header: item.media.startsWith('data:')
+                        }))
+                    );
                     messagePayload.media = JSON.stringify(mediaItems);
                 }
             }
 
-            // Enviar al servidor con progreso
-            const { call, abortController } = sendMessage(messagePayload, (progress) => {
-                setUploadProgress(progress);
-            });
+            const { call, abortController } = isPrivateMessage
+                ? sendPrivateMessage(messagePayload, progress => setUploadProgress(progress)) // ▶️
+                : sendMessage(messagePayload, progress => setUploadProgress(progress));
+
+            // 4. (sin cambios) dispara la petición y actualiza el mensaje temporal
+            console.log("Payload a enviar:", messagePayload);
             const response = await callEndpoint({ call, abortController });
-
-            // Agregar console.log para ver la respuesta cuando no hay chatId
-            if (!selectedChatId.id) {
-                console.log('Respuesta del servidor al enviar mensaje sin chatId:', {
-                    response,
-                    messagePayload
-                });
-            }
-
             if (response) {
                 // Actualizar mensaje temporal con datos del servidor
                 setChatMessages(prev => {
                     if (!prev) return [];
-
                     return prev.map(msg => {
-                        if (msg.id === tempId || msg.tempSignature === tempSignature) {
-                            const updatedMsg = {
+                        if (msg.tempSignature === tempSignature) {
+                            const mediaData = response.media?.[0];
+                            return {
                                 ...msg,
                                 id: response.message_id || msg.id,
                                 ack: response.ack || 1,
                                 is_temp: false,
-                                ...(response.media_url && {
-                                    media_path: response.media_url
-                                }),
-                                // Eliminar la firma temporal ya que ahora es un mensaje real
-                                tempSignature: undefined
+                                media_path: mediaData?.filename ? `${SERVER_URL}/${mediaData.filename}` : msg.media_path,
+                                filename: mediaData?.filename || msg.filename
                             };
-
-                            // Liberar URL temporal si existía
-                            if (msg.is_temp && msg.media_path) {
-                                URL.revokeObjectURL(msg.media_path);
-                            }
-
-                            return updatedMsg;
                         }
-                        return msg;
+                        return msg; // Retorna el mensaje original si no coincide
                     });
                 });
+            }
 
-                if (response.chat_id) {
-                    setTempIdChat(response.chat_id);
-                    setSelectedChatId(prev => ({
-                        ...prev,
-                        status: "OPEN"
-                    }));
-                    setIsNewChat(false);
-                }
+
+            if (response.chat_id) {
+                setTempIdChat(response.chat_id);
+                setIsNewChat(false);
             }
         } catch (error) {
-            console.error("Error al enviar:", error);
-
-            // Marcar mensaje como fallido usando tanto el ID como la firma
             setChatMessages(prev => {
                 if (!prev) return [];
                 return prev.map(msg =>
-                    (msg.id === tempId || msg.tempSignature === tempSignature)
+                    msg.tempSignature === tempSignature
                         ? { ...msg, ack: -1 }
                         : msg
                 );
@@ -741,10 +1037,10 @@ const ChatInterface = () => {
             setUploadProgress(0);
         }
     };
+
     const handleUpdateChat = async (idChat, dataChat) => {
         try {
             const response = await callEndpoint(updateChat(idChat, dataChat), `update_chat_${idChat}`);
-            console.log("Chat actualizado ", response);
             return response;
         } catch (error) {
             console.error("Error actualizando chat ", error);
@@ -772,7 +1068,7 @@ const ChatInterface = () => {
             // Disparar evento de cambio de estado
             const event = new CustomEvent('chatStateChanged', {
                 detail: {
-                    chatId: selectedChatId.id,
+                    chat_id: selectedChatId.id,
                     newState: "OPEN",
                     previousState: previousState,
                     shouldRemove: true
@@ -791,8 +1087,59 @@ const ChatInterface = () => {
             console.error("Error al reabrir el chat:", error);
             toast.error("Error al reabrir el chat");
         } finally {
-            setReopeningChat(false);
+            setSendingMessage(false);
+            setUploadProgress(0);
         }
+    };
+
+    // Eliminar el scrollToBottom del loadMessages y crear un nuevo useEffect para manejar el scroll
+    useEffect(() => {
+        // Solo hacer scroll automático cuando cambia el selectedChatId
+        setIsPrivateMessage(false);
+        if (messagesContainerRef.current && selectedChatId) {
+            setTimeout(() => {
+                messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+            }, 100);
+        }
+    }, [selectedChatId]); // Solo depende de selectedChatId
+
+    // Primero, agregamos el manejador de eventos para el pegado
+    const handlePaste = (e) => {
+        const clipboardItems = e.clipboardData.items;
+        const imageItems = Array.from(clipboardItems).filter(
+            item => item.type.indexOf('image') !== -1
+        );
+
+        if (imageItems.length === 0) return;
+
+        e.preventDefault();
+
+        // Validar límite de archivos
+        if (selectedFiles.length >= 5) {
+            toast.error('Máximo 5 archivos permitidos');
+            return;
+        }
+
+        imageItems.forEach(imageItem => {
+            // Obtener el blob directamente sin crear un nuevo File
+            const blob = imageItem.getAsFile();
+            
+            // Validar tamaño
+            if (blob.size > FILE_SIZE_LIMIT) {
+                toast.error('La imagen excede el límite de 2MB');
+                return;
+            }
+
+            // Crear objeto de archivo para la interfaz
+            const newFile = {
+                file: blob, // Usar el blob directamente
+                previewUrl: URL.createObjectURL(blob),
+                type: 'image'
+            };
+
+            setSelectedFiles(prev => [...prev, newFile]);
+            toast.success('Imagen agregada correctamente');
+        });
     };
 
     if (shouldShowChat && isLoading) {
@@ -946,16 +1293,22 @@ const ChatInterface = () => {
                     {/* Messages Area */}
                     <div
                         ref={messagesContainerRef}
-                        className={`flex-1 overflow-y-auto p-4 space-y-2 scrollbar-hide`}
+                        className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-hide"
                         style={{
                             backgroundImage: theme === 'dark'
                                 ? "url('https://i.pinimg.com/736x/cd/3d/62/cd3d628f57875af792c07d6ad262391c.jpg')"
-                                : "url('https://i.pinimg.com/originals/2b/45/cf/2b45cfec4c0d3c56aed4ccd30b61bd3a.jpg')",
-                            backgroundSize: "cover",
-                            backgroundPosition: "center",
-                            backgroundRepeat: "no-repeat"
+                                : "url('https://i.pinimg.com/originals/2b/45/cf/2b45cff1cf6a03a91a7e7fdb9c9fbd5a.jpg')",
+                            backgroundSize: 'cover',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'center'
                         }}
                     >
+                        {isLoading && (
+                            <div className="flex justify-center py-4">
+                                <Loader className="animate-spin" size={20} />
+                            </div>
+                        )}
+
                         {isNewChat && !hasMessages ? (
                             <div className="flex flex-col justify-center items-center h-full opacity-50">
                                 <p>Nuevo chat con {selectedChatId.name || selectedChatId.number}</p>
@@ -1004,7 +1357,7 @@ const ChatInterface = () => {
                                             <Volume2 size={24} />
                                         </div>
                                         <button
-                                            onClick={removeAudio}
+                                            onClick={removeRecordedAudio}
                                             className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1"
                                         >
                                             <X size={12} />
@@ -1062,6 +1415,7 @@ const ChatInterface = () => {
                         onDragOver={handleDragOver}
                         onDragLeave={handleDragLeave}
                         onDrop={handleDrop}
+                        onPaste={handlePaste} // Agregamos el manejador aquí también
                     >
                         <div className="flex items-center space-x-2">
                             <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.SEND_TEXT]}>
@@ -1096,7 +1450,7 @@ const ChatInterface = () => {
                                     }}
                                 />
                             </AbilityGuard>
-                            <div className="flex space-x-2">
+                            <div className="flex space-x-2 ">
                                 <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.SEND_MEDIA]}>
                                     <div className="relative">
                                         <input
@@ -1127,6 +1481,20 @@ const ChatInterface = () => {
                                         </button>
                                     </div>
                                 </AbilityGuard>
+                                <button
+                                    className={`p-2 rounded-full transition-colors duration-200
+                                        ${isPrivateMessage
+                                            ? 'bg-[#2b95ef] text-white hover:bg-[#1a7fd9]'
+                                            : `bg-[rgb(var(--color-bg-${theme}-secondary))] 
+                                               text-[rgb(var(--color-text-secondary-${theme}))]
+                                               hover:bg-[rgb(var(--input-hover-bg-${theme}))]`}
+                                    active:bg-[rgb(var(--color-primary-${theme}))]`}
+                                    onClick={handleIsPrivate}
+                                    disabled={isChatClosed}
+                                >
+                                    {isPrivateMessage ? <EyeOff size={20} /> : <Eye size={20} />}
+                                </button>
+
                                 <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.SEND_MEDIA]}>
                                     <button
                                         className={`p-2 rounded-full ${isRecording ? 'bg-red-500' : `bg-[rgb(var(--color-bg-${theme}-secondary))]`}
@@ -1159,6 +1527,7 @@ const ChatInterface = () => {
                                         <Send size={20} />
                                     )}
                                 </button>
+
                             </div>
                         </div>
 

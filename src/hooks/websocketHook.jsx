@@ -6,36 +6,130 @@ const WebSocketHook = () => {
     const { setCodigoQR } = useContext(ConnectionQR);
     const { setIsConnected } = useContext(ConnectionInfo);
     const { setMessageData } = useContext(WebSocketMessage);
-    
-    // Referencia para rastrear el último mensaje procesado
+
     const lastMessageRef = useRef(null);
 
     useEffect(() => {
         let conn;
         let reconnectTimeout;
-        
+
         const userDataString = GetCookieItem("userData");
-        
         if (!userDataString) {
             console.error("No se encontró userData en las cookies");
             return;
         }
-        
+
         const userData = JSON.parse(userDataString);
         const userId = userData.id;
+        const abilities = userData.abilities || [];
         
         if (!userId) {
             console.error("No se encontró ID de usuario en las cookies");
             return;
         }
 
-        const connectWebSocket = () => {
-            // Limpiar timeout previo si existe
-            if (reconnectTimeout) {
-                clearTimeout(reconnectTimeout);
+        // Verificar si el usuario tiene permisos para ver todos los chats
+        const canViewAllChats = abilities.includes("chats.filter.agent");
+
+        const normalizeMessage = (data) => {
+            console.log("Normalizando mensaje:", data);
+            // Si es una actualización de ACK
+            if (data.id_wp && !data.body) {
+                return {
+                    id: data.id_message_wp || data.id,
+                    ack: data.ack,
+                    type: 'ack',
+                    chat_id: data.chat_id,
+                    user_id: data.user_id
+                };
             }
-            
-            // Cerrar conexión previa si existe
+
+            const baseMessage = {
+                id: data.id_message_wp || data.id || Date.now().toString(),
+                body: data.body || '',
+                from_me: data.from_me === true || data.from_me === "true",
+                chat_id: data.chat_id,
+                number: data.number,
+                timestamp: data.timestamp
+                    ? (typeof data.timestamp === 'number'
+                        ? new Date(data.timestamp * 1000).toISOString()
+                        : data.timestamp)
+                    : new Date().toISOString(),
+                created_at: data.created_at || new Date().toISOString(),
+                is_private: data.is_private || 0,
+                user_id: data.user_id || null,
+                ack: data.ack || 0,
+                temp_signature: data.temp_signature || null
+            };
+
+            if (data.media_type === 'audio' || data.media_type === 'ptt') {
+                return {
+                    ...baseMessage,
+                    media_type: data.media_type,
+                    filename: data.filename,
+                    media_url: data.filename || '',
+                    filetype: 'audio',
+                    fileformat: data.filename?.split('.').pop() || 'wav'
+                };
+            }
+
+            if (data.media && Array.isArray(data.media) && data.media.length > 0) {
+                const mediaItem = data.media[0];
+                return {
+                    ...baseMessage,
+                    media_type: mediaItem.type || 'chat',
+                    media_url: mediaItem.filename || '',
+                    filename: mediaItem.filename || '',
+                    filetype: mediaItem.type || '',
+                    fileformat: mediaItem.filename?.split('.').pop() || '',
+                    caption: mediaItem.caption || data.body || ''
+                };
+            } else if (data.media_type && data.media_type !== 'chat') {
+                return {
+                    ...baseMessage,
+                    media_type: data.media_type,
+                    media_url: data.media_url || '',
+                    filename: data.filename || '',
+                    filetype: data.filetype || data.media_type,
+                    fileformat: data.fileformat || '',
+                };
+            }
+
+            return {
+                ...baseMessage,
+                media_type: 'chat',
+                media_url: '',
+            };
+        };
+
+        // Función para verificar si un mensaje debe ser procesado según los permisos
+        const shouldProcessMessage = (data) => {
+            // Si es información de estado de sesión (CONNECTED/DISCONNECTED), siempre procesar
+            if (data.status || data.estatus) {
+                return true;
+            }
+
+            // Si el usuario puede ver todos los chats, procesar siempre
+            if (canViewAllChats) {
+                return true;
+            }
+
+            // Si no tiene permisos especiales, solo procesar mensajes propios
+            // Verificar tanto user_id del mensaje como del propietario del chat
+            if (data.user_id && data.user_id.toString() === userId.toString()) {
+                return true;
+            }
+
+            // Si el mensaje es de/para un chat asignado al usuario actual
+            if (data.assigned_user_id && data.assigned_user_id.toString() === userId.toString()) {
+                return true;
+            }
+
+            return false;
+        };
+
+        const connectWebSocket = () => {
+            if (reconnectTimeout) clearTimeout(reconnectTimeout);
             if (conn) {
                 try {
                     conn.close();
@@ -53,14 +147,11 @@ const WebSocketHook = () => {
 
             conn.onerror = (error) => {
                 console.error("🔴 Error en WebSocket: ", error);
-                
-                // En caso de error, cerrar y reconectar
                 try {
                     conn.close();
                 } catch (e) {
                     console.error("Error al cerrar conexión WebSocket en error:", e);
-                    }
-                console.log("🔄 Reconectando WebSocket...");
+                }
                 reconnectTimeout = setTimeout(connectWebSocket, 3000);
             };
 
@@ -72,46 +163,32 @@ const WebSocketHook = () => {
             conn.onmessage = (e) => {
                 try {
                     const data = JSON.parse(e.data);
-                    
-                    // Crear un ID único para el mensaje basado en su contenido
-                    const messageId = data.id_message_wp || 
-                                     data.id || 
-                                     `${data.user_id}_${data.status}_${Date.now()}`;
-                    
-                    // Evitar procesar el mismo mensaje múltiples veces
-                    if (lastMessageRef.current === messageId) {
+
+                    const messageId = data.id_message_wp || data.id || `${data.user_id}_${data.status}_${Date.now()}`;
+                    if (lastMessageRef.current === messageId) return;
+                    lastMessageRef.current = messageId;
+
+                    // Verificar si este mensaje debe ser procesado según los permisos
+                    if (!shouldProcessMessage(data)) {
+                        console.log("Mensaje filtrado por permisos:", data);
                         return;
                     }
-                    
-                    lastMessageRef.current = messageId;
-                    
-                    console.log(`📩 Mensaje WebSocket recibido (${messageId}):`, data);
 
-                    // Verificar que el mensaje sea para este usuario
-                    if (data.user_id && data.user_id.toString() === userId.toString()) {
-                        console.log(`✅ Mensaje corresponde al usuario ${userId}`);
-                        
-                        // Manejar mensajes de estado de conexión
+                    if (data.user_id?.toString() === userId.toString()) {
+                        // Estado de sesión - esta lógica se mantiene igual
                         if (data.status === "DISCONNECTED" || data.estatus === "DISCONNECTED") {
-                            console.log("🔌 Usuario desconectado según WebSocket");
-                            
                             setIsConnected({
                                 sesion: false,
                                 name: '',
                                 number: '',
                                 userId
                             });
-                            
-                            // Actualizar código QR si está presente
+
                             if (data.qr_code) {
-                                console.log("🔄 Actualizando código QR:", data.qr_code.substring(0, 20) + "...");
                                 setCodigoQR(data.qr_code);
-                            } else {
-                                console.warn("⚠️ Mensaje de desconexión sin código QR");
                             }
+
                         } else if (data.status === "CONNECTED" || data.estatus === "CONNECTED") {
-                            console.log("🔌 Usuario conectado según WebSocket");
-                            
                             setIsConnected({
                                 sesion: true,
                                 name: data.name || '',
@@ -119,58 +196,32 @@ const WebSocketHook = () => {
                                 userId
                             });
                         }
-
-                        // Enviar el mensaje completo al contexto para que otros componentes puedan usarlo
-                        // Esto es clave - enviamos el mensaje completo incluyendo el QR si existe
-                        setMessageData(data);
-                        
-                        // Si es un mensaje de chat (tiene campo body), procesarlo específicamente
-                        if (data.body) {
-                            console.log("💬 Mensaje de chat recibido");
-                            // Esta parte permanece igual para manejar mensajes de chat
-                            const normalizedMessage = {
-                                id: data.id_message_wp || Date.now().toString(),
-                                body: data.body,
-                                from_me: data.from_me === true || data.from_me === "true",
-                                chat_id: data.chat_id,
-                                number: data.number,
-                                notify_name: data.notify_name,
-                                timestamp: data.timestamp ? new Date(data.timestamp * 1000).toISOString() : new Date().toISOString(),
-                                created_at: data.created_at || new Date().toISOString(),
-                                media_type: data.media_type || 'chat',
-                                media_url: data.media_url || '',
-                                is_private: data.is_private || 0,
-                                user_id: data.user_id || null,
-                            };
-                            // También enviamos el mensaje normalizado
-                            setMessageData(normalizedMessage);
-                        }
-                    } else {
-                        console.log(`⚠️ Mensaje ignorado: usuario ${data.user_id} ≠ ${userId}`);
                     }
+
+                    // Procesar mensaje solo si pasa el filtro de permisos
+                    // Siempre enviar el mensaje original completo
+                    setMessageData(data);
+
+                    // Si hay mensaje o media, normalizar
+                    if (data.body !== undefined || data.media_type || (data.media && data.media.length > 0)) {
+                        const normalizedMessage = normalizeMessage(data);
+                        setMessageData(normalizedMessage);
+                    }
+
                 } catch (err) {
                     console.error("❌ Error procesando mensaje WebSocket:", err);
                 }
             };
         };
 
-        // Iniciar la conexión si tenemos un ID de usuario
         connectWebSocket();
 
-        // Cleanup al desmontar
         return () => {
-            if (reconnectTimeout) {
-                clearTimeout(reconnectTimeout);
-            }
-            
-            if (conn) {
-                console.log("Cerrando conexión WebSocket (componente desmontado)");
-                conn.close();
-            }
+            if (reconnectTimeout) clearTimeout(reconnectTimeout);
+            if (conn) conn.close();
         };
     }, [setCodigoQR, setIsConnected, setMessageData]);
 
-    // Este componente no renderiza nada
     return null;
 };
 

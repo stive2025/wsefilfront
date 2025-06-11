@@ -50,44 +50,33 @@ const ChatTransfer = ({ isOpen, onClose }) => {
 
     const handleTransfer = async (e) => {
         e.preventDefault();
+        if (!selectedAgent) return;
+        
         try {
-          const previousState = selectedChatId.status;
-          const chatElement = document.querySelector(`[data-chat-id="${selectedChatId.id}"]`);
-          
-          // Actualizar estado a PENDING
-          await handleUpdateChat(selectedChatId.id, { state: "PENDING" });
-          
-          // Realizar la transferencia
-          const transferData = {
-            to: selectedAgent.id,
-            is_private: isPrivate,
-            ...(isPrivate && observations.trim() && { body: observations })
-          };
-          await callEndpoint(transferChat(selectedChatId.id, transferData));
-          
-          // Aplicar animación
-          if (chatElement) {
-            chatElement.classList.add('fade-out');
-            await new Promise(resolve => setTimeout(resolve, 300));
-          }
-          
-          // Disparar evento
-          const event = new CustomEvent('chatStateChanged', {
-            detail: {
-              chatId: selectedChatId.id,
-              newState: "PENDING",
-              previousState: previousState,
-              shouldRemove: true
+            // 1. Primero hacer la actualización en el servidor
+            await handleUpdateChat(selectedChatId.id, { state: "PENDING" });
+            await callEndpoint(transferChat(selectedChatId.id, {
+                to: selectedAgent.id,
+                is_private: isPrivate,
+                ...(isPrivate && observations.trim() && { body: observations })
+            }));
+
+            // 2. Encontrar y animar el elemento del chat
+            const chatElement = document.querySelector(`[data-chat-id="${selectedChatId.id}"]`);
+            if (chatElement) {
+                chatElement.style.animation = 'slideOutAndFade 0.3s ease-out forwards';
+                
+                // 3. Esperar a que termine la animación antes de ocultarlo
+                await new Promise(resolve => setTimeout(resolve, 300));
+                chatElement.style.display = 'none';
             }
-          });
-          window.dispatchEvent(event);
-          
-          setSelectedChatId(null);
-          onClose();
-          toast.success("Chat transferido exitosamente");
+
+            setSelectedChatId(null);
+            onClose();
+            toast.success("Chat transferido exitosamente");
         } catch (error) {
-          toast.error("Error al transferir el chat");
-          console.error("Error:", error);
+            toast.error("Error al transferir el chat");
+            console.error("Error:", error);
         }
     };
 

@@ -3,7 +3,7 @@ import { loadAbort } from "../hooks/fechAndload.jsx";
 
 const getChatList = (params = {}) => {
   const abortController = loadAbort();
-  
+  console.log("params", params);
   // Construir la URL con los parámetros
   let endpoint = "chats";
   const queryParams = new URLSearchParams();
@@ -12,29 +12,29 @@ const getChatList = (params = {}) => {
   if (params.page) {
     queryParams.append('page', params.page);
   }
-  
   // Agregar filtro por nombre si existe
   if (params.name) {
     queryParams.append('name', params.name);
   }
-  
-  // Agregar filtro por etiqueta si existe
+   if (params.phone) {
+    queryParams.append('phone', params.phone);
+  }
+   // Agregar filtro por etiqueta si existe
   if (params.id_tag) {
     queryParams.append('tag_id', params.id_tag);
   }
-  
   // Agregar filtro por agente si existe
   if (params.agent_id) {
     queryParams.append('user_id', params.agent_id);
     console.log("params.agent_id", queryParams);
   }
-
   if (params.state) {
     queryParams.append('state', params.state);
   }
   
   // Añadir los parámetros a la URL si existen
   const queryString = queryParams.toString();
+  console.log("queryString", queryString);
   if (queryString) {
     endpoint = `${endpoint}?${queryString}`;
   }
@@ -45,10 +45,10 @@ const getChatList = (params = {}) => {
   };
 };
 
-const getChat = (chatId) => {
+const getChat = (chatId, page = 1) => {
   const abortController = loadAbort();
   return {
-    call: CustomFetch(`chats/${chatId}`, {
+    call: CustomFetch(`chats/${chatId}?page=${page}`, {
       signal: abortController.controller.signal,
     }),
     abortController,

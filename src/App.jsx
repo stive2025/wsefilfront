@@ -92,7 +92,7 @@ function App() {
 
   // Filtros
   const [agentSelected, setAgentSelected] = useState(null);
-  const [stateSelected, setStateSelected] = useState(0);
+  const [stateSelected, setStateSelected] = useState('OPEN');
   const [tagSelected, setTagSelected] = useState(0);
   return (
     <ThemeProvider>

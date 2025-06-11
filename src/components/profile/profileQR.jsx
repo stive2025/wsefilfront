@@ -243,8 +243,7 @@ const ProfileQR = () => {
             </div>
           ) : codigoQR ? (
             <div className={`
-              border-6 flex flex-col items-center
-              ${theme === 'light' ? 'border-[rgb(var(--color-primary-light))]' : 'border-[rgb(var(--color-primary-dark))]'}
+              border-14 flex flex-col items-center bg-white rounded-lg p-4
             `}>
               <QRCodeCanvas
                 value={codigoQR}
