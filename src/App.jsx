@@ -19,7 +19,7 @@ import {
   // 📌 Contextos de interfaz del chat
   ChatInterfaceClick, SearchInChatClick, NewMessage,
 
-  // 📌 Contextos relacionados con información de contacto y agentes
+ // 📌 Contextos relacionados con información de contacto y agentes
   ContactInfoClick, ContactHandle, NewContactForm, UpdateContactForm,
   NewAgentForm, UpdateAgentForm, AgentHandle,
 
@@ -67,7 +67,7 @@ function App() {
   const [agentNew, setAgentNew] = useState(null);
   const [agentFind, setAgentFind] = useState(null);
   const [agentHandle, setAgentHandle] = useState(null);
-  const [tempIdChat, setTempIdChat] = useState(null);
+  const [tempIdChat, setTempIdChat] = useState(null); 
 
 
   // 📌 Estados relacionados con etiquetas (Tags)
