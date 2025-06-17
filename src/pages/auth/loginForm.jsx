@@ -101,7 +101,7 @@ const LoginForm = () => {
           </div>
 
           {/* Imagen */}
-          <div className="ml-8 flex drop-shadow-[-7px_15px_5px_rgba(0,0,0,0.3)] hidden md:block">
+          <div className="ml-8 hidden drop-shadow-[-7px_15px_5px_rgba(0,0,0,0.3)] md:block">
             <img
               src="./images/log_in.png"
               alt="CRM SEFIL"
