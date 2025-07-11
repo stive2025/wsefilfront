@@ -98,10 +98,12 @@ const InputArea = ({
                 : "bg-[rgb(var(--color-bg-light-secondary))]",
             theme === 'dark'
               ? "hover:bg-[rgb(var(--input-hover-bg-dark))] active:bg-[rgb(var(--color-primary-dark))] text-[rgb(var(--color-text-secondary-dark))] hover:text-[rgb(var(--color-primary-dark))]"
-              : "hover:bg-[rgb(var(--input-hover-bg-light))] active:bg-[rgb(var(--color-primary-light))] text-[rgb(var(--color-text-secondary-light))] hover:text-[rgb(var(--color-primary-light))]"
+              : "hover:bg-[rgb(var(--input-hover-bg-light))] active:bg-[rgb(var(--color-primary-light))] text-[rgb(var(--color-text-secondary-light))] hover:text-[rgb(var(--color-primary-light))]",
+            (isChatClosed || recordedAudio) && "opacity-50 cursor-not-allowed"
           )}
           onClick={handleMicClick}
-          disabled={isChatClosed}
+          disabled={isChatClosed || recordedAudio}
+          title={recordedAudio ? "Ya existe un audio grabado" : "Grabar audio"}
         >
           <Mic size={20} />
         </button>
