@@ -25,6 +25,11 @@ import { getUserLabelColors } from "@/utils/getUserLabelColors";
 
 
 const ChatInterface = () => {
+    // ... estados existentes ...
+    const [recordingTime, setRecordingTime] = useState(0); // segundos transcurridos
+    const recordingIntervalRef = useRef(null);
+    const MAX_RECORDING_TIME = 180; // 3 minutos
+
 
 
 
@@ -101,6 +106,9 @@ const ChatInterface = () => {
                 record_stream.stop();
                 setIsRecording(false);
             }
+            // Limpiar barra y tiempo
+            clearInterval(recordingIntervalRef.current);
+            setRecordingTime(0);
         } else {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -109,13 +117,28 @@ const ChatInterface = () => {
                 recorder.start();
                 setStream(recorder);
                 setIsRecording(true);
+                setRecordingTime(0);
+
+                // Iniciar intervalo para actualizar el tiempo
+                recordingIntervalRef.current = setInterval(() => {
+                    setRecordingTime(prev => {
+                        if (prev + 1 >= MAX_RECORDING_TIME) {
+                            // Detener grabación automáticamente
+                            if (recorder.state === 'recording') {
+                                recorder.stop();
+                                setIsRecording(false);
+                            }
+                            clearInterval(recordingIntervalRef.current);
+                            return MAX_RECORDING_TIME;
+                        }
+                        return prev + 1;
+                    });
+                }, 1000);
 
                 const blobToBase64 = (blob) => {
                     return new Promise((resolve, reject) => {
                         const reader = new FileReader();
-                        reader.onloadend = () => {
-                            resolve(reader.result);
-                        };
+                        reader.onloadend = () => resolve(reader.result);
                         reader.onerror = reject;
                         reader.readAsDataURL(blob);
                     });
@@ -126,18 +149,22 @@ const ChatInterface = () => {
                     const audioUrl = URL.createObjectURL(e.data);
                     const fileName = `audio_${new Date().toISOString()}.${getExtension(recorder.mimeType)}`;
 
-
                     setRecordedAudio({
                         blob: e.data,
                         url: audioUrl,
                         name: fileName,
                         base64: base64
                     });
+                    // Limpiar barra y tiempo
+                    clearInterval(recordingIntervalRef.current);
+                    setRecordingTime(0);
                 });
 
             } catch (error) {
                 console.error("Error accessing microphone:", error);
                 alert("Couldn't access microphone. Please check permissions.");
+                clearInterval(recordingIntervalRef.current);
+                setRecordingTime(0);
             }
         }
     };
@@ -1107,6 +1134,12 @@ const ChatInterface = () => {
         });
     };
 
+    function formatTime(secs) {
+        const m = Math.floor(secs / 60).toString().padStart(2, '0');
+        const s = (secs % 60).toString().padStart(2, '0');
+        return `${m}:${s}`;
+    }
+
     if (shouldShowChat && isLoading) {
         return (
             <div className={`flex flex-col h-screen w-full 
@@ -1120,6 +1153,13 @@ const ChatInterface = () => {
                 </p>
             </div>
         );
+    }
+
+    // --- UI para la barra de progreso de grabación ---
+    function formatTime(secs) {
+        const m = Math.floor(secs / 60).toString().padStart(2, '0');
+        const s = (secs % 60).toString().padStart(2, '0');
+        return `${m}:${s}`;
     }
 
     return (
@@ -1472,6 +1512,23 @@ const ChatInterface = () => {
                                     >
                                         <Mic size={20} />
                                     </button>
+                                    {isRecording && (
+                                        <div className="w-52 max-w-full flex flex-col items-center mt-2">
+                                            <div className="flex justify-between text-xs w-full mb-1">
+                                                <span className="font-mono text-teal-700">{formatTime(recordingTime)}</span>
+                                                <span className="font-mono text-gray-400">/ {formatTime(MAX_RECORDING_TIME)}</span>
+                                            </div>
+                                            <div className="w-full h-2 bg-gray-200 rounded">
+                                                <div
+                                                    className="h-2 bg-teal-500 rounded transition-all"
+                                                    style={{ width: `${Math.min(100, (recordingTime / MAX_RECORDING_TIME) * 100)}%` }}
+                                                />
+                                            </div>
+                                            {recordingTime === MAX_RECORDING_TIME && (
+                                                <div className="text-xs text-red-600 mt-1 text-center">Tiempo máximo alcanzado</div>
+                                            )}
+                                        </div>
+                                    )}
                                 </AbilityGuard>
                                 <button
                                     className={`p-2 rounded-full
