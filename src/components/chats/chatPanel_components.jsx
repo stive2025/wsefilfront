@@ -126,12 +126,6 @@ const ChatInterface = () => {
                     const audioUrl = URL.createObjectURL(e.data);
                     const fileName = `audio_${new Date().toISOString()}.${getExtension(recorder.mimeType)}`;
 
-                    console.log('Audio grabado:', {
-                        blobUrl: audioUrl,
-                        fileName: fileName,
-                        mimeType: recorder.mimeType,
-                        blobSize: e.data.size
-                    });
 
                     setRecordedAudio({
                         blob: e.data,
@@ -152,7 +146,6 @@ const ChatInterface = () => {
     const handleIsPrivate = () => {
         setIsPrivateMessage(prev => !prev);
         toast.success(`Mensaje ${!isPrivateMessage ? 'privado' : 'público'} activado`);
-        console.log('Estado mensaje privado:', !isPrivateMessage); // Para debug
     }
 
     const getExtension = (mimeType) => {
@@ -160,7 +153,6 @@ const ChatInterface = () => {
     };
 
     const handleMediaError = (element, type) => {
-        console.log(element, type, 'Error loading media:', element.src);
         // Intentar cargar desde la URL del servidor si falló la carga local
         if (!element.src.includes(SERVER_URL) && element.src.includes('/')) {
             const filename = element.src.split('/').pop();
@@ -313,7 +305,6 @@ const ChatInterface = () => {
                 (messageData.ack !== undefined && !messageData.body && !messageData.media_type);
 
             if (isAckUpdate) {
-                console.log('Actualizando ACK para mensaje:', messageData);
                 setChatMessages(prevMessages => {
                     if (!prevMessages) return [];
 
@@ -477,10 +468,9 @@ const ChatInterface = () => {
 
     // Funciones para archivos multimedia
     const checkTotalMediaSize = (newFiles) => {
+        // Solo sumar archivos seleccionados, NO el audio grabado
         let currentTotalSize = selectedFiles.reduce((total, file) => total + file.file.size, 0);
-        if (recordedAudio) {
-            currentTotalSize += recordedAudio.blob.size;
-        }
+        // No sumar el tamaño de recordedAudio
         const newTotalSize = currentTotalSize + newFiles.reduce((total, file) => total + file.size, 0);
         return newTotalSize <= FILE_SIZE_LIMIT;
     };
@@ -911,13 +901,6 @@ const ChatInterface = () => {
                 };
             }
 
-
-
-            // Agregar log para verificar el payload
-            console.log('Enviando mensaje con payload:', {
-                ...messagePayload,
-            });
-
             // Procesar archivos
             if (filesToSend.length > 0 || audioToSend) {
                 const mediaItems = [];
@@ -928,12 +911,6 @@ const ChatInterface = () => {
                         const reader = new FileReader();
                         reader.readAsDataURL(file);
                         reader.onload = () => {
-                            // El resultado ya incluye el encabezado data:mimetype;base64,
-                            console.log('Archivo convertido a base64:', {
-                                fileName: file.name,
-                                mimeType: file.type,
-                                base64Preview: reader.result.substring(0, 50) + '...' // Log solo el inicio para debug
-                            });
                             resolve(reader.result); // Enviamos el base64 completo con encabezado
                         };
                         reader.onerror = reject;
@@ -943,11 +920,6 @@ const ChatInterface = () => {
                 // Procesar archivos seleccionados
                 for (const fileObj of filesToSend) {
                     const base64Data = await fileToBase64(fileObj.file);
-                    console.log('Procesando archivo:', {
-                        type: fileObj.type,
-                        mimeType: fileObj.file.type,
-                        fileName: fileObj.file.name
-                    });
 
                     mediaItems.push({
                         type: fileObj.type,
@@ -960,11 +932,13 @@ const ChatInterface = () => {
 
                 // Procesar audio grabado
                 if (audioToSend) {
-                    console.log('Procesando audio:', {
+                    console.log('Bandera Procesando audio:', {
                         type: 'audio',
                         mimeType: 'audio/webm',
                         fileName: audioToSend.name
                     });
+                    // Log del base64 del audio (solo preview)
+                    console.log('Base64 del audio (preview):\n', audioToSend.base64 ,'\n\n...');
 
                     mediaItems.push({
                         type: 'audio',
@@ -976,14 +950,6 @@ const ChatInterface = () => {
                 }
 
                 if (mediaItems.length > 0) {
-                    console.log('Enviando archivos multimedia:',
-                        mediaItems.map(item => ({
-                            type: item.type,
-                            mediaType: item.media_type,
-                            filename: item.filename,
-                            hasBase64Header: item.media.startsWith('data:')
-                        }))
-                    );
                     messagePayload.media = JSON.stringify(mediaItems);
                 }
             }
@@ -993,7 +959,6 @@ const ChatInterface = () => {
                 : sendMessage(messagePayload, progress => setUploadProgress(progress));
 
             // 4. (sin cambios) dispara la petición y actualiza el mensaje temporal
-            console.log("Payload a enviar:", messagePayload);
             const response = await callEndpoint({ call, abortController });
             if (response) {
                 // Actualizar mensaje temporal con datos del servidor

@@ -73,7 +73,6 @@ const CustomMessageForm = () => {
 
         try {
           const response = await callEndpoint(createCustomMessage(formCustomData));
-          console.log("Mensaje personalizado creado ", response);
           setSuccess("Mensaje personalizado creado con éxito");
           setCustomHandle(true);
          
@@ -101,7 +100,6 @@ const CustomMessageForm = () => {
 
         try {
           const response = await callEndpoint(updateCustomMessage(idCustom, formCustomData));
-          console.log("Mensaje personalizado actualizado ", response);
           setSuccess("Mensaje personalizado actualizado con éxito");
           setCustomHandle(true);
           setCustomFind(null);

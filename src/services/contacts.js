@@ -7,7 +7,6 @@ const getContacts = (params = {}) => {
   // Construir la URL con los parámetros
   let endpoint = "contacts";
   const queryParams = new URLSearchParams();
-  console.log("Params:", queryParams);
 
   // Si hay búsqueda por nombre, solo usamos ese parámetro
   if (params.name) {
@@ -22,10 +21,8 @@ const getContacts = (params = {}) => {
 
   // Añadir los parámetros a la URL si existen
   const queryString = queryParams.toString();
-  console.log("Query String:", queryString);
   if (queryString) {
     endpoint = `${endpoint}?${queryString}`;
-    console.log("Endpoint with Query String:", endpoint);
   }
 
   return {
@@ -45,7 +42,6 @@ const getContact = (contactId) => {
 };
 
 const createContact = (contactData) => {
-  console.log("Creating contact with data:", contactData);
   const abortController = loadAbort();
   return {
     call: CustomFetch("contacts", {

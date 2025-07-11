@@ -26,7 +26,6 @@ const ChatTransfer = ({ isOpen, onClose }) => {
     const handleUpdateChat = async (idChat, dataChat) => {
         try {
           const response = await callEndpoint(updateChat(idChat, dataChat), `update_chat_${idChat}`);
-          console.log("Chat actualizado ", response);
         } catch (error) {
           console.error("Error actualizando chat ", error);
         }

@@ -124,8 +124,6 @@ const NewContact = () => {
   // Efecto para cargar datos de contacto en modo edición
   useEffect(() => {
     if (contactFind && countries.length > 0) {
-      console.log("Contacto a editar ", contactFind);
-
       // Verificar el estado de count_edits
       const currentCountEdits = contactFind.count_edits || 0;
       setCountEdits(currentCountEdits);

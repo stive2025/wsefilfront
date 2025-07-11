@@ -44,7 +44,6 @@ const Navtopbar = () => {
         onClick={() => {
           setStateSelected(item.key);
           setActiveItem(item.key);
-          console.log(item.key);
         }}
         className={`
           flex items-center gap-2 cursor-pointer rounded-full p-2 transition-colors duration-200

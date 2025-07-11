@@ -66,7 +66,6 @@ const ProfileQR = () => {
 
       const apiCall = getCodigoQR();
       const response = await callEndpoint(apiCall);
-      console.log("Response inicial:", response);
 
       if (response?.data?.user_id?.toString() === userId.toString()) {
         if (response.data.status === "CONNECTED") {
@@ -86,7 +85,6 @@ const ProfileQR = () => {
 
           // Si no está conectado y hay un código QR, actualizarlo
           if (response.data.qr_code) {
-            console.log("Estableciendo código QR inicial:", response.data.qr_code.substring(0, 20) + "...");
             setCodigoQR(response.data.qr_code);
           }
         }
@@ -110,13 +108,10 @@ const ProfileQR = () => {
       return;
     }
 
-    console.log("🔍 ProfileQR: Procesando nuevo mensaje WebSocket:", messageData);
-
     const userId = getCurrentUserId();
     userIdRef.current = userId;
 
     if (!userId) {
-      console.error("❌ No se pudo obtener el ID de usuario al procesar mensaje WebSocket");
       return;
     }
 
@@ -124,13 +119,9 @@ const ProfileQR = () => {
       // Marcar este mensaje como procesado
       processedMessageRef.current[messageId] = true;
 
-      console.log("👤 Mensaje WebSocket para este usuario. Status:", messageData.status || messageData.estatus);
-
-      // Verificar tanto status como estatus (ambos formatos se usan en tu sistema)
       const status = messageData.status || messageData.estatus;
 
       if (status === "DISCONNECTED") {
-        console.log("🔌 Usuario desconectado - Actualizando estado");
         setIsConnected({
           sesion: false,
           name: '',
@@ -139,19 +130,15 @@ const ProfileQR = () => {
         });
 
         if (messageData.qr_code) {
-          console.log("🔄 Actualizando QR desde WebSocket:", messageData.qr_code.substring(0, 20) + "...");
           setCodigoQR(messageData.qr_code);
 
-          // Forzar una actualización del estado para asegurar el re-renderizado
           setTimeout(() => {
-            console.log("⏱️ Verificando estado del QR después de actualización");
             console.log("QR actual:", codigoQR ? "Presente" : "No disponible");
           }, 100);
         } else {
           console.warn("⚠️ Mensaje de desconexión sin código QR");
         }
       } else if (status === "CONNECTED") {
-        console.log("🔌 Usuario conectado - Actualizando estado");
         setIsConnected({
           sesion: true,
           name: messageData.name || '',
@@ -159,27 +146,24 @@ const ProfileQR = () => {
           userId
         });
       }
-    } else {
-      console.log(`⚠️ Mensaje ignorado: usuario ${messageData.user_id} ≠ ${userId}`);
     }
   }, [messageData, setIsConnected, setCodigoQR, codigoQR]);
 
   // Efecto para la verificación inicial cuando se abre el panel
   useEffect(() => {
     if (profileInfoOpen) {
-      console.log("Panel de perfil abierto, verificando conexión inicial");
       checkInitialConnection();
     }
   }, [profileInfoOpen]);
 
-  // Debug efecto para monitorear cambios en codigoQR
-  useEffect(() => {
-    if (codigoQR) {
-      console.log("Estado de codigoQR actualizado:", codigoQR.substring(0, 20) + "...");
-    } else {
-      console.log("Estado de codigoQR: null o vacío");
-    }
-  }, [codigoQR]);
+  // // Debug efecto para monitorear cambios en codigoQR
+  // useEffect(() => {
+  //   if (codigoQR) {
+  //     console.log("Estado de codigoQR actualizado:", codigoQR.substring(0, 20) + "...");
+  //   } else {
+  //     console.log("Estado de codigoQR: null o vacío");
+  //   }
+  // }, [codigoQR]);
 
   return (
     <WebSocketMessage.Provider value={{ messageData, setMessageData }}>
