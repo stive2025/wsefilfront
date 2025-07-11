@@ -1383,6 +1383,7 @@ const ChatInterface = () => {
                             sendingMessage={sendingMessage}
                             recordingTime={recordingTime}
                             MAX_RECORDING_TIME={MAX_RECORDING_TIME}
+                            recordedAudio={recordedAudio}
                         />
                         {/* Progress Bar */}
                         {uploadProgress > 0 && uploadProgress < 100 && (

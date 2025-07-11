@@ -19,7 +19,8 @@ const InputArea = ({
   isChatClosed,
   sendingMessage,
   recordingTime,
-  MAX_RECORDING_TIME
+  MAX_RECORDING_TIME,
+  recordedAudio
 }) => {
   const { theme } = useTheme();
 
@@ -106,13 +107,23 @@ const InputArea = ({
         </button>
         <button
           className={clsx(
-            "p-2 rounded-full disabled:opacity-50",
+            "p-2 rounded-full",
             theme === 'dark'
               ? "bg-[rgb(var(--color-primary-dark))] hover:bg-[rgb(var(--color-secondary-dark))] text-[rgb(var(--color-text-primary-dark))]"
-              : "bg-[rgb(var(--color-primary-light))] hover:bg-[rgb(var(--color-secondary-light))] text-[rgb(var(--color-text-primary-light))]"
+              : "bg-[rgb(var(--color-primary-light))] hover:bg-[rgb(var(--color-secondary-light))] text-[rgb(var(--color-text-primary-light))]",
+            (isChatClosed || isRecording || (messageText.trim() === "" && selectedFiles.length === 0 && (!recordedAudio || recordedAudio === null)) || sendingMessage) && "opacity-50 cursor-not-allowed"
           )}
           onClick={handleSendMessage}
-          disabled={isChatClosed || (messageText.trim() === "" && selectedFiles.length === 0) || sendingMessage}
+          disabled={
+            isChatClosed ||
+            isRecording ||
+            (
+              messageText.trim() === "" &&
+              selectedFiles.length === 0 &&
+              (!recordedAudio || recordedAudio === null)
+            ) ||
+            sendingMessage
+          }
         >
           {sendingMessage ? <Loader size={20} className="animate-spin" /> : <Send size={20} />}
         </button>
