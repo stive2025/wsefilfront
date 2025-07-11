@@ -1,6 +1,8 @@
 import React from "react";
 import { Mic, Paperclip, Eye, EyeOff, Loader, Send } from "lucide-react";
 import AudioRecorderBar from "./AudioRecorderBar";
+import { useTheme } from "@/contexts/themeContext";
+import clsx from "clsx";
 
 const InputArea = ({
   messageText,
@@ -19,13 +21,20 @@ const InputArea = ({
   recordingTime,
   MAX_RECORDING_TIME
 }) => {
+  const { theme } = useTheme();
+
   return (
     <div className="flex items-center space-x-2">
       <textarea
         value={messageText}
         onChange={e => setMessageText(e.target.value)}
         placeholder={isChatClosed ? "Chat cerrado" : "Escribe un mensaje..."}
-        className="flex-1 bg-[rgb(var(--color-bg-light))] text-[rgb(var(--color-text-primary-light))] rounded-lg p-3 resize-none outline-none scrollbar-hide h-[40px] min-h-[40px] max-h-[120px] leading-[20px]"
+        className={clsx(
+          "flex-1 rounded-lg p-3 resize-none outline-none scrollbar-hide h-[40px] min-h-[40px] max-h-[120px] leading-[20px]",
+          theme === 'dark'
+            ? "bg-[rgb(var(--color-bg-dark))] text-[rgb(var(--color-text-primary-dark))] placeholder-[rgb(var(--color-text-secondary-dark))] hover:bg-[rgb(var(--input-hover-bg-dark))] focus:border-[rgb(var(--input-focus-border-dark))]"
+            : "bg-[rgb(var(--color-bg-light))] text-[rgb(var(--color-text-primary-light))] placeholder-[rgb(var(--color-text-secondary-light))] hover:bg-[rgb(var(--input-hover-bg-light))] focus:border-[rgb(var(--input-focus-border-light))]"
+        )}
         style={{ overflow: messageText ? 'auto' : 'hidden' }}
         disabled={isChatClosed}
         onKeyDown={e => {
@@ -47,7 +56,12 @@ const InputArea = ({
             key={selectedFiles.length}
           />
           <button
-            className="p-2 rounded-full bg-[rgb(var(--color-bg-light-secondary))] hover:bg-[rgb(var(--input-hover-bg-light))] active:bg-[rgb(var(--color-primary-light))] text-[rgb(var(--color-text-secondary-light))] hover:text-[rgb(var(--color-primary-light))]"
+            className={clsx(
+              "p-2 rounded-full",
+              theme === 'dark'
+                ? "bg-[rgb(var(--color-bg-dark-secondary))] hover:bg-[rgb(var(--input-hover-bg-dark))] active:bg-[rgb(var(--color-primary-dark))] text-[rgb(var(--color-text-secondary-dark))] hover:text-[rgb(var(--color-primary-dark))]"
+                : "bg-[rgb(var(--color-bg-light-secondary))] hover:bg-[rgb(var(--input-hover-bg-light))] active:bg-[rgb(var(--color-primary-light))] text-[rgb(var(--color-text-secondary-light))] hover:text-[rgb(var(--color-primary-light))]"
+            )}
             onClick={handlePaperclipClick}
             disabled={isChatClosed}
           >
@@ -60,21 +74,43 @@ const InputArea = ({
           </button>
         </div>
         <button
-          className={`p-2 rounded-full transition-colors duration-200 ${isPrivateMessage ? 'bg-[#2b95ef] text-white hover:bg-[#1a7fd9]' : 'bg-[rgb(var(--color-bg-light-secondary))] text-[rgb(var(--color-text-secondary-light))] hover:bg-[rgb(var(--input-hover-bg-light))]'}`}
+          className={clsx(
+            "p-2 rounded-full transition-colors duration-200",
+            isPrivateMessage
+              ? "bg-[#2b95ef] text-white hover:bg-[#1a7fd9]"
+              : theme === 'dark'
+                ? "bg-[rgb(var(--color-bg-dark-secondary))] text-[rgb(var(--color-text-secondary-dark))] hover:bg-[rgb(var(--input-hover-bg-dark))]"
+                : "bg-[rgb(var(--color-bg-light-secondary))] text-[rgb(var(--color-text-secondary-light))] hover:bg-[rgb(var(--input-hover-bg-light))]"
+          )}
           onClick={handleIsPrivate}
           disabled={isChatClosed}
         >
           {isPrivateMessage ? <EyeOff size={20} /> : <Eye size={20} />}
         </button>
         <button
-          className={`p-2 rounded-full ${isRecording ? 'bg-red-500' : 'bg-[rgb(var(--color-bg-light-secondary))]'} hover:bg-[rgb(var(--input-hover-bg-light))] active:bg-[rgb(var(--color-primary-light))] text-[rgb(var(--color-text-secondary-light))] hover:text-[rgb(var(--color-primary-light))]`}
+          className={clsx(
+            "p-2 rounded-full",
+            isRecording
+              ? "bg-red-500"
+              : theme === 'dark'
+                ? "bg-[rgb(var(--color-bg-dark-secondary))]"
+                : "bg-[rgb(var(--color-bg-light-secondary))]",
+            theme === 'dark'
+              ? "hover:bg-[rgb(var(--input-hover-bg-dark))] active:bg-[rgb(var(--color-primary-dark))] text-[rgb(var(--color-text-secondary-dark))] hover:text-[rgb(var(--color-primary-dark))]"
+              : "hover:bg-[rgb(var(--input-hover-bg-light))] active:bg-[rgb(var(--color-primary-light))] text-[rgb(var(--color-text-secondary-light))] hover:text-[rgb(var(--color-primary-light))]"
+          )}
           onClick={handleMicClick}
           disabled={isChatClosed}
         >
           <Mic size={20} />
         </button>
         <button
-          className="p-2 rounded-full bg-[rgb(var(--color-primary-light))] hover:bg-[rgb(var(--color-secondary-light))] text-[rgb(var(--color-text-primary-light))] disabled:opacity-50"
+          className={clsx(
+            "p-2 rounded-full disabled:opacity-50",
+            theme === 'dark'
+              ? "bg-[rgb(var(--color-primary-dark))] hover:bg-[rgb(var(--color-secondary-dark))] text-[rgb(var(--color-text-primary-dark))]"
+              : "bg-[rgb(var(--color-primary-light))] hover:bg-[rgb(var(--color-secondary-light))] text-[rgb(var(--color-text-primary-light))]"
+          )}
           onClick={handleSendMessage}
           disabled={isChatClosed || (messageText.trim() === "" && selectedFiles.length === 0) || sendingMessage}
         >
