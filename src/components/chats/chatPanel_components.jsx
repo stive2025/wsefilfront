@@ -1,4 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import MediaPreview from "./chat_panel_components/MediaPreview";
+import AudioRecorderBar from "./chat_panel_components/AudioRecorderBar";
+import InputArea from "./chat_panel_components/InputArea";
+import MessageList from "./chat_panel_components/MessageList";
+import EmptyState from "./chat_panel_components/EmptyState";
+import { formatTime } from "./chat_panel_components/utils";
 import {
     Send, Search, MessageSquareShare, SquarePlus,
     Mic, Paperclip, X, ArrowLeft, File,
@@ -965,7 +971,7 @@ const ChatInterface = () => {
                         fileName: audioToSend.name
                     });
                     // Log del base64 del audio (solo preview)
-                    console.log('Base64 del audio (preview):\n', audioToSend.base64 ,'\n\n...');
+                    console.log('Base64 del audio (preview):\n', audioToSend.base64, '\n\n...');
 
                     mediaItems.push({
                         type: 'audio',
@@ -1115,7 +1121,7 @@ const ChatInterface = () => {
         imageItems.forEach(imageItem => {
             // Obtener el blob directamente sin crear un nuevo File
             const blob = imageItem.getAsFile();
-            
+
             // Validar tamaño
             if (blob.size > FILE_SIZE_LIMIT) {
                 toast.error('La imagen excede el límite de 2MB');
@@ -1296,82 +1302,21 @@ const ChatInterface = () => {
                     )}
 
                     {/* Messages Area */}
-                    <div
-                        ref={messagesContainerRef}
-                        className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-hide"
-                        style={{
-                            backgroundImage: theme === 'dark'
-                                ? "url('https://i.pinimg.com/736x/cd/3d/62/cd3d628f57875af792c07d6ad262391c.jpg')"
-                                : "url('https://i.pinimg.com/originals/2b/45/cf/2b45cff1cf6a03a91a7e7fdb9c9fbd5a.jpg')",
-                            backgroundSize: 'cover',
-                            backgroundRepeat: 'no-repeat',
-                            backgroundPosition: 'center'
-                        }}
-                    >
-                        {isLoading && (
-                            <div className="flex justify-center py-4">
-                                <Loader className="animate-spin" size={20} />
-                            </div>
-                        )}
-
-                        {isNewChat && !hasMessages ? (
-                            <div className="flex flex-col justify-center items-center h-full opacity-50">
-                                <p>Nuevo chat con {selectedChatId.name || selectedChatId.number}</p>
-                                <p className="text-sm mt-2">Escribe tu primer mensaje</p>
-                            </div>
-                        ) : (
-                            renderMessagesWithDateSeparators()
-                        )}
-                    </div>
+                    <MessageList
+                        isLoading={isLoading}
+                        isNewChat={isNewChat}
+                        hasMessages={hasMessages}
+                        renderMessagesWithDateSeparators={renderMessagesWithDateSeparators}
+                        selectedChatId={selectedChatId}
+                    />
 
                     {/* Preview de archivos y audio seleccionados */}
-                    {(selectedFiles.length > 0 || recordedAudio) && (
-                        <div className="px-4 py-2 bg-gray-800 border-t border-gray-700">
-                            <div className="text-sm text-gray-400 mb-2">Archivos adjuntos:</div>
-                            <div className="flex flex-wrap gap-2">
-                                {selectedFiles.map((file, index) => (
-                                    <div key={index} className="relative">
-                                        {file.type === 'image' ? (
-                                            <img
-                                                src={file.previewUrl}
-                                                className="h-16 w-16 object-cover rounded"
-                                                alt="Preview"
-                                            />
-                                        ) : (
-                                            <div className="h-16 w-16 bg-gray-700 rounded flex items-center justify-center">
-                                                {file.type === 'audio' ? (
-                                                    <Volume2 size={24} />
-                                                ) : file.type === 'video' ? (
-                                                    <PlayCircle size={24} />
-                                                ) : (
-                                                    <File size={24} />
-                                                )}
-                                            </div>
-                                        )}
-                                        <button
-                                            onClick={() => removeFile(index)}
-                                            className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1"
-                                        >
-                                            <X size={12} />
-                                        </button>
-                                    </div>
-                                ))}
-                                {recordedAudio && (
-                                    <div className="relative">
-                                        <div className="h-16 w-16 bg-gray-700 rounded flex items-center justify-center">
-                                            <Volume2 size={24} />
-                                        </div>
-                                        <button
-                                            onClick={removeRecordedAudio}
-                                            className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1"
-                                        >
-                                            <X size={12} />
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    )}
+                    <MediaPreview
+                        selectedFiles={selectedFiles}
+                        recordedAudio={recordedAudio}
+                        removeFile={removeFile}
+                        removeRecordedAudio={removeRecordedAudio}
+                    />
 
                     {/* Media Preview */}
                     {mediaPreview && (
@@ -1420,139 +1365,25 @@ const ChatInterface = () => {
                         onDragOver={handleDragOver}
                         onDragLeave={handleDragLeave}
                         onDrop={handleDrop}
-                        onPaste={handlePaste} // Agregamos el manejador aquí también
+                        onPaste={handlePaste}
                     >
-                        <div className="flex items-center space-x-2">
-                            <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.SEND_TEXT]}>
-                                <textarea
-                                    value={messageText}
-                                    onChange={(e) => {
-                                        setMessageText(e.target.value);
-                                        // Ajuste automático de altura
-                                        e.target.style.height = '40px'; // Altura inicial de una línea
-                                        const scrollHeight = e.target.scrollHeight;
-                                        const maxHeight = 120; // 5 líneas aproximadamente (24px por línea)
-                                        e.target.style.height = `${Math.min(scrollHeight, maxHeight)}px`;
-                                    }}
-                                    placeholder={isChatClosed ? "Chat cerrado" : "Escribe un mensaje..."}
-                                    className={`flex-1 bg-[rgb(var(--color-bg-${theme}))] 
-                                        text-[rgb(var(--color-text-primary-${theme}))]
-                                        placeholder-[rgb(var(--color-text-secondary-${theme}))]
-                                        rounded-lg p-3 resize-none outline-none
-                                        hover:bg-[rgb(var(--input-hover-bg-${theme}))]
-                                        focus:border-[rgb(var(--input-focus-border-${theme}))]
-                                        scrollbar-hide h-[40px] min-h-[40px] max-h-[120px]
-                                        leading-[20px]`}
-                                    style={{
-                                        overflow: messageText ? 'auto' : 'hidden'
-                                    }}
-                                    disabled={isChatClosed}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' && !e.shiftKey) {
-                                            e.preventDefault();
-                                            handleSendMessage();
-                                        }
-                                    }}
-                                />
-                            </AbilityGuard>
-                            <div className="flex space-x-2 ">
-                                <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.SEND_MEDIA]}>
-                                    <div className="relative">
-                                        <input
-                                            type="file"
-                                            ref={fileInputRef}
-                                            onChange={handleFileSelect}
-                                            multiple
-                                            className="hidden"
-                                            disabled={isChatClosed}
-                                            key={selectedFiles.length}
-                                        />
-                                        <button
-                                            className={`p-2 rounded-full
-                                                bg-[rgb(var(--color-bg-${theme}-secondary))]
-                                                hover:bg-[rgb(var(--input-hover-bg-${theme}))]
-                                                active:bg-[rgb(var(--color-primary-${theme}))]
-                                                text-[rgb(var(--color-text-secondary-${theme}))]
-                                                hover:text-[rgb(var(--color-primary-${theme}))]`}
-                                            onClick={handlePaperclipClick}
-                                            disabled={isChatClosed}
-                                        >
-                                            <Paperclip size={20} />
-                                            {selectedFiles.length > 0 && (
-                                                <span className="absolute -top-1 -right-1 bg-teal-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                                                    {selectedFiles.length}
-                                                </span>
-                                            )}
-                                        </button>
-                                    </div>
-                                </AbilityGuard>
-                                <button
-                                    className={`p-2 rounded-full transition-colors duration-200
-                                        ${isPrivateMessage
-                                            ? 'bg-[#2b95ef] text-white hover:bg-[#1a7fd9]'
-                                            : `bg-[rgb(var(--color-bg-${theme}-secondary))] 
-                                               text-[rgb(var(--color-text-secondary-${theme}))]
-                                               hover:bg-[rgb(var(--input-hover-bg-${theme}))]`}
-                                    active:bg-[rgb(var(--color-primary-${theme}))]`}
-                                    onClick={handleIsPrivate}
-                                    disabled={isChatClosed}
-                                >
-                                    {isPrivateMessage ? <EyeOff size={20} /> : <Eye size={20} />}
-                                </button>
-
-                                <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.SEND_MEDIA]}>
-                                    <button
-                                        className={`p-2 rounded-full ${isRecording ? 'bg-red-500' : `bg-[rgb(var(--color-bg-${theme}-secondary))]`}
-                                            hover:bg-[rgb(var(--input-hover-bg-${theme}))]
-                                            active:bg-[rgb(var(--color-primary-${theme}))]
-                                            text-[rgb(var(--color-text-secondary-${theme}))]
-                                            hover:text-[rgb(var(--color-primary-${theme}))]`}
-                                        onClick={handleMicClick}
-                                        disabled={isChatClosed}
-                                    >
-                                        <Mic size={20} />
-                                    </button>
-                                    {isRecording && (
-                                        <div className="w-52 max-w-full flex flex-col items-center mt-2">
-                                            <div className="flex justify-between text-xs w-full mb-1">
-                                                <span className="font-mono text-teal-700">{formatTime(recordingTime)}</span>
-                                                <span className="font-mono text-gray-400">/ {formatTime(MAX_RECORDING_TIME)}</span>
-                                            </div>
-                                            <div className="w-full h-2 bg-gray-200 rounded">
-                                                <div
-                                                    className="h-2 bg-teal-500 rounded transition-all"
-                                                    style={{ width: `${Math.min(100, (recordingTime / MAX_RECORDING_TIME) * 100)}%` }}
-                                                />
-                                            </div>
-                                            {recordingTime === MAX_RECORDING_TIME && (
-                                                <div className="text-xs text-red-600 mt-1 text-center">Tiempo máximo alcanzado</div>
-                                            )}
-                                        </div>
-                                    )}
-                                </AbilityGuard>
-                                <button
-                                    className={`p-2 rounded-full
-                                        bg-[rgb(var(--color-primary-${theme}))]
-                                        hover:bg-[rgb(var(--color-secondary-${theme}))]
-                                        text-[rgb(var(--color-text-primary-${theme}))]
-                                        disabled:opacity-50`}
-                                    onClick={handleSendMessage}
-                                    disabled={
-                                        isChatClosed ||
-                                        (messageText.trim() === "" && selectedFiles.length === 0 && !recordedAudio) ||
-                                        sendingMessage
-                                    }
-                                >
-                                    {sendingMessage ? (
-                                        <Loader size={20} className="animate-spin" />
-                                    ) : (
-                                        <Send size={20} />
-                                    )}
-                                </button>
-
-                            </div>
-                        </div>
-
+                        <InputArea
+                            messageText={messageText}
+                            setMessageText={setMessageText}
+                            handleSendMessage={handleSendMessage}
+                            handlePaperclipClick={handlePaperclipClick}
+                            handleFileSelect={handleFileSelect}
+                            fileInputRef={fileInputRef}
+                            selectedFiles={selectedFiles}
+                            isPrivateMessage={isPrivateMessage}
+                            handleIsPrivate={handleIsPrivate}
+                            isRecording={isRecording}
+                            handleMicClick={handleMicClick}
+                            isChatClosed={isChatClosed}
+                            sendingMessage={sendingMessage}
+                            recordingTime={recordingTime}
+                            MAX_RECORDING_TIME={MAX_RECORDING_TIME}
+                        />
                         {/* Progress Bar */}
                         {uploadProgress > 0 && uploadProgress < 100 && (
                             <div className="w-full bg-gray-700 rounded-full h-2 mt-2">
@@ -1565,20 +1396,10 @@ const ChatInterface = () => {
                     </div>
                 </>
             ) : (
-                // Empty state when no chat is selected
-                <div className={`flex flex-col items-center justify-center h-full 
-                    text-[rgb(var(--color-text-secondary-${theme}))]`}>
-                    <div className={`p-6 bg-[rgb(var(--color-bg-${theme}-secondary))] 
-                        rounded-xl flex flex-col items-center`}>
-                        <MessageSquareShare size={64} className={`mb-4 text-[rgb(var(--color-primary-${theme}))]`} />
-                        <h3 className={`text-xl font-medium text-[rgb(var(--color-text-primary-${theme}))] mb-2`}>
-                            Ningún chat seleccionado
-                        </h3>
-                        <p className="text-center mb-2">
-                            Selecciona un chat de la lista o inicia una nueva conversación
-                        </p>
-                    </div>
-                </div>
+                <>
+                    {/* Empty state when no chat is selected */}
+                    <EmptyState />
+                </>
             )}
         </div>
     );
