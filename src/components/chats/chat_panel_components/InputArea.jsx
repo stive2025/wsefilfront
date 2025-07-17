@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import { Mic, Paperclip, Eye, EyeOff, Loader, Send } from "lucide-react";
 import AudioRecorderBar from "./AudioRecorderBar";
 import { useTheme } from "@/contexts/themeContext";
@@ -23,20 +23,37 @@ const InputArea = ({
   recordedAudio
 }) => {
   const { theme } = useTheme();
+  const textareaRef = useRef(null);
+  
+  // Auto-resize textarea based on content
+  useEffect(() => {
+    if (textareaRef.current) {
+      // Reset height to auto to get the correct scrollHeight
+      textareaRef.current.style.height = 'auto';
+      // Set the height to scrollHeight to expand the textarea
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
+    }
+  }, [messageText]);
 
   return (
     <div className="flex items-center space-x-2">
       <textarea
+        ref={textareaRef}
         value={messageText}
         onChange={e => setMessageText(e.target.value)}
         placeholder={isChatClosed ? "Chat cerrado" : "Escribe un mensaje..."}
         className={clsx(
-          "flex-1 rounded-lg p-3 resize-none outline-none scrollbar-hide h-[40px] min-h-[40px] max-h-[120px] leading-[20px]",
+          "flex-1 rounded-lg p-3 resize-none outline-none overflow-y-auto min-h-[40px] max-h-[200px] leading-[20px]",
           theme === 'dark'
             ? "bg-[rgb(var(--color-bg-dark))] text-[rgb(var(--color-text-primary-dark))] placeholder-[rgb(var(--color-text-secondary-dark))] hover:bg-[rgb(var(--input-hover-bg-dark))] focus:border-[rgb(var(--input-focus-border-dark))]"
             : "bg-[rgb(var(--color-bg-light))] text-[rgb(var(--color-text-primary-light))] placeholder-[rgb(var(--color-text-secondary-light))] hover:bg-[rgb(var(--input-hover-bg-light))] focus:border-[rgb(var(--input-focus-border-light))]"
         )}
-        style={{ overflow: messageText ? 'auto' : 'hidden' }}
+        style={{
+          height: 'auto',
+          minHeight: '40px',
+          overflowY: 'auto',
+          overflowX: 'hidden'
+        }}
         disabled={isChatClosed}
         onKeyDown={e => {
           if (e.key === 'Enter' && !e.shiftKey) {
