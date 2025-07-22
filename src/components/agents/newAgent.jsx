@@ -185,7 +185,6 @@ const NewAgent = () => {
 
         try {
           const response = await callEndpoint(createAgent(formAgentData));
-          console.log("Agente creado ", response);
           setSuccess("Agente creado con éxito");
           setAgentHandle(true);
 
@@ -222,7 +221,6 @@ const NewAgent = () => {
 
         try {
           const response = await callEndpoint(updateAgent(idAgent, formAgentData));
-          console.log("Agente actualizado ", response);
           setSuccess("Agente actualizado con éxito");
           setAgentHandle(true);
           setAgentFind(null);

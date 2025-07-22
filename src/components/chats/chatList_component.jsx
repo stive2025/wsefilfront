@@ -132,7 +132,6 @@ const TagsBar = ({ tags }) => {
   };
 
   const handleTagClick = (tagId) => {
-    console.log('Tag seleccionado:', tagId);
     setTagSelected(tagId);
   };
 
@@ -688,9 +687,7 @@ const ChatList = ({ role = "admin" }) => {
         delete filterParams.page;
       }
 
-      console.log('API Parameters:', filterParams);
       const response = await callEndpoint(getChatList(filterParams), 'chatList');;
-      console.log("Respuesta de la API:", response);
       setPaginationInfo({
         current_page: response.current_page || 1,
         last_page: response.last_page || 1,
@@ -700,7 +697,6 @@ const ChatList = ({ role = "admin" }) => {
       setHasMoreChats((response.current_page || 1) < (response.last_page || 1));
 
       const chatData = response.data || [];
-      console.log("Datos de chats recibidos:", chatData);
 
       const enrichedChats = await Promise.all(
         chatData.map(async (chat) => {
@@ -719,14 +715,11 @@ const ChatList = ({ role = "admin" }) => {
           const newChats = enrichedChats.filter(chat => !existingIds.has(chat.id));
           return [...prev, ...newChats];
         });
-        console.log("Chats añadidos:", enrichedChats);
       } else {
         setChats(enrichedChats);
-        console.log("Chats cargados:", enrichedChats);
       }
 
     } catch (error) {
-      console.error("Error loading chats:", error);
       if (!append) {
         setChats([]);
       }
@@ -759,7 +752,6 @@ const ChatList = ({ role = "admin" }) => {
   useEffect(() => {
     // Solo ejecutar si no hay búsqueda activa
     if (!searchQuery.trim()) {
-      console.log('Aplicando filtros:', { stateSelected, tagSelected, agentSelected });
       resetChatState();
       loadChats({
         page: 1,
@@ -779,7 +771,6 @@ const ChatList = ({ role = "admin" }) => {
     // Si hay texto de búsqueda, configurar debounce
     if (searchQuery.trim()) {
       const timeout = setTimeout(() => {
-        console.log('Ejecutando búsqueda:', searchQuery);
         resetChatState();
         loadChats({
           page: 1,
@@ -826,11 +817,8 @@ const ChatList = ({ role = "admin" }) => {
           messageData.user_id?.toString() === currentUserId?.toString();
 
       if (!canProcessMessage) {
-          console.log("Mensaje ignorado en ChatList - no tiene permisos o no es propietario");
           return;
       }
-
-      console.log("Procesando mensaje para el usuario actual:", currentUserId);
 
       const existingChatIndex = chats.findIndex(chat =>
         chat.id === messageData.chat_id ||
@@ -862,18 +850,15 @@ const ChatList = ({ role = "admin" }) => {
 
         // Mover el chat al principio solo si es un nuevo mensaje
         if (isNewMessage) {
-          console.log("Nuevo mensaje - Moviendo chat al inicio:", chatToUpdate);
           updatedChats.splice(existingChatIndex, 1);
           updatedChats.unshift(chatToUpdate);
         } else {
-          console.log("Solo actualización de ACK - Manteniendo posición del chat");
           updatedChats[existingChatIndex] = chatToUpdate;
         }
 
         setChats(updatedChats);
       } else if (messageData.type === 'message') {
         // Crear nuevo chat solo si es un mensaje nuevo
-        console.log("Creando nuevo chat para el mensaje");
         const newChat = {
           id: messageData.chat_id,
           contact_id: messageData.contact_id,

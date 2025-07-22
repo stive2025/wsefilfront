@@ -37,7 +37,6 @@ export const AuthProvider = ({ children }) => {
       if (userData) {
         try {
           const parsedUser = JSON.parse(userData);
-          console.log("Cargando usuario desde cookies:", parsedUser);
           setUser(parsedUser);
           // CORRECCIÓN: Asegurar que abilities es un array
           setAbilities(parsedUser.abilities || []);
@@ -56,10 +55,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     setLoading(true);
     try {
-      console.log("Iniciando login con credenciales:", credentials);
       const response = await loginService(credentials).call;
-      
-      console.log("Respuesta de login completa:", response);
       
       if (!response) {
         throw new Error('Invalid login response');
@@ -88,8 +84,6 @@ export const AuthProvider = ({ children }) => {
         token: tokenValue,
         abilities: userAbilities
       };
-  
-      console.log("Guardando datos de usuario:", userData);
       
       setUser(userData);
       setAbilities(userAbilities);

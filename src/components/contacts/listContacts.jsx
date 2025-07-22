@@ -58,8 +58,6 @@ const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, lo
 
   if (!contacts || !contacts.length) {
     return <div className={`p-4 text-[rgb(var(--color-text-secondary-${theme}))]`}>No hay contactos disponibles</div>;
-  } else {
-    console.log("Contacts:", contacts);
   }
 
   return (
@@ -77,7 +75,6 @@ const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, lo
               if (location.pathname === "/contacts") {
                 navigate("/chatList");
               }
-              console.log("Contacto seleccionado:", item);
               if (item.chat) {
                 setSelectedChatId({
                   id: item.chat.id,
@@ -298,7 +295,6 @@ const ListContacts = () => {
 
       const contactsCall = getContacts(params);
       const response = await callEndpoint(contactsCall);
-      console.log("Response from fetchContactsByPhone:", response);
 
       if (response && response.data) {
         handleContactsResponse(response, true, 1);
@@ -315,24 +311,18 @@ const ListContacts = () => {
   // Función auxiliar para manejar las respuestas de contactos
   const handleContactsResponse = (response, reset, page) => {
     try {
-      console.log("Response from API:", response);
-
       if (!response || !response.data) {
         throw new Error("Respuesta inválida de la API");
       }
 
       const newContacts = response.data;
-      console.log("New Contacts:", newContacts);
 
       setError(null); // Limpiar cualquier error previo
       setTotalItems(response.total || 0);
-      console.log("Total Items:", response.total);
 
       if (reset) {
-        console.log("Resetting contacts");
         setContacts(newContacts);
       } else {
-        console.log("Appending new contacts");
         const existingIds = contacts.map(contact => contact.id);
         const uniqueNewContacts = newContacts.filter(contact => !existingIds.includes(contact.id));
         setContacts(prev => [...prev, ...uniqueNewContacts]);

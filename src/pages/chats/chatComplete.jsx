@@ -66,7 +66,6 @@ const ChatComplete = () => {
                             notificationAudio.current.pause();
                             notificationAudio.current.currentTime = 0;
                             setAudioInitialized(true);
-                            console.log('Audio inicializado exitosamente');
                         })
                         .catch(error => {
                             console.error('Error en la inicialización del audio:', error);
@@ -99,15 +98,10 @@ const ChatComplete = () => {
     // Modificar el useEffect que maneja los mensajes
     useEffect(() => {
         if (messageData && notificationAudio.current) {
-            console.log("Nuevo mensaje recibido en complete:", messageData);
-            console.log("chat seleccionado:", selectedChatId);
 
             // Obtener datos del usuario actual
             const userData = JSON.parse(GetCookieItem('userData'));
-            console.log("Datos del usuario actual:", userData);
             const currentUserId = userData.id;
-            console.log("ID del usuario actual:", currentUserId);
-            console.log("ID del mensaje:", messageData.user_id);
 
             // Verificar si el usuario puede recibir la notificación
             const canReceiveNotification =
@@ -120,15 +114,6 @@ const ChatComplete = () => {
                 (messageData.from_me === false || messageData.from_me === "false") &&
                 soundEnabled &&
                 (!isTabActive || selectedChatId?.id !== messageData.chat_id);
-
-            // Logs para debugging
-            console.log("Condiciones de notificación:", {
-                tienePermisoEspecial: hasAbility(ABILITIES.CHATS.FILTER_BY_AGENT),
-                esParaEsteUsuario: messageData.user_id?.toString() === currentUserId?.toString(),
-                puedeRecibirNotificacion: canReceiveNotification,
-                userId: currentUserId,
-                messageUserId: messageData.user_id
-            });
 
             if (shouldPlaySound) {
                 try {
@@ -160,10 +145,8 @@ const ChatComplete = () => {
     useEffect(() => {
         const checkConnection = async () => {
             try {
-                console.log("Verificando estado de conexión...");
                 const apiCall = getCodigoQR();
                 const response = await callEndpoint(apiCall);
-                console.log("Respuesta de conexión:", response.data);
 
                 if (response.data.status === "DISCONNECTED") {
                     setIsConnected({
@@ -171,14 +154,12 @@ const ChatComplete = () => {
                         name: '',
                         number: ''
                     });
-                    console.log("No hay sesión activa");
                 } else if (response.data.status === "CONNECTED") {
                     setIsConnected({
                         sesion: true,
                         name: response.data.name || '',
                         number: response.data.number || ''
                     });
-                    console.log("Sesión activa detectada");
                 }
             } catch (error) {
                 if (error.name !== 'AbortError') {

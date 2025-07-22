@@ -21,7 +21,6 @@ const ContactInfo = () => {
 
     useEffect(() => {
         // Only fetch when the modal is open AND we have a contact ID AND user has permission
-        console.log("informacion del chat", selectedChatId);
         if (infoOpen && selectedChatId?.idContact) {
             setIsLoading(true);
             const fetchContact = async () => {
@@ -29,7 +28,6 @@ const ContactInfo = () => {
                     const contactCall = getContact(selectedChatId.idContact);
                     const response = await callEndpoint(contactCall);
                     setContactFind(response);
-                    console.log("Contacto encontrado:", response);
                 } catch (error) {
                     if (error.name !== "AbortError") {
                         console.error("Error buscando contacto:", error);

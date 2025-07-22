@@ -38,9 +38,9 @@ const ProfileInfo = () => {
         });
     };
 
-    useEffect(() => {
-        console.log("infoProfile", infoProfile);
-    }, [infoProfile]);
+    // useEffect(() => {
+    //     console.log("infoProfile", infoProfile);
+    // }, [infoProfile]);
 
     const handleChangePassword = async (newPassword) => {
         try {
@@ -48,7 +48,6 @@ const ProfileInfo = () => {
 
             const result = await call; // Aquí obtienes el objeto real con status, message, data, etc.
 
-            console.log("Resultado real:", result);
             if (result?.status === 200) {
                 toast.success("Contraseña actualizada con éxito");
             } else {

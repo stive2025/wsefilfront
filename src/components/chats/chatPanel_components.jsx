@@ -1,4 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import MediaPreview from "./chat_panel_components/MediaPreview";
+import AudioRecorderBar from "./chat_panel_components/AudioRecorderBar";
+import InputArea from "./chat_panel_components/InputArea";
+import MessageList from "./chat_panel_components/MessageList";
+import EmptyState from "./chat_panel_components/EmptyState";
+import { formatTime } from "./chat_panel_components/utils";
 import {
     Send, Search, MessageSquareShare, SquarePlus,
     Mic, Paperclip, X, ArrowLeft, File,
@@ -25,6 +31,11 @@ import { getUserLabelColors } from "@/utils/getUserLabelColors";
 
 
 const ChatInterface = () => {
+    // ... estados existentes ...
+    const [recordingTime, setRecordingTime] = useState(0); // segundos transcurridos
+    const recordingIntervalRef = useRef(null);
+    const MAX_RECORDING_TIME = 180; // 3 minutos
+
 
 
 
@@ -101,6 +112,9 @@ const ChatInterface = () => {
                 record_stream.stop();
                 setIsRecording(false);
             }
+            // Limpiar barra y tiempo
+            clearInterval(recordingIntervalRef.current);
+            setRecordingTime(0);
         } else {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -109,13 +123,28 @@ const ChatInterface = () => {
                 recorder.start();
                 setStream(recorder);
                 setIsRecording(true);
+                setRecordingTime(0);
+
+                // Iniciar intervalo para actualizar el tiempo
+                recordingIntervalRef.current = setInterval(() => {
+                    setRecordingTime(prev => {
+                        if (prev + 1 >= MAX_RECORDING_TIME) {
+                            // Detener grabación automáticamente
+                            if (recorder.state === 'recording') {
+                                recorder.stop();
+                                setIsRecording(false);
+                            }
+                            clearInterval(recordingIntervalRef.current);
+                            return MAX_RECORDING_TIME;
+                        }
+                        return prev + 1;
+                    });
+                }, 1000);
 
                 const blobToBase64 = (blob) => {
                     return new Promise((resolve, reject) => {
                         const reader = new FileReader();
-                        reader.onloadend = () => {
-                            resolve(reader.result);
-                        };
+                        reader.onloadend = () => resolve(reader.result);
                         reader.onerror = reject;
                         reader.readAsDataURL(blob);
                     });
@@ -126,24 +155,22 @@ const ChatInterface = () => {
                     const audioUrl = URL.createObjectURL(e.data);
                     const fileName = `audio_${new Date().toISOString()}.${getExtension(recorder.mimeType)}`;
 
-                    console.log('Audio grabado:', {
-                        blobUrl: audioUrl,
-                        fileName: fileName,
-                        mimeType: recorder.mimeType,
-                        blobSize: e.data.size
-                    });
-
                     setRecordedAudio({
                         blob: e.data,
                         url: audioUrl,
                         name: fileName,
                         base64: base64
                     });
+                    // Limpiar barra y tiempo
+                    clearInterval(recordingIntervalRef.current);
+                    setRecordingTime(0);
                 });
 
             } catch (error) {
                 console.error("Error accessing microphone:", error);
                 alert("Couldn't access microphone. Please check permissions.");
+                clearInterval(recordingIntervalRef.current);
+                setRecordingTime(0);
             }
         }
     };
@@ -152,7 +179,6 @@ const ChatInterface = () => {
     const handleIsPrivate = () => {
         setIsPrivateMessage(prev => !prev);
         toast.success(`Mensaje ${!isPrivateMessage ? 'privado' : 'público'} activado`);
-        console.log('Estado mensaje privado:', !isPrivateMessage); // Para debug
     }
 
     const getExtension = (mimeType) => {
@@ -160,7 +186,6 @@ const ChatInterface = () => {
     };
 
     const handleMediaError = (element, type) => {
-        console.log(element, type, 'Error loading media:', element.src);
         // Intentar cargar desde la URL del servidor si falló la carga local
         if (!element.src.includes(SERVER_URL) && element.src.includes('/')) {
             const filename = element.src.split('/').pop();
@@ -313,7 +338,6 @@ const ChatInterface = () => {
                 (messageData.ack !== undefined && !messageData.body && !messageData.media_type);
 
             if (isAckUpdate) {
-                console.log('Actualizando ACK para mensaje:', messageData);
                 setChatMessages(prevMessages => {
                     if (!prevMessages) return [];
 
@@ -477,10 +501,9 @@ const ChatInterface = () => {
 
     // Funciones para archivos multimedia
     const checkTotalMediaSize = (newFiles) => {
+        // Solo sumar archivos seleccionados, NO el audio grabado
         let currentTotalSize = selectedFiles.reduce((total, file) => total + file.file.size, 0);
-        if (recordedAudio) {
-            currentTotalSize += recordedAudio.blob.size;
-        }
+        // No sumar el tamaño de recordedAudio
         const newTotalSize = currentTotalSize + newFiles.reduce((total, file) => total + file.size, 0);
         return newTotalSize <= FILE_SIZE_LIMIT;
     };
@@ -911,13 +934,6 @@ const ChatInterface = () => {
                 };
             }
 
-
-
-            // Agregar log para verificar el payload
-            console.log('Enviando mensaje con payload:', {
-                ...messagePayload,
-            });
-
             // Procesar archivos
             if (filesToSend.length > 0 || audioToSend) {
                 const mediaItems = [];
@@ -928,12 +944,6 @@ const ChatInterface = () => {
                         const reader = new FileReader();
                         reader.readAsDataURL(file);
                         reader.onload = () => {
-                            // El resultado ya incluye el encabezado data:mimetype;base64,
-                            console.log('Archivo convertido a base64:', {
-                                fileName: file.name,
-                                mimeType: file.type,
-                                base64Preview: reader.result.substring(0, 50) + '...' // Log solo el inicio para debug
-                            });
                             resolve(reader.result); // Enviamos el base64 completo con encabezado
                         };
                         reader.onerror = reject;
@@ -943,11 +953,6 @@ const ChatInterface = () => {
                 // Procesar archivos seleccionados
                 for (const fileObj of filesToSend) {
                     const base64Data = await fileToBase64(fileObj.file);
-                    console.log('Procesando archivo:', {
-                        type: fileObj.type,
-                        mimeType: fileObj.file.type,
-                        fileName: fileObj.file.name
-                    });
 
                     mediaItems.push({
                         type: fileObj.type,
@@ -960,11 +965,13 @@ const ChatInterface = () => {
 
                 // Procesar audio grabado
                 if (audioToSend) {
-                    console.log('Procesando audio:', {
+                    console.log('Bandera Procesando audio:', {
                         type: 'audio',
                         mimeType: 'audio/webm',
                         fileName: audioToSend.name
                     });
+                    // Log del base64 del audio (solo preview)
+                    console.log('Base64 del audio (preview):\n', audioToSend.base64, '\n\n...');
 
                     mediaItems.push({
                         type: 'audio',
@@ -976,14 +983,6 @@ const ChatInterface = () => {
                 }
 
                 if (mediaItems.length > 0) {
-                    console.log('Enviando archivos multimedia:',
-                        mediaItems.map(item => ({
-                            type: item.type,
-                            mediaType: item.media_type,
-                            filename: item.filename,
-                            hasBase64Header: item.media.startsWith('data:')
-                        }))
-                    );
                     messagePayload.media = JSON.stringify(mediaItems);
                 }
             }
@@ -993,7 +992,6 @@ const ChatInterface = () => {
                 : sendMessage(messagePayload, progress => setUploadProgress(progress));
 
             // 4. (sin cambios) dispara la petición y actualiza el mensaje temporal
-            console.log("Payload a enviar:", messagePayload);
             const response = await callEndpoint({ call, abortController });
             if (response) {
                 // Actualizar mensaje temporal con datos del servidor
@@ -1123,7 +1121,7 @@ const ChatInterface = () => {
         imageItems.forEach(imageItem => {
             // Obtener el blob directamente sin crear un nuevo File
             const blob = imageItem.getAsFile();
-            
+
             // Validar tamaño
             if (blob.size > FILE_SIZE_LIMIT) {
                 toast.error('La imagen excede el límite de 2MB');
@@ -1142,6 +1140,12 @@ const ChatInterface = () => {
         });
     };
 
+    function formatTime(secs) {
+        const m = Math.floor(secs / 60).toString().padStart(2, '0');
+        const s = (secs % 60).toString().padStart(2, '0');
+        return `${m}:${s}`;
+    }
+
     if (shouldShowChat && isLoading) {
         return (
             <div className={`flex flex-col h-screen w-full 
@@ -1155,6 +1159,13 @@ const ChatInterface = () => {
                 </p>
             </div>
         );
+    }
+
+    // --- UI para la barra de progreso de grabación ---
+    function formatTime(secs) {
+        const m = Math.floor(secs / 60).toString().padStart(2, '0');
+        const s = (secs % 60).toString().padStart(2, '0');
+        return `${m}:${s}`;
     }
 
     return (
@@ -1291,82 +1302,21 @@ const ChatInterface = () => {
                     )}
 
                     {/* Messages Area */}
-                    <div
-                        ref={messagesContainerRef}
-                        className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-hide"
-                        style={{
-                            backgroundImage: theme === 'dark'
-                                ? "url('https://i.pinimg.com/736x/cd/3d/62/cd3d628f57875af792c07d6ad262391c.jpg')"
-                                : "url('https://i.pinimg.com/originals/2b/45/cf/2b45cff1cf6a03a91a7e7fdb9c9fbd5a.jpg')",
-                            backgroundSize: 'cover',
-                            backgroundRepeat: 'no-repeat',
-                            backgroundPosition: 'center'
-                        }}
-                    >
-                        {isLoading && (
-                            <div className="flex justify-center py-4">
-                                <Loader className="animate-spin" size={20} />
-                            </div>
-                        )}
-
-                        {isNewChat && !hasMessages ? (
-                            <div className="flex flex-col justify-center items-center h-full opacity-50">
-                                <p>Nuevo chat con {selectedChatId.name || selectedChatId.number}</p>
-                                <p className="text-sm mt-2">Escribe tu primer mensaje</p>
-                            </div>
-                        ) : (
-                            renderMessagesWithDateSeparators()
-                        )}
-                    </div>
+                    <MessageList
+                        isLoading={isLoading}
+                        isNewChat={isNewChat}
+                        hasMessages={hasMessages}
+                        renderMessagesWithDateSeparators={renderMessagesWithDateSeparators}
+                        selectedChatId={selectedChatId}
+                    />
 
                     {/* Preview de archivos y audio seleccionados */}
-                    {(selectedFiles.length > 0 || recordedAudio) && (
-                        <div className="px-4 py-2 bg-gray-800 border-t border-gray-700">
-                            <div className="text-sm text-gray-400 mb-2">Archivos adjuntos:</div>
-                            <div className="flex flex-wrap gap-2">
-                                {selectedFiles.map((file, index) => (
-                                    <div key={index} className="relative">
-                                        {file.type === 'image' ? (
-                                            <img
-                                                src={file.previewUrl}
-                                                className="h-16 w-16 object-cover rounded"
-                                                alt="Preview"
-                                            />
-                                        ) : (
-                                            <div className="h-16 w-16 bg-gray-700 rounded flex items-center justify-center">
-                                                {file.type === 'audio' ? (
-                                                    <Volume2 size={24} />
-                                                ) : file.type === 'video' ? (
-                                                    <PlayCircle size={24} />
-                                                ) : (
-                                                    <File size={24} />
-                                                )}
-                                            </div>
-                                        )}
-                                        <button
-                                            onClick={() => removeFile(index)}
-                                            className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1"
-                                        >
-                                            <X size={12} />
-                                        </button>
-                                    </div>
-                                ))}
-                                {recordedAudio && (
-                                    <div className="relative">
-                                        <div className="h-16 w-16 bg-gray-700 rounded flex items-center justify-center">
-                                            <Volume2 size={24} />
-                                        </div>
-                                        <button
-                                            onClick={removeRecordedAudio}
-                                            className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1"
-                                        >
-                                            <X size={12} />
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    )}
+                    <MediaPreview
+                        selectedFiles={selectedFiles}
+                        recordedAudio={recordedAudio}
+                        removeFile={removeFile}
+                        removeRecordedAudio={removeRecordedAudio}
+                    />
 
                     {/* Media Preview */}
                     {mediaPreview && (
@@ -1415,122 +1365,26 @@ const ChatInterface = () => {
                         onDragOver={handleDragOver}
                         onDragLeave={handleDragLeave}
                         onDrop={handleDrop}
-                        onPaste={handlePaste} // Agregamos el manejador aquí también
+                        onPaste={handlePaste}
                     >
-                        <div className="flex items-center space-x-2">
-                            <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.SEND_TEXT]}>
-                                <textarea
-                                    value={messageText}
-                                    onChange={(e) => {
-                                        setMessageText(e.target.value);
-                                        // Ajuste automático de altura
-                                        e.target.style.height = '40px'; // Altura inicial de una línea
-                                        const scrollHeight = e.target.scrollHeight;
-                                        const maxHeight = 120; // 5 líneas aproximadamente (24px por línea)
-                                        e.target.style.height = `${Math.min(scrollHeight, maxHeight)}px`;
-                                    }}
-                                    placeholder={isChatClosed ? "Chat cerrado" : "Escribe un mensaje..."}
-                                    className={`flex-1 bg-[rgb(var(--color-bg-${theme}))] 
-                                        text-[rgb(var(--color-text-primary-${theme}))]
-                                        placeholder-[rgb(var(--color-text-secondary-${theme}))]
-                                        rounded-lg p-3 resize-none outline-none
-                                        hover:bg-[rgb(var(--input-hover-bg-${theme}))]
-                                        focus:border-[rgb(var(--input-focus-border-${theme}))]
-                                        scrollbar-hide h-[40px] min-h-[40px] max-h-[120px]
-                                        leading-[20px]`}
-                                    style={{
-                                        overflow: messageText ? 'auto' : 'hidden'
-                                    }}
-                                    disabled={isChatClosed}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' && !e.shiftKey) {
-                                            e.preventDefault();
-                                            handleSendMessage();
-                                        }
-                                    }}
-                                />
-                            </AbilityGuard>
-                            <div className="flex space-x-2 ">
-                                <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.SEND_MEDIA]}>
-                                    <div className="relative">
-                                        <input
-                                            type="file"
-                                            ref={fileInputRef}
-                                            onChange={handleFileSelect}
-                                            multiple
-                                            className="hidden"
-                                            disabled={isChatClosed}
-                                            key={selectedFiles.length}
-                                        />
-                                        <button
-                                            className={`p-2 rounded-full
-                                                bg-[rgb(var(--color-bg-${theme}-secondary))]
-                                                hover:bg-[rgb(var(--input-hover-bg-${theme}))]
-                                                active:bg-[rgb(var(--color-primary-${theme}))]
-                                                text-[rgb(var(--color-text-secondary-${theme}))]
-                                                hover:text-[rgb(var(--color-primary-${theme}))]`}
-                                            onClick={handlePaperclipClick}
-                                            disabled={isChatClosed}
-                                        >
-                                            <Paperclip size={20} />
-                                            {selectedFiles.length > 0 && (
-                                                <span className="absolute -top-1 -right-1 bg-teal-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                                                    {selectedFiles.length}
-                                                </span>
-                                            )}
-                                        </button>
-                                    </div>
-                                </AbilityGuard>
-                                <button
-                                    className={`p-2 rounded-full transition-colors duration-200
-                                        ${isPrivateMessage
-                                            ? 'bg-[#2b95ef] text-white hover:bg-[#1a7fd9]'
-                                            : `bg-[rgb(var(--color-bg-${theme}-secondary))] 
-                                               text-[rgb(var(--color-text-secondary-${theme}))]
-                                               hover:bg-[rgb(var(--input-hover-bg-${theme}))]`}
-                                    active:bg-[rgb(var(--color-primary-${theme}))]`}
-                                    onClick={handleIsPrivate}
-                                    disabled={isChatClosed}
-                                >
-                                    {isPrivateMessage ? <EyeOff size={20} /> : <Eye size={20} />}
-                                </button>
-
-                                <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.SEND_MEDIA]}>
-                                    <button
-                                        className={`p-2 rounded-full ${isRecording ? 'bg-red-500' : `bg-[rgb(var(--color-bg-${theme}-secondary))]`}
-                                            hover:bg-[rgb(var(--input-hover-bg-${theme}))]
-                                            active:bg-[rgb(var(--color-primary-${theme}))]
-                                            text-[rgb(var(--color-text-secondary-${theme}))]
-                                            hover:text-[rgb(var(--color-primary-${theme}))]`}
-                                        onClick={handleMicClick}
-                                        disabled={isChatClosed}
-                                    >
-                                        <Mic size={20} />
-                                    </button>
-                                </AbilityGuard>
-                                <button
-                                    className={`p-2 rounded-full
-                                        bg-[rgb(var(--color-primary-${theme}))]
-                                        hover:bg-[rgb(var(--color-secondary-${theme}))]
-                                        text-[rgb(var(--color-text-primary-${theme}))]
-                                        disabled:opacity-50`}
-                                    onClick={handleSendMessage}
-                                    disabled={
-                                        isChatClosed ||
-                                        (messageText.trim() === "" && selectedFiles.length === 0 && !recordedAudio) ||
-                                        sendingMessage
-                                    }
-                                >
-                                    {sendingMessage ? (
-                                        <Loader size={20} className="animate-spin" />
-                                    ) : (
-                                        <Send size={20} />
-                                    )}
-                                </button>
-
-                            </div>
-                        </div>
-
+                        <InputArea
+                            messageText={messageText}
+                            setMessageText={setMessageText}
+                            handleSendMessage={handleSendMessage}
+                            handlePaperclipClick={handlePaperclipClick}
+                            handleFileSelect={handleFileSelect}
+                            fileInputRef={fileInputRef}
+                            selectedFiles={selectedFiles}
+                            isPrivateMessage={isPrivateMessage}
+                            handleIsPrivate={handleIsPrivate}
+                            isRecording={isRecording}
+                            handleMicClick={handleMicClick}
+                            isChatClosed={isChatClosed}
+                            sendingMessage={sendingMessage}
+                            recordingTime={recordingTime}
+                            MAX_RECORDING_TIME={MAX_RECORDING_TIME}
+                            recordedAudio={recordedAudio}
+                        />
                         {/* Progress Bar */}
                         {uploadProgress > 0 && uploadProgress < 100 && (
                             <div className="w-full bg-gray-700 rounded-full h-2 mt-2">
@@ -1543,20 +1397,10 @@ const ChatInterface = () => {
                     </div>
                 </>
             ) : (
-                // Empty state when no chat is selected
-                <div className={`flex flex-col items-center justify-center h-full 
-                    text-[rgb(var(--color-text-secondary-${theme}))]`}>
-                    <div className={`p-6 bg-[rgb(var(--color-bg-${theme}-secondary))] 
-                        rounded-xl flex flex-col items-center`}>
-                        <MessageSquareShare size={64} className={`mb-4 text-[rgb(var(--color-primary-${theme}))]`} />
-                        <h3 className={`text-xl font-medium text-[rgb(var(--color-text-primary-${theme}))] mb-2`}>
-                            Ningún chat seleccionado
-                        </h3>
-                        <p className="text-center mb-2">
-                            Selecciona un chat de la lista o inicia una nueva conversación
-                        </p>
-                    </div>
-                </div>
+                <>
+                    {/* Empty state when no chat is selected */}
+                    <EmptyState />
+                </>
             )}
         </div>
     );

@@ -32,7 +32,6 @@ const WebSocketHook = () => {
         const canViewAllChats = abilities.includes("chats.filter.agent");
 
         const normalizeMessage = (data) => {
-            console.log("Normalizando mensaje:", data);
             // Si es una actualización de ACK
             if (data.id_wp && !data.body) {
                 return {
@@ -138,7 +137,6 @@ const WebSocketHook = () => {
                 }
             }
 
-            console.log(`Intentando conectar WebSocket para usuario ${userId}...`);
             conn = new WebSocket('ws://193.46.198.228:8081');
 
             conn.onopen = () => {
@@ -170,7 +168,6 @@ const WebSocketHook = () => {
 
                     // Verificar si este mensaje debe ser procesado según los permisos
                     if (!shouldProcessMessage(data)) {
-                        console.log("Mensaje filtrado por permisos:", data);
                         return;
                     }
 

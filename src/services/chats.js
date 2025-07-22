@@ -3,7 +3,6 @@ import { loadAbort } from "../hooks/fechAndload.jsx";
 
 const getChatList = (params = {}) => {
   const abortController = loadAbort();
-  console.log("params", params);
   // Construir la URL con los parámetros
   let endpoint = "chats";
   const queryParams = new URLSearchParams();
@@ -26,7 +25,6 @@ const getChatList = (params = {}) => {
   // Agregar filtro por agente si existe
   if (params.agent_id) {
     queryParams.append('user_id', params.agent_id);
-    console.log("params.agent_id", queryParams);
   }
   if (params.state) {
     queryParams.append('state', params.state);
@@ -34,7 +32,6 @@ const getChatList = (params = {}) => {
   
   // Añadir los parámetros a la URL si existen
   const queryString = queryParams.toString();
-  console.log("queryString", queryString);
   if (queryString) {
     endpoint = `${endpoint}?${queryString}`;
   }

@@ -21,7 +21,6 @@ export const setCookieItem = (name, value, days = 1) => {
       const stringValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
       
       document.cookie = `${name}=${encodeURIComponent(stringValue)};${expires};path=/`;
-      console.log(`Cookie '${name}' guardada correctamente. Expira en ${days} día(s).`);
     } catch (error) {
       console.error(`Error al guardar cookie '${name}':`, error);
     }
@@ -35,7 +34,7 @@ export const setCookieItem = (name, value, days = 1) => {
   export const GetCookieItem = (name) => {
     try {
       if (!name) {
-        console.error("Error al obtener cookie: nombre inválido");
+        console.error("Error al obtener cookie: nombre no válido");
         return null;
       }
   
@@ -47,12 +46,10 @@ export const setCookieItem = (name, value, days = 1) => {
         if (cookie.indexOf(nameEQ) === 0) {
           const rawValue = cookie.substring(nameEQ.length);
           const decodedValue = decodeURIComponent(rawValue);
-          console.log(`Cookie '${name}' encontrada:`, decodedValue.substring(0, 20) + (decodedValue.length > 20 ? '...' : ''));
           return decodedValue;
         }
       }
       
-      console.log(`Cookie '${name}' no encontrada`);
       return null;
     } catch (error) {
       console.error(`Error al obtener cookie '${name}':`, error);
@@ -68,7 +65,6 @@ export const setCookieItem = (name, value, days = 1) => {
     try {
       // Eliminar cookie configurando una fecha de expiración en el pasado
       document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-      console.log(`Cookie '${name}' eliminada correctamente`);
     } catch (error) {
       console.error(`Error al eliminar cookie '${name}':`, error);
     }
