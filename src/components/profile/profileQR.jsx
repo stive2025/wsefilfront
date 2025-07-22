@@ -226,14 +226,12 @@ const ProfileQR = () => {
               </div>
             </div>
           ) : codigoQR ? (
-            <div className={`
-              border-14 flex flex-col items-center bg-white rounded-lg p-4
-            `}>
+            <div className="border-4 border-gray-200 flex flex-col items-center bg-white rounded-lg p-4 shadow-lg">
               <QRCodeCanvas
                 value={codigoQR}
                 size={isMobile ? 200 : 256}
-                bgColor={theme === 'light' ? '#F9F9F9' : '#2d3e3a'}
-                fgColor={theme === 'light' ? '#1F1F1F' : '#FFFFFF'}
+                bgColor="#FFFFFF"
+                fgColor="#000000"
               />
             </div>
           ) : (
