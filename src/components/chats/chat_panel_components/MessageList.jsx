@@ -1,14 +1,29 @@
 import React from "react";
+import { useTheme } from "@/contexts/themeContext";
+import clsx from "clsx";
 
 const MessageList = ({ isLoading, isNewChat, hasMessages, renderMessagesWithDateSeparators, selectedChatId }) => {
+  const { theme } = useTheme();
+  
+  // Obtener la ruta del SVG basado en el tema
+  const getBackgroundSVG = () => {
+    return theme === 'dark' ? '/bg-dark.jpg' : '/bg-light.jpg';
+  };
+  
   return (
     <div
-      className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-hide"
+      className={clsx(
+        "flex-1 overflow-y-auto p-4 space-y-2 scrollbar-hide",
+        theme === 'dark'
+          ? "bg-[rgb(var(--color-bg-dark))]"
+          : "bg-[rgb(var(--color-bg-light))]"
+      )}
       style={{
-        backgroundImage: `url('https://i.pinimg.com/736x/cd/3d/62/cd3d628f57875af792c07d6ad262391c.jpg')`,
-        backgroundSize: 'cover',
-        backgroundRepeat: 'no-repeat',
-        backgroundPosition: 'center'
+        backgroundImage: `url('${getBackgroundSVG()}')`,
+        // backgroundSize: '1024px 1024px',
+        // backgroundSize: '850px 1804px',
+        backgroundRepeat: 'repeat',
+        backgroundAttachment: 'local'
       }}
     >
       {isLoading && (
