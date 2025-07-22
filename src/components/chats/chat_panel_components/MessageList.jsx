@@ -20,8 +20,6 @@ const MessageList = ({ isLoading, isNewChat, hasMessages, renderMessagesWithDate
       )}
       style={{
         backgroundImage: `url('${getBackgroundSVG()}')`,
-        // backgroundSize: '1024px 1024px',
-        // backgroundSize: '850px 1804px',
         backgroundRepeat: 'repeat',
         backgroundAttachment: 'local'
       }}
