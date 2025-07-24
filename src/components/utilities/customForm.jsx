@@ -1,6 +1,6 @@
 import { useState, useCallback, useContext, useEffect } from 'react';
 import Resize from "@/hooks/responsiveHook.jsx";
-import { useFetchAndLoad } from "@/hooks/fechAndLoad.jsx";
+import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
 import { createCustomMessage, updateCustomMessage } from "@/services/customMessages.js";
 import { UpdateCustomForm, CustomHandle, CustomCreateForm } from "@/contexts/chats.js";
 import { MailPlus } from 'lucide-react';

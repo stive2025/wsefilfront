@@ -1,7 +1,7 @@
 import { useState, useCallback, useContext, useEffect } from 'react';
 import { User } from 'lucide-react';
 import Resize from "@/hooks/responsiveHook.jsx";
-import { useFetchAndLoad } from "@/hooks/fechAndLoad.jsx";
+import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
 import {
   createContact,
   updateContact,

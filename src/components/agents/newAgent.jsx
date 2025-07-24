@@ -1,7 +1,7 @@
 import { useState, useCallback, useContext, useEffect } from 'react';
 import { User, CheckSquare, Settings } from 'lucide-react';
 import Resize from "@/hooks/responsiveHook.jsx";
-import { useFetchAndLoad } from "@/hooks/fechAndLoad.jsx";
+import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
 import { createAgent, updateAgent } from "@/services/agents.js";
 import { UpdateAgentForm, AgentHandle, NewAgentForm } from "@/contexts/chats.js";
 import { ABILITIES, ROLES, ROLE_DEFAULT_ABILITIES } from "@/constants/abilities.js";
