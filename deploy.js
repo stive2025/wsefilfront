@@ -1,8 +1,12 @@
 import ftp from "basic-ftp"
-import path from "path"
+import path, { dirname } from "path"
 import dotenv from "dotenv"
+import { fileURLToPath } from "url";
 
 dotenv.config() // Cargar variables de entorno
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 async function deploy() {
     const client = new ftp.Client()
@@ -17,9 +21,9 @@ async function deploy() {
         })
 
         const localPath = path.join(__dirname, "dist") // o "dist"
-        // const remotePath = process.env.FTP_REMOTE_PATH || "/public_html"
+        const remotePath = process.env.FTP_REMOTE_PATH || "/"
 
-        // await client.ensureDir(remotePath)
+        await client.ensureDir(remotePath)
         await client.clearWorkingDir()
         await client.uploadFromDir(localPath)
 
