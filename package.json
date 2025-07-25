@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "clean": "rimraf dist",
     "validate": "node scripts/validate-build.js",
-    "prebuild": "npm run validate"
+    "prebuild": "npm run validate",
+    "deploy": "npm run build && node deploy.js"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.0",
@@ -18,10 +19,11 @@
     "@shadcn/ui": "^0.0.4",
     "@tailwindcss/vite": "^4.0.6",
     "@vitejs/plugin-react": "^4.3.4",
+    "basic-ftp": "^5.0.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
-    "dotenv": "^16.4.7",
+    "dotenv": "^16.6.1",
     "framer-motion": "^12.4.7",
     "js-cookie": "^3.0.5",
     "lucide-react": "^0.475.0",
