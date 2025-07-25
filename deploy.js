@@ -1,6 +1,6 @@
-const ftp = require("basic-ftp")
-const path = require("path")
-const dotenv = require("dotenv")
+import ftp from "basic-ftp"
+import path from "path"
+import dotenv from "dotenv"
 
 dotenv.config() // Cargar variables de entorno
 
