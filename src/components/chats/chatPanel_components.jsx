@@ -34,7 +34,7 @@ const ChatInterface = () => {
     // ... estados existentes ...
     const [recordingTime, setRecordingTime] = useState(0); // segundos transcurridos
     const recordingIntervalRef = useRef(null);
-    const MAX_RECORDING_TIME = 180; // 3 minutos
+    const MAX_RECORDING_TIME = 60; // 1 minuto
 
 
 
