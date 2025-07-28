@@ -50,27 +50,60 @@ const handleClear = () => {
   );
 };
 
-const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, loadingMore, lastContactRef, setSelectedChatId, setNewMessage }) => {
+const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, lastContactRef, setSelectedChatId, setNewMessage }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { theme } = useTheme();
 
+  // Función para solicitar transferencia de chat
+  const handleRequestTransfer = (contact) => {
+    const confirmTransfer = window.confirm(
+      `¿Deseas solicitar la transferencia del chat de ${contact.name}?\n\nEsto enviará una solicitud al administrador para que te asigne este contacto.`
+    );
+    
+    if (confirmTransfer) {
+      // TODO: Implementar llamada a API para solicitar transferencia
+      console.log('Solicitando transferencia para contacto:', contact.id);
+      // Aquí iría la llamada a la API para solicitar transferencia
+      alert('Solicitud de transferencia enviada. Espera la aprobación del administrador.');
+    }
+  };
+
   if (!contacts || !contacts.length) {
-    return <div className={`p-4 text-[rgb(var(--color-text-secondary-${theme}))]`}>No hay contactos disponibles</div>;
+    return (
+      <div className={`p-8 text-center text-[rgb(var(--color-text-secondary-${theme}))]`}>
+        <div className="mb-4">
+          <Search size={48} className="mx-auto mb-2 opacity-50" />
+          <p className="text-lg font-medium">No se encontraron contactos</p>
+          <p className="text-sm mt-2">El contacto que buscas no existe en el sistema.</p>
+          <p className="text-sm">¿Deseas crear un nuevo contacto?</p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className={`bg-[rgb(var(--color-bg-${theme}-secondary))]`}>
-      {contacts.map((item, index) => (
+      {contacts.map((item, index) => {
+        return (
         <div
           key={item.id}
           className="w-full flex items-center p-4"
           ref={index === contacts.length - 1 ? lastContactRef : null}
         >
           <div
-            className={`w-full flex items-center space-x-3 hover:bg-[rgb(var(--color-bg-${theme}))] 
-            cursor-pointer active:bg-[rgb(var(--color-primary-${theme}))]`}
+            className={`w-full flex items-center space-x-3 ${
+              item.is_assign 
+                ? `hover:bg-[rgb(var(--color-bg-${theme}))] cursor-pointer active:bg-[rgb(var(--color-primary-${theme}))]`
+                : `cursor-not-allowed opacity-75`
+            }`}
             onClick={() => {
+              // Solo permitir acceso al chat si is_assign es true
+              if (!item.is_assign) {
+                alert('No tienes permisos para acceder a este chat. Solicita la transferencia del contacto.');
+                return;
+              }
+              
               if (location.pathname === "/contacts") {
                 navigate("/chatList");
               }
@@ -103,6 +136,12 @@ const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, lo
             <div className="flex-1">
               <div className={`font-medium text-sm md:text-base text-[rgb(var(--color-text-primary-${theme}))]`}>
                 {item.name || 'Sin nombre'}
+                {!item.is_assign && (
+                  <span className={`ml-2 px-2 py-1 text-xs rounded-full
+                  bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200`}>
+                    No asignado
+                  </span>
+                )}
               </div>
               <div className={`text-xs md:text-sm text-[rgb(var(--color-text-secondary-${theme}))] 
               overflow-hidden text-ellipsis whitespace-nowrap max-w-[150px] sm:max-w-[200px]`}>
@@ -111,40 +150,62 @@ const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, lo
             </div>
           </div>
           {location.pathname === "/contacts" && (
-            <div className="flex">
-              <AbilityGuard abilities={[ABILITIES.CONTACTS.EDIT]}>
-                <button
-                  className={`mr-2 p-2 rounded-md transition-colors duration-200 
-    bg-[rgb(var(--color-primary-${theme}))] 
-    hover:bg-[rgb(var(--color-secondary-${theme}))] 
-    text-white shadow-sm cursor-pointer`}
-                  onClick={() => onFindContact(item.id)}
-                >
-                  <Pencil size={16} />
-                </button>
-              </AbilityGuard>
+            <div className="flex space-x-1">
+              {item.is_assign ? (
+                // Botones normales cuando el contacto está asignado
+                <>
+                  <AbilityGuard abilities={[ABILITIES.CONTACTS.UPDATE]}>
+                    <button
+                      className={`p-1 rounded-full text-[rgb(var(--color-text-secondary-${theme}))] 
+                      hover:bg-[rgb(var(--color-bg-${theme}))] hover:text-[rgb(var(--color-primary-${theme}))] 
+                      transition-colors duration-200`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onFindContact(item.id);
+                      }}
+                      disabled={isDeleting}
+                      title="Editar contacto"
+                    >
+                      <Pencil size={16} />
+                    </button>
+                  </AbilityGuard>
 
-              <AbilityGuard abilities={[ABILITIES.CONTACTS.DELETE]}>
+                  <AbilityGuard abilities={[ABILITIES.CONTACTS.DELETE]}>
+                    <button
+                      className={`p-1 rounded-full text-[rgb(var(--color-text-secondary-${theme}))] 
+                      hover:bg-red-500 hover:text-white transition-colors duration-200 
+                      ${isDeleting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteContact(item.id);
+                      }}
+                      disabled={isDeleting}
+                      title="Eliminar contacto"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </AbilityGuard>
+                </>
+              ) : (
+                // Botón de solicitar transferencia cuando no está asignado
                 <button
-                  className={`p-2 rounded-md transition-colors duration-200 
-    bg-[rgb(var(--color-secondary-${theme}))] 
-    hover:bg-[rgb(var(--color-primary-${theme}))] 
-    text-white shadow-sm cursor-pointer`}
-                  onClick={() => onDeleteContact(item.id)}
-                  disabled={isDeleting}
+                  className={`px-3 py-1 rounded-full text-xs font-medium
+                  bg-[rgb(var(--color-secondary-${theme}))] text-[rgb(var(--color-text-primary-${theme}))]
+                  hover:bg-[rgb(var(--color-primary-${theme}))] transition-colors duration-200`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRequestTransfer(item);
+                  }}
+                  title="Solicitar transferencia de chat de este contacto a supervisión"
                 >
-                  <Trash2 size={16} />
+                  Solicitar transferencia de chat
                 </button>
-              </AbilityGuard>
+              )}
             </div>
           )}
         </div>
-      ))}
-      {loadingMore && (
-        <div className={`p-4 text-[rgb(var(--color-text-secondary-${theme}))] text-center`}>
-          Cargando más contactos...
-        </div>
-      )}
+        );
+      })}
     </div>
   );
 };
@@ -283,7 +344,6 @@ const ListContacts = () => {
                 onDeleteContact={handleDeleteContact}
                 isDeleting={isDeleting}
                 onFindContact={handleFindContact}
-                loadingMore={loadingMore}
                 lastContactRef={lastContactRef}
                 setSelectedChatId={setSelectedChatId}
                 setNewMessage={setNewMessage}
@@ -341,7 +401,6 @@ const ListContacts = () => {
                 onDeleteContact={handleDeleteContact}
                 isDeleting={isDeleting}
                 onFindContact={handleFindContact}
-                loadingMore={loadingMore}
                 lastContactRef={lastContactRef}
                 setSelectedChatId={setSelectedChatId}
                 setNewMessage={setNewMessage}

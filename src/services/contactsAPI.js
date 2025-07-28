@@ -275,10 +275,18 @@ export const ContactUtils = {
       id: contact.id,
       name: contact.name || 'Sin nombre',
       phone: contact.phone_number || '',
+      phone_number: contact.phone_number || '',
       photo: contact.profile_picture || 'avatar.jpg',
+      profile_picture: contact.profile_picture || null,
       chat: contact.chat || null,
       idContact: contact.id,
-      number: contact.phone_number
+      number: contact.phone_number,
+      is_assign: contact.is_assign,
+      user_id: contact.user_id,
+      created_at: contact.created_at,
+      updated_at: contact.updated_at,
+      sync_id: contact.sync_id,
+      count_edits: contact.count_edits
     };
   },
 
