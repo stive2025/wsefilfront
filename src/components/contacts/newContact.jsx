@@ -437,8 +437,9 @@ const NewContact = () => {
                     placeholder="Número de teléfono"
                     value={phoneNumber}
                     onChange={handlePhoneChange}
-                    disabled={contactFind && !canEdit}
-                    className={`w-full p-2 bg-[rgb(var(--color-bg-${theme}-secondary))] text-[rgb(var(--color-text-primary-${theme}))] rounded-md ${contactFind && !canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    disabled={!!contactFind}
+                    className={`w-full p-2 bg-[rgb(var(--color-bg-${theme}-secondary))] text-[rgb(var(--color-text-primary-${theme}))] rounded-md ${contactFind ? 'opacity-50 cursor-not-allowed' : ''}`}
+
                   />
                 </div>
               </div>
