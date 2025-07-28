@@ -1,14 +1,13 @@
 /* eslint-disable react/prop-types */
 import Resize from "@/hooks/responsiveHook.jsx";
-import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
 import { Search, Plus, Pencil, Trash2, ArrowLeft } from "lucide-react";
-import { useContext, useEffect, useState, useRef, useCallback } from "react";
+import { useContext, useRef, useCallback, useEffect, useState } from "react";
 import { NewContactForm, ChatInterfaceClick, NewMessage, UpdateContactForm, ContactHandle } from "@/contexts/chats.js";
 import { useNavigate, useLocation } from "react-router-dom";
-import { getContacts, deleteContact, getContact } from "@/services/contacts.js";
 import { ABILITIES } from '@/constants/abilities';
 import AbilityGuard from '@/components/common/AbilityGuard.jsx';
 import { useTheme } from "@/contexts/themeContext";
+import useContactsSearch from "@/hooks/useContactsSearch.js";
 
 // Componentes reutilizables
 const SearchInput = ({ searchTerm, onSearchChange }) => {
@@ -80,14 +79,14 @@ const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, lo
                   id: item.chat.id,
                   idContact: item.id,
                   name: item.name,
-                  photo: item.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
+                  photo: item.profile_picture || "avatar.jpg",
                   number: item.phone_number
                 });
               } else {
                 setSelectedChatId({
                   idContact: item.id,
                   name: item.name,
-                  photo: item.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
+                  photo: item.profile_picture || "avatar.jpg",
                   number: item.phone_number
                 });
               }
@@ -160,247 +159,86 @@ const ListContacts = () => {
 
   const isMobile = Resize();
   const location = useLocation();
-  const { loading, callEndpoint } = useFetchAndLoad();
-
-  const [contacts, setContacts] = useState([]);
-  const [error, setError] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [searchTimeout, setSearchTimeout] = useState(null);
-  const [, setTotalItems] = useState(0);
-  const [isSearchMode, setIsSearchMode] = useState(false);
+
+  // Usar el hook optimizado para búsqueda de contactos
+  const {
+    contacts,
+    loading,
+    error,
+    searchTerm,
+    hasMore,
+    isSearchMode,
+    handleSearchChange,
+    loadMore,
+    clearError,
+    deleteContact: deleteContactAPI,
+    getContactById,
+    refresh
+  } = useContactsSearch({
+    pageSize: 20,
+    debounceDelay: 300,
+    autoSearch: true
+  });
 
   // Referencia al último elemento para implementar intersección
   const observer = useRef();
   const lastContactRef = useCallback(node => {
-    if (loading || loadingMore) return;
+    if (loading) return;
 
     // Desconectar el observador anterior
     if (observer.current) observer.current.disconnect();
 
     observer.current = new IntersectionObserver(entries => {
       // Si el elemento es visible y hay más datos para cargar
-      if (entries[0].isIntersecting && hasMore && !loadingMore) {
-        loadMoreContacts();
+      if (entries[0].isIntersecting && hasMore && !isSearchMode) {
+        loadMore();
       }
     }, { threshold: 0.5 }); // Activar cuando el 50% del elemento sea visible
 
     if (node) observer.current.observe(node);
-  }, [hasMore, loadingMore, loading]);
+  }, [hasMore, loading, isSearchMode, loadMore]);
 
-  // Cargar datos iniciales
+  // Efecto para refrescar cuando cambia contactHandle
   useEffect(() => {
-    fetchContacts(1, true);
-    setContactHandle(false); // Resetear el estado de contacto al cargar la lista
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contactHandle]);
-
-  // Efecto para manejar la búsqueda con debounce
-  useEffect(() => {
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
+    if (contactHandle) {
+      refresh();
+      setContactHandle(false);
     }
+  }, [contactHandle, refresh, setContactHandle]);
 
-    setSearchTimeout(setTimeout(() => {
-      const isPhone = /^\+?\d+$/.test(searchTerm);
-      const formattedPhone = isPhone
-        ? searchTerm.replace(/^0+/, '')
-        : undefined;
+  // Todas las funciones de búsqueda y paginación ahora están manejadas por el hook useContactsSearch
 
-      if (!searchTerm) {
-        setIsSearchMode(false);
-        fetchContacts(1, true);
-      } else if (isPhone) {
-        setIsSearchMode(true);
-        fetchContactsByPhone(formattedPhone);
-      } else {
-        setIsSearchMode(true);
-        fetchContactsByName(searchTerm);
-      }
-    }, 500)); // Reducido a 500ms para mejor respuesta
-
-    return () => {
-      if (searchTimeout) clearTimeout(searchTimeout);
-    };
-  }, [searchTerm]);
-
-  // Función para obtener contactos por paginación
-  const fetchContacts = async (page = 1, reset = false) => {
-    try {
-      if ((loading && !reset) || (loadingMore && !reset)) return;
-
-      if (reset) {
-        setContacts([]);
-        setCurrentPage(1);
-        setHasMore(true);
-      } else {
-        setLoadingMore(true);
-      }
-
-      // Construir parámetros para la llamada API - solo paginación
-      const params = {
-        page: page
-      };
-
-      // Llamar a getContacts() con los parámetros
-      const contactsCall = getContacts(params);
-      const response = await callEndpoint(contactsCall);
-
-      // Procesar la respuesta paginada
-      handleContactsResponse(response, reset, page);
-
-    } catch (error) {
-      handleApiError(error);
-    } finally {
-      setLoadingMore(false);
-    }
-  };
-
-  // Función para buscar contactos por nombre
-  const fetchContactsByName = async (name) => {
-    try {
-      setContacts([]); // Limpiar contactos existentes
-      setError(null); // Limpiar error anterior
-
-      const params = {
-        name: name
-      };
-
-      const contactsCall = getContacts(params);
-      const response = await callEndpoint(contactsCall);
-
-      if (response && response.data) {
-        handleContactsResponse(response, true, 1);
-      } else {
-        setContacts([]);
-        setError("No se encontraron contactos");
-      }
-
-    } catch (error) {
-      handleApiError(error);
-    }
-  };
-
-  const fetchContactsByPhone = async (phone) => {
-    try {
-      setContacts([]); // Limpiar contactos existentes
-      setError(null); // Limpiar error anterior
-
-      const params = {
-        phone: phone
-      };
-
-      const contactsCall = getContacts(params);
-      const response = await callEndpoint(contactsCall);
-
-      if (response && response.data) {
-        handleContactsResponse(response, true, 1);
-      } else {
-        setContacts([]);
-        setError("No se encontraron contactos");
-      }
-
-    } catch (error) {
-      handleApiError(error);
-    }
-  };
-
-  // Función auxiliar para manejar las respuestas de contactos
-  const handleContactsResponse = (response, reset, page) => {
-    try {
-      if (!response || !response.data) {
-        throw new Error("Respuesta inválida de la API");
-      }
-
-      const newContacts = response.data;
-
-      setError(null); // Limpiar cualquier error previo
-      setTotalItems(response.total || 0);
-
-      if (reset) {
-        setContacts(newContacts);
-      } else {
-        const existingIds = contacts.map(contact => contact.id);
-        const uniqueNewContacts = newContacts.filter(contact => !existingIds.includes(contact.id));
-        setContacts(prev => [...prev, ...uniqueNewContacts]);
-      }
-
-      setCurrentPage(page);
-      setHasMore(response.next_page_url !== null);
-
-    } catch (error) {
-      console.error("Error en handleContactsResponse:", error);
-      setError("Error al procesar los datos de contactos");
-      setContacts([]);
-    }
-  };
-
-  // Función auxiliar para manejar errores de API
-  const handleApiError = (error) => {
-    if (error.name !== 'AbortError') {
-      console.error("Error cargando contactos:", error);
-      // Mensaje de error más específico
-      const errorMessage = error.response?.data?.message ||
-        "No se pudieron cargar los contactos";
-      setError(errorMessage);
-      setContacts([]); // Asegurarse de limpiar los contactos en caso de error
-    }
-  };
-
-  const loadMoreContacts = () => {
-    if (!hasMore || loadingMore || loading || isSearchMode) return;
-
-    fetchContacts(currentPage + 1, false);
-  };
-
+  // Función optimizada para eliminar contacto
   const handleDeleteContact = async (id) => {
     const confirmDelete = window.confirm("¿Estás seguro de que deseas eliminar este contacto?");
     if (!confirmDelete) return;
 
     setIsDeleting(true);
     try {
-      const deleteCall = deleteContact(id);
-      await callEndpoint(deleteCall);
-      if (isSearchMode && searchTerm) {
-        fetchContactsByName(searchTerm);
-      } else {
-        fetchContacts(1, true);
-      }
+      await deleteContactAPI(id);
+      // El hook se encarga de refrescar la lista automáticamente
     } catch (error) {
-      if (error.name !== 'AbortError') {
-        console.error("Error eliminando contacto:", error);
-        setError("No se pudo eliminar el contacto");
-      }
+      console.error("Error eliminando contacto:", error);
+      // El hook maneja el error automáticamente
     } finally {
       setIsDeleting(false);
     }
   };
 
-  //función para obtener el contacto a editar
+  // Función optimizada para obtener el contacto a editar
   const handleFindContact = async (id) => {
     try {
       setIsDeleting(true);
-      const contactCall = getContact(id);
-      const response = await callEndpoint(contactCall);
-      setContactFind(response);
-
-      // Always set contactNew to true when editing, regardless of device type
+      const contact = await getContactById(id);
+      setContactFind(contact);
       setContactNew(true);
     } catch (error) {
-      if (error.name !== 'AbortError') {
-        console.error("Error buscando contacto:", error);
-        setError("No se pudo cargar la información del contacto");
-      }
+      console.error("Error buscando contacto:", error);
+      // El hook maneja el error automáticamente
     } finally {
       setIsDeleting(false);
     }
-  };
-
-  const handleSearch = (term) => {
-    setSearchTerm(term);
   };
 
   return (
@@ -431,7 +269,7 @@ const ListContacts = () => {
                 <label>CONTACTOS</label>
               </div>
             )}
-            <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
+            <SearchInput searchTerm={searchTerm} onSearchChange={handleSearchChange} />
           </div>
 
           <div className="flex-1 overflow-y-auto">
@@ -489,7 +327,7 @@ const ListContacts = () => {
                 <label>CONTACTOS</label>
               </div>
             )}
-            <SearchInput searchTerm={searchTerm} onSearchChange={handleSearch} />
+            <SearchInput searchTerm={searchTerm} onSearchChange={handleSearchChange} />
           </div>
 
           <div className="flex-1 overflow-y-auto scrollbar-hide">
