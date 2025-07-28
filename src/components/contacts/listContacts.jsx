@@ -127,10 +127,40 @@ const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, la
               setNewMessage(false);
             }}
           >
-            {/* Aquí puedes poner un avatar si tu API devuelve uno, si no, usar una imagen por defecto */}
-            <div className={`w-10 h-10 rounded-full bg-[rgb(var(--color-bg-${theme}))] 
-            flex items-center justify-center text-[rgb(var(--color-text-primary-${theme}))]`}>
-              {item.name ? item.name.charAt(0).toUpperCase() : '?'}
+            {/* Avatar del contacto - imagen o iniciales */}
+            <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+              {item.profile_picture ? (
+                <img 
+                  src={item.profile_picture} 
+                  alt={item.name || 'Contacto'}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    // Si falla la carga de la imagen del perfil, mostrar avatar por defecto
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+              ) : (
+                <img 
+                  src="/avatar.jpg" 
+                  alt={item.name || 'Avatar por defecto'}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    // Si falla la carga del avatar por defecto, mostrar iniciales
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+              )}
+              {/* Fallback con iniciales si fallan las imágenes */}
+              <div 
+                className={`w-full h-full rounded-full bg-[rgb(var(--color-bg-${theme}))] 
+                flex items-center justify-center text-[rgb(var(--color-text-primary-${theme}))] 
+                text-sm font-medium`}
+                style={{ display: 'none' }}
+              >
+                {item.name ? item.name.charAt(0).toUpperCase() : '?'}
+              </div>
             </div>
 
             <div className="flex-1">
