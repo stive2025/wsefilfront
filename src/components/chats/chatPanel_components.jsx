@@ -76,7 +76,7 @@ const ChatInterface = () => {
     // Referencias
     const fileInputRef = useRef(null);
     //const audioChunksRef = useRef([]);
-    const messagesContainerRef = useRef(null);
+    const messageListRef = useRef(null);
     // Determinar si el chat está cerrado
     const isChatClosed = selectedChatId?.status === "CLOSED";
     const shouldShowChat = selectedChatId && (selectedChatId.id || selectedChatId.idContact || selectedChatId.number);
@@ -206,8 +206,8 @@ const ChatInterface = () => {
         }
     };
     const scrollToBottom = useCallback(() => {
-        if (!isScrollingManually.current && messagesContainerRef.current) {
-            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        if (messageListRef.current && messageListRef.current.scrollToBottom) {
+            messageListRef.current.scrollToBottom();
         }
     }, []);
 
@@ -296,13 +296,13 @@ const ChatInterface = () => {
         loadMessages(1, false);
     }, [selectedChatId?.id]);
 
-    useEffect(() => {
-        const messagesContainer = messagesContainerRef.current;
-        if (messagesContainer) {
-            messagesContainer.addEventListener('scroll', handleScroll);
-            return () => messagesContainer.removeEventListener('scroll', handleScroll);
-        }
-    }, [handleScroll]);
+    // useEffect(() => {
+    //     const messagesContainer = messagesContainerRef.current;
+    //     if (messagesContainer) {
+    //         messagesContainer.addEventListener('scroll', handleScroll);
+    //         return () => messagesContainer.removeEventListener('scroll', handleScroll);
+    //     }
+    // }, [handleScroll]);
 
 
     useEffect(() => {
@@ -1094,12 +1094,12 @@ const ChatInterface = () => {
     useEffect(() => {
         // Solo hacer scroll automático cuando cambia el selectedChatId
         setIsPrivateMessage(false);
-        if (messagesContainerRef.current && selectedChatId) {
+        if (selectedChatId) {
             setTimeout(() => {
-                messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+                scrollToBottom();
             }, 100);
         }
-    }, [selectedChatId]); // Solo depende de selectedChatId
+    }, [selectedChatId, scrollToBottom]); // Solo depende de selectedChatId
 
     // Primero, agregamos el manejador de eventos para el pegado
     const handlePaste = (e) => {
@@ -1303,6 +1303,7 @@ const ChatInterface = () => {
 
                     {/* Messages Area */}
                     <MessageList
+                        ref={messageListRef}
                         isLoading={isLoading}
                         isNewChat={isNewChat}
                         hasMessages={hasMessages}

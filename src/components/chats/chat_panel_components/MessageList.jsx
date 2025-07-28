@@ -1,10 +1,10 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, forwardRef, useImperativeHandle } from "react";
 import { useTheme } from "@/contexts/themeContext";
 import { ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import clsx from "clsx";
 
-const MessageList = ({ isLoading, isNewChat, hasMessages, renderMessagesWithDateSeparators, selectedChatId }) => {
+const MessageList = forwardRef(({ isLoading, isNewChat, hasMessages, renderMessagesWithDateSeparators, selectedChatId }, ref) => {
   const { theme } = useTheme();
   const messageListRef = useRef(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
@@ -20,6 +20,11 @@ const MessageList = ({ isLoading, isNewChat, hasMessages, renderMessagesWithDate
       messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
     }
   };
+
+  // Exponer la función scrollToBottom al componente padre
+  useImperativeHandle(ref, () => ({
+    scrollToBottom
+  }), []);
 
   // Función para detectar si el usuario está cerca del final
   const isNearBottom = () => {
@@ -121,6 +126,8 @@ const MessageList = ({ isLoading, isNewChat, hasMessages, renderMessagesWithDate
       </AnimatePresence>
     </div>
   );
-};
+});
+
+MessageList.displayName = 'MessageList';
 
 export default MessageList;
