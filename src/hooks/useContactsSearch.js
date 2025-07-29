@@ -29,14 +29,7 @@ export const useContactsSearch = (options = {}) => {
   const debounceTimerRef = useRef(null);
   const lastSearchRef = useRef('');
 
-  /**
-   * Cancelar petición anterior si existe
-   */
-  const cancelPreviousRequest = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-  }, []);
+
 
   /**
    * Limpiar estados de error
@@ -50,9 +43,13 @@ export const useContactsSearch = (options = {}) => {
    */
   const loadContacts = useCallback(async (page = 1, append = false) => {
     try {
-      cancelPreviousRequest();
+      // Solo cancelar si hay una petición previa pendiente
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
       
-      const { signal, controller } = useAbortController();
+      // Crear nuevo AbortController
+      const controller = new AbortController();
       abortControllerRef.current = controller;
 
       if (!append) {
@@ -60,7 +57,8 @@ export const useContactsSearch = (options = {}) => {
         setError(null);
       }
 
-      const response = await ContactsService.getAll(page, pageSize, signal);
+      console.log('Cargando contactos, página:', page, 'append:', append);
+      const response = await ContactsService.getAll(page, pageSize, controller.signal);
 
       if (response.success) {
         const formattedContacts = ContactUtils.formatContactsList(response.data);
@@ -86,13 +84,14 @@ export const useContactsSearch = (options = {}) => {
       setLoading(false);
       abortControllerRef.current = null;
     }
-  }, [pageSize, cancelPreviousRequest]);
+  }, [pageSize]);
 
   /**
    * Buscar contactos
    */
   const searchContacts = useCallback(async (query) => {
     if (!query || query.trim() === '') {
+      console.log('searchContacts: Query vacío, llamando loadContacts');
       loadContacts(1, false);
       return;
     }
@@ -104,16 +103,21 @@ export const useContactsSearch = (options = {}) => {
     }
 
     try {
-      cancelPreviousRequest();
+      // Solo cancelar si hay una petición previa pendiente
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
       
-      const { signal, controller } = useAbortController();
+      // Crear nuevo AbortController
+      const controller = new AbortController();
       abortControllerRef.current = controller;
 
       setLoading(true);
       setError(null);
       setIsSearchMode(true);
 
-      const response = await ContactsService.search(validation.query, signal);
+      console.log('Buscando contactos:', validation.query);
+      const response = await ContactsService.search(validation.query, controller.signal);
 
       if (response.success) {
         const formattedContacts = ContactUtils.formatContactsList(response.data);
@@ -134,7 +138,7 @@ export const useContactsSearch = (options = {}) => {
       setLoading(false);
       abortControllerRef.current = null;
     }
-  }, [loadContacts, cancelPreviousRequest]);
+  }, [loadContacts]);
 
   /**
    * Manejar cambio en el término de búsqueda con debounce
@@ -194,8 +198,8 @@ export const useContactsSearch = (options = {}) => {
    */
   const deleteContact = useCallback(async (contactId) => {
     try {
-      const { signal, controller } = useAbortController();
-      const response = await ContactsService.delete(contactId, signal);
+      const controller = new AbortController();
+      const response = await ContactsService.delete(contactId, controller.signal);
 
       if (response.success) {
         // Remover contacto de la lista local
@@ -218,8 +222,8 @@ export const useContactsSearch = (options = {}) => {
    */
   const getContactById = useCallback(async (contactId) => {
     try {
-      const { signal, controller } = useAbortController();
-      const response = await ContactsService.getById(contactId, signal);
+      const controller = new AbortController();
+      const response = await ContactsService.getById(contactId, controller.signal);
 
       if (response.success) {
         return { 
@@ -239,18 +243,61 @@ export const useContactsSearch = (options = {}) => {
     }
   }, []);
 
+  // Función para carga inicial (sin useCallback para evitar dependencias)
+  const initialLoad = async () => {
+    try {
+      console.log('Hook useContactsSearch: Cargando contactos iniciales');
+      
+      // Crear nuevo AbortController
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
+      setLoading(true);
+      setError(null);
+
+      const response = await ContactsService.getAll(1, pageSize, controller.signal);
+      console.log('Respuesta de ContactsService.getAll:', response);
+
+      if (response.success) {
+        console.log('Respuesta exitosa, datos recibidos:', response.data);
+        const formattedContacts = ContactUtils.formatContactsList(response.data);
+        console.log('Contactos formateados:', formattedContacts);
+        
+        setContacts(formattedContacts);
+        setCurrentPage(1);
+        setHasMore(response.hasMore);
+        setTotalItems(response.total);
+        setIsSearchMode(false);
+        console.log('Estado actualizado - Contactos iniciales cargados:', formattedContacts.length);
+      } else {
+        console.error('Error en respuesta inicial:', response.message);
+        setError(response.message);
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.error('Error cargando contactos iniciales:', err);
+        setError(err.message || 'Error al cargar contactos');
+      }
+    } finally {
+      setLoading(false);
+      abortControllerRef.current = null;
+    }
+  };
+
   // Efecto para cargar contactos iniciales
   useEffect(() => {
-    loadContacts(1, false);
+    initialLoad();
     
     // Cleanup al desmontar
     return () => {
-      cancelPreviousRequest();
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [loadContacts, cancelPreviousRequest]);
+  }, []); // Solo ejecutar una vez al montar
 
   // Cleanup de timers
   useEffect(() => {

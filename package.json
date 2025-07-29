@@ -11,7 +11,7 @@
     "clean": "rimraf dist",
     "validate": "node scripts/validate-build.js",
     "prebuild": "npm run validate",
-    "deploy": "npm run build && node deploy.js"
+    "deploy-qa": "npm run build && node deploy.js"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.0",
