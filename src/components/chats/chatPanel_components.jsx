@@ -17,6 +17,7 @@ import Resize from "@/hooks/responsiveHook.jsx";
 import MenuInchat from "@/components/mod/menuInchat.jsx";
 import ChatTransfer from "@/components/mod/chatTransfer.jsx";
 import { useFetchAndLoad } from "@/hooks/fechAndload.jsx";
+import { useMessagesPagination } from "@/hooks/useMessagesPagination.js";
 import ChatTag from "@/components/mod/chatTag.jsx";
 import ChatResolved from "@/components/mod/chatResolved.jsx";
 import { TagClick, ResolveClick, SearchInChatClick, TempNewMessage, ChatInterfaceClick, WebSocketMessage } from "@/contexts/chats.js";
@@ -67,25 +68,30 @@ const ChatInterface = () => {
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [isRecording, setIsRecording] = useState(false);
     const [recordedAudio, setRecordedAudio] = useState(null);
-    const [chatMessages, setChatMessages] = useState([]);
+    // Hook de paginación de mensajes
+    const {
+        messages: chatMessages,
+        isLoading,
+        isLoadingMore: loadingMoreMessages,
+        hasMoreMessages,
+        loadMoreMessages,
+        addNewMessage,
+        updateMessage,
+        hasMessages
+    } = useMessagesPagination(selectedChatId?.id);
+    
     const [sendingMessage, setSendingMessage] = useState(false);
     const [isNewChat, setIsNewChat] = useState(false);
     const [reopeningChat, setReopeningChat] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
     const [record_stream, setStream] = useState(null);  // Reemplaza mediaRecorderRef
+    
     // Referencias
     const fileInputRef = useRef(null);
-    //const audioChunksRef = useRef([]);
     const messageListRef = useRef(null);
+    
     // Determinar si el chat está cerrado
     const isChatClosed = selectedChatId?.status === "CLOSED";
     const shouldShowChat = selectedChatId && (selectedChatId.id || selectedChatId.idContact || selectedChatId.number);
-    const hasMessages = chatMessages && chatMessages.length > 0;
-
-    const [page, setPage] = useState(1);
-    const [hasMoreMessages, setHasMoreMessages] = useState(true);
-    const [loadingMoreMessages, setLoadingMoreMessages] = useState(false);
-    const [initialLoad, setInitialLoad] = useState(true);
     const formatMessage = (text) => {
         if (!text) return '';
 
@@ -211,111 +217,35 @@ const ChatInterface = () => {
         }
     }, []);
 
-    const loadMessages = async (pageNum = 1, append = false) => {
-        if (!selectedChatId) return;
-
-        try {
-            if (pageNum === 1) {
-                setIsLoading(true);
-                isScrollingManually.current = false; // Resetear el flag manual al cargar nuevo chat
-
-            } else {
-                setLoadingMoreMessages(true);
-            }
-
-            // Si es un nuevo chat (tiene idContact pero no id)
-            if (selectedChatId.idContact && !selectedChatId.id) {
-                setChatMessages([]);
-                setIsNewChat(true);
-                setSelectedChatId(prev => ({
-                    ...prev,
-                    status: "OPEN"
-                }));
-                return;
-            }
-
-            // Si es un chat existente
-            if (selectedChatId.id) {
-                const response = await callEndpoint(getChat(selectedChatId.id, pageNum));
-                const newMessages = response.messages.data || [];
-                setHasMoreMessages(newMessages.length > 0);
-
-                if (append) {
-                    // Cuando cargamos más mensajes (paginación), los agregamos al principio
-                    setChatMessages(prev => [...newMessages.reverse(), ...(prev || [])]);
-                    return
-                } else {
-                    // Carga inicial, invertimos el orden para que los más recientes queden abajo
-                    setChatMessages(newMessages.reverse());
-                    setSelectedChatId(prev => ({
-                        ...prev,
-                        status: response.state || prev.state
-                    }));
-                    setIsNewChat(false);
-                }
-            }
-        } catch (error) {
-            console.error("Error cargando mensajes:", error);
-            if (!append) {
-                setChatMessages([]);
-                toast.error("Error al cargar los mensajes del chat");
-            }
-        } finally {
-            setIsLoading(false);
-            setLoadingMoreMessages(false);
-            setInitialLoad(false);
-        }
-    };
-
-    // Agregar función para manejar el scroll
-    const handleScroll = useCallback((e) => {
-        if (scrollTimeoutRef.current) {
-            clearTimeout(scrollTimeoutRef.current);
-        }
-
-        const element = e.target;
-        scrollPositionRef.current = element.scrollTop;
-
-        // Determinar si el usuario está cerca del top (con un margen de 50px)
-        const isNearTop = element.scrollTop <= 50;
-
-        if (isNearTop && !loadingMoreMessages && hasMoreMessages && !initialLoad) {
-
-            setPage(prev => prev + 1);
-            loadMessages(page + 1, true);
-        }
-    }, [loadingMoreMessages, hasMoreMessages, page, initialLoad]);
-
-
-    // Efecto INICIAL
+    // Manejar nuevo chat (cuando tiene idContact pero no id)
     useEffect(() => {
-        setPage(1);
-        setHasMoreMessages(true);
-        setInitialLoad(true);
-        isScrollingManually.current = false;
-        loadMessages(1, false);
-    }, [selectedChatId?.id]);
+        if (selectedChatId?.idContact && !selectedChatId.id) {
+            setIsNewChat(true);
+            setSelectedChatId(prev => ({
+                ...prev,
+                status: "OPEN"
+            }));
+        } else {
+            setIsNewChat(false);
+        }
+    }, [selectedChatId, setSelectedChatId]);
 
-    // useEffect(() => {
-    //     const messagesContainer = messagesContainerRef.current;
-    //     if (messagesContainer) {
-    //         messagesContainer.addEventListener('scroll', handleScroll);
-    //         return () => messagesContainer.removeEventListener('scroll', handleScroll);
-    //     }
-    // }, [handleScroll]);
+    // La paginación ahora se maneja en el hook useMessagesPagination y en MessageList
 
 
+    // Auto-scroll cuando hay nuevos mensajes
     useEffect(() => {
-        if (chatMessages && chatMessages.length > 0 && !initialLoad) {
-            const isNewMessage = chatMessages[chatMessages.length - 1]?.is_temp ||
-                chatMessages[chatMessages.length - 1]?.from_me === "true" ||
-                !chatMessages[chatMessages.length - 1]?.from_me;
+        if (chatMessages && chatMessages.length > 0) {
+            const lastMessage = chatMessages[chatMessages.length - 1];
+            const isNewMessage = lastMessage?.is_temp ||
+                lastMessage?.from_me === "true" ||
+                !lastMessage?.from_me;
 
             if (isNewMessage && !isScrollingManually.current) {
                 scrollToBottom();
             }
         }
-    }, [chatMessages, initialLoad]);
+    }, [chatMessages]);
 
     useEffect(() => {
         if (messageData) {
@@ -338,61 +268,45 @@ const ChatInterface = () => {
                 (messageData.ack !== undefined && !messageData.body && !messageData.media_type);
 
             if (isAckUpdate) {
-                setChatMessages(prevMessages => {
-                    if (!prevMessages) return [];
-
-                    return prevMessages.map(msg => {
-                        // Actualizar ACK si coincide el ID del mensaje
-                        if (msg.id === messageData.id_message_wp ||
-                            msg.id === messageData.id ||
-                            msg.tempSignature === messageData.temp_signature) {
-                            return {
-                                ...msg,
-                                ack: messageData.ack
-                            };
+                // Buscar y actualizar mensaje por ID o temp_signature
+                const messageId = messageData.id_message_wp || messageData.id;
+                const tempSignature = messageData.temp_signature;
+                
+                if (messageId || tempSignature) {
+                    updateMessage(messageId || tempSignature, { ack: messageData.ack });
+                }
+                
+                // Si es ack=3 (leído), actualizar todos los mensajes enviados no leídos
+                if (messageData.ack === 3) {
+                    chatMessages.forEach(msg => {
+                        if (msg.from_me && msg.ack === 2) {
+                            updateMessage(msg.id, { ack: 3 });
                         }
-
-                        // Si el mensaje anterior tiene ack=2 y recibimos una actualización de lectura,
-                        // actualizar todos los mensajes previos no leídos a leídos
-                        if (messageData.ack === 3 && msg.ack === 2 && msg.from_me) {
-                            return {
-                                ...msg,
-                                ack: 3
-                            };
-                        }
-
-                        return msg;
                     });
-                });
+                }
                 return;
             }
 
             // Continuar con el manejo normal de mensajes
             if (messageData.body || messageData.media_type) {
-                setChatMessages(prevMessages => {
-                    if (!prevMessages) return [];
+                // Buscar mensaje temporal para actualizar
+                const tempMessage = chatMessages.find(msg =>
+                    msg.is_temp &&
+                    msg.body === messageData.body &&
+                    msg.from_me === (messageData.from_me === true || messageData.from_me === "true") &&
+                    (!msg.media_path || msg.media_path === messageData.media_url)
+                );
 
-                    // Buscar mensaje temporal
-                    const tempMessageIndex = prevMessages.findIndex(msg =>
-                        msg.is_temp &&
-                        msg.body === messageData.body &&
-                        msg.from_me === (messageData.from_me === true || messageData.from_me === "true") &&
-                        (!msg.media_path || msg.media_path === messageData.media_url)
-                    );
-
-                    if (tempMessageIndex !== -1) {
-                        // Actualizar mensaje temporal
-                        const newMessages = [...prevMessages];
-                        newMessages[tempMessageIndex] = {
-                            ...newMessages[tempMessageIndex],
-                            id: messageData.id_message_wp || messageData.id,
-                            is_temp: false,
-                            ack: messageData.ack || 1,
-                            media_path: messageData.media_url ? `${SERVER_URL}/${messageData.media_url}` : newMessages[tempMessageIndex].media_path,
-                            filename: messageData.filename
-                        };
-                        return newMessages;
-                    }
+                if (tempMessage) {
+                    // Actualizar mensaje temporal
+                    updateMessage(tempMessage.id, {
+                        id: messageData.id_message_wp || messageData.id,
+                        is_temp: false,
+                        ack: messageData.ack || 1,
+                        media_path: messageData.media_url ? `${SERVER_URL}/${messageData.media_url}` : tempMessage.media_path,
+                        filename: messageData.filename
+                    });
+                } else {
 
                     // Agregar nuevo mensaje si no es temporal
                     if (!messageData.from_me || isNewChat) {
@@ -412,11 +326,9 @@ const ChatInterface = () => {
                             ack: messageData.ack || 0,
                             is_temp: false
                         };
-                        return [...prevMessages, normalizedMessage];
+                        addNewMessage(normalizedMessage);
                     }
-
-                    return prevMessages;
-                });
+                }
 
                 if (!isScrollingManually.current) {
                     setTimeout(scrollToBottom, 100);
@@ -894,7 +806,7 @@ const ChatInterface = () => {
             }
 
             // Siempre agregamos el mensaje temporal (comportamiento optimista)
-            setChatMessages(prev => prev ? [...prev, newMessage] : [newMessage]);
+            addNewMessage(newMessage);
             scrollToBottom();
 
             // Limpiar UI
@@ -995,23 +907,17 @@ const ChatInterface = () => {
             const response = await callEndpoint({ call, abortController });
             if (response) {
                 // Actualizar mensaje temporal con datos del servidor
-                setChatMessages(prev => {
-                    if (!prev) return [];
-                    return prev.map(msg => {
-                        if (msg.tempSignature === tempSignature) {
-                            const mediaData = response.media?.[0];
-                            return {
-                                ...msg,
-                                id: response.message_id || msg.id,
-                                ack: response.ack || 1,
-                                is_temp: false,
-                                media_path: mediaData?.filename ? `${SERVER_URL}/${mediaData.filename}` : msg.media_path,
-                                filename: mediaData?.filename || msg.filename
-                            };
-                        }
-                        return msg; // Retorna el mensaje original si no coincide
-                    });
-                });
+                const mediaData = response.media?.[0];
+                const messageUpdates = {
+                    id: response.message_id || tempId,
+                    ack: response.ack || 1,
+                    is_temp: false,
+                    ...(mediaData?.filename && {
+                        media_path: `${SERVER_URL}/${mediaData.filename}`,
+                        filename: mediaData.filename
+                    })
+                };
+                updateMessage(tempId, messageUpdates);
             }
 
 
@@ -1020,14 +926,8 @@ const ChatInterface = () => {
                 setIsNewChat(false);
             }
         } catch (error) {
-            setChatMessages(prev => {
-                if (!prev) return [];
-                return prev.map(msg =>
-                    msg.tempSignature === tempSignature
-                        ? { ...msg, ack: -1 }
-                        : msg
-                );
-            });
+            // Actualizar el mensaje temporal para mostrar error
+            updateMessage(tempId, { ack: -1 });
 
             toast.error(error.response?.data?.message || "Error al enviar el mensaje");
         } finally {
@@ -1309,6 +1209,9 @@ const ChatInterface = () => {
                         hasMessages={hasMessages}
                         renderMessagesWithDateSeparators={renderMessagesWithDateSeparators}
                         selectedChatId={selectedChatId}
+                        isLoadingMore={loadingMoreMessages}
+                        hasMoreMessages={hasMoreMessages}
+                        onLoadMore={loadMoreMessages}
                     />
 
                     {/* Preview de archivos y audio seleccionados */}

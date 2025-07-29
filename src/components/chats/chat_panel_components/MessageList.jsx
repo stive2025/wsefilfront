@@ -1,13 +1,25 @@
-import React, { useRef, useEffect, useState, forwardRef, useImperativeHandle } from "react";
+import React, { useRef, useEffect, useState, forwardRef, useImperativeHandle, useCallback } from "react";
 import { useTheme } from "@/contexts/themeContext";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import clsx from "clsx";
 
-const MessageList = forwardRef(({ isLoading, isNewChat, hasMessages, renderMessagesWithDateSeparators, selectedChatId }, ref) => {
+const MessageList = forwardRef(({ 
+  isLoading, 
+  isNewChat, 
+  hasMessages, 
+  renderMessagesWithDateSeparators, 
+  selectedChatId,
+  // Nuevas props para paginación
+  isLoadingMore = false,
+  hasMoreMessages = false,
+  onLoadMore = () => {}
+}, ref) => {
   const { theme } = useTheme();
   const messageListRef = useRef(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const previousChatIdRef = useRef(null);
+  const shouldScrollToBottomRef = useRef(false);
   
   // Obtener la ruta del SVG basado en el tema
   const getBackgroundSVG = () => {
@@ -33,24 +45,52 @@ const MessageList = forwardRef(({ isLoading, isNewChat, hasMessages, renderMessa
     return scrollHeight - scrollTop - clientHeight < 100; // 100px de margen
   };
 
-  // Manejar el evento de scroll
-  const handleScroll = () => {
-    if (messageListRef.current && hasMessages) {
-      const nearBottom = isNearBottom();
-      setShowScrollButton(!nearBottom);
-    }
-  };
+  // Detectar si el usuario está cerca del top para cargar más mensajes
+  const isNearTop = useCallback(() => {
+    if (!messageListRef.current) return false;
+    const { scrollTop } = messageListRef.current;
+    return scrollTop <= 100; // 100px de margen desde el top
+  }, []);
 
-  // Hacer scroll al final cuando se selecciona un chat diferente
+  // Manejar el evento de scroll
+  const handleScroll = useCallback(() => {
+    if (!messageListRef.current || !hasMessages) return;
+    
+    const nearBottom = isNearBottom();
+    const nearTop = isNearTop();
+    
+    // Mostrar/ocultar botón de scroll al final
+    setShowScrollButton(!nearBottom);
+    
+    // Cargar más mensajes si está cerca del top
+    if (nearTop && !isLoadingMore && hasMoreMessages) {
+      onLoadMore();
+    }
+  }, [hasMessages, isNearBottom, isNearTop, isLoadingMore, hasMoreMessages, onLoadMore]);
+
+  // Detectar cambio de chat y marcar para scroll automático
   useEffect(() => {
-    if (selectedChatId?.id && hasMessages && !isLoading) {
+    const currentChatId = selectedChatId?.id;
+    const previousChatId = previousChatIdRef.current;
+    
+    // Si cambió el chat ID, marcar para hacer scroll al final
+    if (currentChatId && currentChatId !== previousChatId) {
+      shouldScrollToBottomRef.current = true;
+      previousChatIdRef.current = currentChatId;
+    }
+  }, [selectedChatId?.id]);
+  
+  // Hacer scroll al final solo cuando sea necesario
+  useEffect(() => {
+    if (shouldScrollToBottomRef.current && hasMessages && !isLoading) {
       // Usar setTimeout para asegurar que el DOM se haya actualizado
       setTimeout(() => {
         scrollToBottom();
         setShowScrollButton(false); // Ocultar botón al cambiar de chat
+        shouldScrollToBottomRef.current = false; // Reset flag
       }, 100);
     }
-  }, [selectedChatId?.id, hasMessages, isLoading]);
+  }, [hasMessages, isLoading]);
 
   // Agregar listener de scroll
   useEffect(() => {
@@ -59,7 +99,7 @@ const MessageList = forwardRef(({ isLoading, isNewChat, hasMessages, renderMessa
       scrollContainer.addEventListener('scroll', handleScroll);
       return () => scrollContainer.removeEventListener('scroll', handleScroll);
     }
-  }, [hasMessages]);
+  }, [handleScroll]);
   
   return (
     <div
@@ -76,9 +116,31 @@ const MessageList = forwardRef(({ isLoading, isNewChat, hasMessages, renderMessa
         backgroundAttachment: 'local'
       }}
     >
+      {/* Indicador de carga para más mensajes (parte superior) */}
+      <AnimatePresence>
+        {isLoadingMore && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+            className="flex justify-center py-3 border-b border-gray-200 dark:border-gray-700"
+          >
+            <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+              <Loader2 size={16} className="animate-spin" />
+              <span>Cargando mensajes anteriores...</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {/* Indicador de carga inicial */}
       {isLoading && (
         <div className="flex justify-center py-4">
-          <span className="animate-spin">Cargando...</span>
+          <div className="flex items-center space-x-2">
+            <Loader2 size={20} className="animate-spin" />
+            <span>Cargando mensajes...</span>
+          </div>
         </div>
       )}
       {isNewChat && !hasMessages ? (
