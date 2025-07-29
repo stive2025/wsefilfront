@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import Resize from "@/hooks/responsiveHook.jsx";
-import { Search, Plus, Pencil, Trash2, ArrowLeft } from "lucide-react";
+import { Search, Plus, Pencil, Trash2, ArrowLeft, Loader2 } from "lucide-react";
 import { useContext, useRef, useCallback, useEffect, useState } from "react";
 import { NewContactForm, ChatInterfaceClick, NewMessage, UpdateContactForm, ContactHandle } from "@/contexts/chats.js";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -50,7 +50,7 @@ const handleClear = () => {
   );
 };
 
-const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, lastContactRef, setSelectedChatId, setNewMessage }) => {
+const ContactItems = ({ contacts, onDeleteContact, isDeleting, isLoadingEdit, onFindContact, lastContactRef, setSelectedChatId, setNewMessage }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { theme } = useTheme();
@@ -184,19 +184,25 @@ const ContactItems = ({ contacts, onDeleteContact, isDeleting, onFindContact, la
               {item.is_assign ? (
                 // Botones normales cuando el contacto está asignado
                 <>
-                  <AbilityGuard abilities={[ABILITIES.CONTACTS.UPDATE]}>
+                  <AbilityGuard abilities={[ABILITIES.CONTACTS.EDIT]}>
                     <button
                       className={`p-1 rounded-full text-[rgb(var(--color-text-secondary-${theme}))] 
                       hover:bg-[rgb(var(--color-bg-${theme}))] hover:text-[rgb(var(--color-primary-${theme}))] 
-                      transition-colors duration-200`}
+                      transition-colors duration-200 ${isLoadingEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
                       onClick={(e) => {
                         e.stopPropagation();
-                        onFindContact(item.id);
+                        if (!isLoadingEdit) {
+                          onFindContact(item.id);
+                        }
                       }}
-                      disabled={isDeleting}
-                      title="Editar contacto"
+                      disabled={isDeleting || isLoadingEdit}
+                      title={isLoadingEdit ? "Cargando datos del contacto..." : "Editar contacto"}
                     >
-                      <Pencil size={16} />
+                      {isLoadingEdit ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <Pencil size={16} />
+                      )}
                     </button>
                   </AbilityGuard>
 
@@ -251,6 +257,7 @@ const ListContacts = () => {
   const isMobile = Resize();
   const location = useLocation();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isLoadingEdit, setIsLoadingEdit] = useState(false);
 
   // Usar el hook optimizado para búsqueda de contactos
   const {
@@ -290,6 +297,16 @@ const ListContacts = () => {
     if (node) observer.current.observe(node);
   }, [hasMore, loading, isSearchMode, loadMore]);
 
+  // Efecto para limpiar estado de edición al cargar la interfaz
+  useEffect(() => {
+    if (location.pathname === "/contacts") {
+      // Limpiar estado de edición al cargar la interfaz de contactos
+      setContactFind(null);
+      setContactNew(false);
+      setIsLoadingEdit(false);
+    }
+  }, [location.pathname, setContactFind, setContactNew]);
+
   // Efecto para refrescar cuando cambia contactHandle
   useEffect(() => {
     if (contactHandle) {
@@ -320,15 +337,25 @@ const ListContacts = () => {
   // Función optimizada para obtener el contacto a editar
   const handleFindContact = async (id) => {
     try {
-      setIsDeleting(true);
-      const contact = await getContactById(id);
-      setContactFind(contact);
-      setContactNew(true);
+      console.log('Buscando contacto con ID:', id);
+      setIsLoadingEdit(true); // Estado específico para carga de edición
+      
+      const response = await getContactById(id);
+      console.log('Respuesta getContactById:', response);
+      
+      if (response.success && response.data) {
+        console.log('Contacto encontrado:', response.data);
+        setContactFind(response.data); // Usar response.data, no response
+        setContactNew(true); // Abrir el formulario de edición
+      } else {
+        console.error('Error al obtener contacto:', response.message);
+        alert('Error al cargar los datos del contacto: ' + response.message);
+      }
     } catch (error) {
       console.error("Error buscando contacto:", error);
-      // El hook maneja el error automáticamente
+      alert('Error al cargar los datos del contacto');
     } finally {
-      setIsDeleting(false);
+      setIsLoadingEdit(false);
     }
   };
 
@@ -373,6 +400,7 @@ const ListContacts = () => {
                 contacts={contacts}
                 onDeleteContact={handleDeleteContact}
                 isDeleting={isDeleting}
+                isLoadingEdit={isLoadingEdit}
                 onFindContact={handleFindContact}
                 lastContactRef={lastContactRef}
                 setSelectedChatId={setSelectedChatId}
@@ -430,6 +458,7 @@ const ListContacts = () => {
                 contacts={contacts}
                 onDeleteContact={handleDeleteContact}
                 isDeleting={isDeleting}
+                isLoadingEdit={isLoadingEdit}
                 onFindContact={handleFindContact}
                 lastContactRef={lastContactRef}
                 setSelectedChatId={setSelectedChatId}

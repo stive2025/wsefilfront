@@ -470,13 +470,13 @@ const NewContact = () => {
                     <button
                       onClick={handleUpdateContact}
                       disabled={!isFormValid || loading || !canEdit}
-                      className={`py-2 px-4 rounded bg-[rgb(var(--color-primary-${theme}))] text-[rgb(var(--color-text-primary-${theme}))] transition-colors duration-300 hover:bg-[rgb(var(--color-secondary-${theme}))] disabled:opacity-50 disabled:cursor-not-allowed`}
+                      className={`cursor-pointer py-2 px-4 rounded bg-[rgb(var(--color-primary-${theme}))] text-[rgb(var(--color-text-primary-${theme}))] transition-colors duration-300 hover:bg-[rgb(var(--color-secondary-${theme}))] disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                       {loading ? 'Guardando...' : canEdit ? 'Actualizar' : 'No editable'}
                     </button>
                     <button
                       onClick={handleCancelEdit}
-                      className="py-2 px-4 rounded bg-red-500 text-white"
+                      className="cursor-pointer py-2 px-4 rounded bg-red-500 text-white"
                     >
                       Cancelar
                     </button>
