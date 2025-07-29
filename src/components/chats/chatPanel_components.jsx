@@ -233,16 +233,27 @@ const ChatInterface = () => {
     // La paginación ahora se maneja en el hook useMessagesPagination y en MessageList
 
 
-    // Auto-scroll cuando hay nuevos mensajes
+    // Referencia para rastrear el último mensaje y evitar scroll en paginación
+    const lastMessageIdRef = useRef(null);
+    
+    // Auto-scroll solo cuando se agrega un mensaje realmente nuevo al final
     useEffect(() => {
         if (chatMessages && chatMessages.length > 0) {
             const lastMessage = chatMessages[chatMessages.length - 1];
-            const isNewMessage = lastMessage?.is_temp ||
-                lastMessage?.from_me === "true" ||
-                !lastMessage?.from_me;
-
-            if (isNewMessage && !isScrollingManually.current) {
+            const lastMessageId = lastMessage?.id;
+            
+            // Solo hacer scroll si:
+            // 1. Es un mensaje temporal (recién enviado)
+            // 2. O es un mensaje nuevo que no habíamos visto antes (diferente ID)
+            const isTemporaryMessage = lastMessage?.is_temp;
+            const isNewMessageId = lastMessageId && lastMessageId !== lastMessageIdRef.current;
+            
+            if ((isTemporaryMessage || isNewMessageId) && !isScrollingManually.current) {
                 scrollToBottom();
+                // Solo actualizar la referencia si no es un mensaje temporal
+                if (!isTemporaryMessage && lastMessageId) {
+                    lastMessageIdRef.current = lastMessageId;
+                }
             }
         }
     }, [chatMessages]);
@@ -992,14 +1003,16 @@ const ChatInterface = () => {
 
     // Eliminar el scrollToBottom del loadMessages y crear un nuevo useEffect para manejar el scroll
     useEffect(() => {
-        // Solo hacer scroll automático cuando cambia el selectedChatId
+        // Solo hacer scroll automático cuando cambia el ID del chat (no todo el objeto)
         setIsPrivateMessage(false);
-        if (selectedChatId) {
+        // Resetear la referencia del último mensaje al cambiar de chat
+        lastMessageIdRef.current = null;
+        if (selectedChatId?.id) {
             setTimeout(() => {
                 scrollToBottom();
             }, 100);
         }
-    }, [selectedChatId, scrollToBottom]); // Solo depende de selectedChatId
+    }, [selectedChatId?.id, scrollToBottom]); // Solo depende del ID del chat
 
     // Primero, agregamos el manejador de eventos para el pegado
     const handlePaste = (e) => {
