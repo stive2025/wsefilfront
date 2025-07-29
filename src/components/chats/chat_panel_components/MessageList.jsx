@@ -21,6 +21,11 @@ const MessageList = forwardRef(({
   const previousChatIdRef = useRef(null);
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false);
   
+  // Referencias para preservar posición de scroll en paginación
+  const scrollHeightBeforeLoad = useRef(0);
+  const scrollTopBeforeLoad = useRef(0);
+  const isLoadingMoreRef = useRef(false);
+  
   // Obtener la ruta del SVG basado en el tema
   const getBackgroundSVG = () => {
     return theme === 'dark' ? '/bg-dark.jpg' : '/bg-light.jpg';
@@ -91,6 +96,54 @@ const MessageList = forwardRef(({
       }, 100);
     }
   }, [shouldScrollToBottom, hasMessages, isLoading]);
+
+  // Detectar cuando comienza la carga de más mensajes y guardar posición
+  useEffect(() => {
+    if (isLoadingMore && !isLoadingMoreRef.current && messageListRef.current) {
+      // Guardar posición actual antes de cargar
+      scrollHeightBeforeLoad.current = messageListRef.current.scrollHeight;
+      scrollTopBeforeLoad.current = messageListRef.current.scrollTop;
+      isLoadingMoreRef.current = true;
+      console.log('Guardando posición antes de cargar:', {
+        scrollHeight: scrollHeightBeforeLoad.current,
+        scrollTop: scrollTopBeforeLoad.current
+      });
+    } else if (!isLoadingMore && isLoadingMoreRef.current) {
+      // La carga terminó, resetear flag
+      isLoadingMoreRef.current = false;
+    }
+  }, [isLoadingMore]);
+
+  // Ajustar scroll después de cargar mensajes anteriores
+  useEffect(() => {
+    // Solo ajustar cuando la carga termine y tengamos datos guardados
+    if (!isLoadingMore && scrollHeightBeforeLoad.current > 0 && messageListRef.current) {
+      // Usar setTimeout para asegurar que el DOM se actualice
+      setTimeout(() => {
+        if (messageListRef.current) {
+          const currentScrollHeight = messageListRef.current.scrollHeight;
+          const heightDifference = currentScrollHeight - scrollHeightBeforeLoad.current;
+          
+          if (heightDifference > 0) {
+            // Ajustar scroll para mantener la posición relativa
+            const newScrollTop = scrollTopBeforeLoad.current + heightDifference;
+            messageListRef.current.scrollTop = newScrollTop;
+            
+            console.log('Ajustando scroll después de cargar:', {
+              heightDifference,
+              oldScrollTop: scrollTopBeforeLoad.current,
+              newScrollTop,
+              currentScrollHeight
+            });
+          }
+          
+          // Limpiar referencias después del ajuste
+          scrollHeightBeforeLoad.current = 0;
+          scrollTopBeforeLoad.current = 0;
+        }
+      }, 50);
+    }
+  }, [hasMessages, isLoadingMore]);
 
   // Agregar listener de scroll
   useEffect(() => {
