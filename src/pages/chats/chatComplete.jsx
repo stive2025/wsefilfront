@@ -1,6 +1,6 @@
 import { useEffect, useContext, useState, useRef } from "react";
 import ChatInterface from "@/components/chats/chatPanel_components.jsx";
-import ChatList from "@/components/chats/chatList_component.jsx";
+import { ChatListOptimized as ChatList } from "@/components/chats";
 import Resize from "@/hooks/responsiveHook.jsx";
 import ContactInfo from "@/components/chats/contactInfo.jsx";
 import SearchInChat from "@/components/chats/searchInChat.jsx";
@@ -14,7 +14,6 @@ import { useTheme } from "@/contexts/themeContext";
 import { useAuth } from "@/contexts/authContext";
 import { GetCookieItem } from "@/utilities/cookies";
 import { ABILITIES } from "@/constants/abilities.js";
-
 
 const ChatComplete = () => {
     const { callEndpoint } = useFetchAndLoad();
