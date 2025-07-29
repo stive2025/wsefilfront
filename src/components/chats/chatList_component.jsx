@@ -702,7 +702,7 @@ const ChatList = ({ role = "admin" }) => {
         chatData.map(async (chat) => {
           return {
             ...chat,
-            avatar: chat.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
+            avatar: chat.profile_picture || "/avatar.jpg",
           };
         })
       );
@@ -867,7 +867,7 @@ const ChatList = ({ role = "admin" }) => {
           last_message: getMessagePreview(messageData),
           timestamp: new Date(messageData.timestamp).toLocaleDateString(),
           updated_at: messageData.timestamp,
-          avatar: messageData.profile_picture || "https://th.bing.com/th/id/OIP.hmLglIuAaL31MXNFuTGBgAHaHa?rs=1&pid=ImgDetMain",
+          avatar: messageData.profile_picture || "/avatar.jpg",
           unread_message: messageData.from_me === false || messageData.from_me === "false" ? 1 : 0,
           state: "PENDING",
           ack: messageData.ack,
