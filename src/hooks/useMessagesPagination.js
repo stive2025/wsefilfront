@@ -27,6 +27,26 @@ export const useMessagesPagination = (chatId) => {
   const lastChatIdRef = useRef(null);
 
   /**
+   * Función utilitaria para deduplicar mensajes
+   * @param {Array} newMessages - Mensajes nuevos
+   * @param {Array} existingMessages - Mensajes existentes
+   * @returns {Array} - Mensajes únicos
+   */
+  const deduplicateMessages = useCallback((newMessages, existingMessages) => {
+    const existingIds = new Set(existingMessages.map(msg => msg.id));
+    const uniqueMessages = newMessages.filter(msg => {
+      const isDuplicate = existingIds.has(msg.id);
+      if (isDuplicate) {
+        console.log(`Mensaje duplicado detectado y filtrado: ID ${msg.id}`);
+      }
+      return !isDuplicate;
+    });
+    
+    console.log(`Deduplicación: ${newMessages.length} mensajes nuevos, ${uniqueMessages.length} únicos, ${newMessages.length - uniqueMessages.length} duplicados filtrados`);
+    return uniqueMessages;
+  }, []);
+
+  /**
    * Cancelar peticiones pendientes
    */
   const cancelPendingRequests = useCallback(() => {
@@ -80,7 +100,12 @@ export const useMessagesPagination = (chatId) => {
         setMessages(prevMessages => {
           // Invertir los nuevos mensajes para mantener el orden cronológico
           const reversedNewMessages = [...newMessages].reverse();
-          return [...reversedNewMessages, ...prevMessages];
+          
+          // Deduplicar mensajes usando la función utilitaria
+          const uniqueNewMessages = deduplicateMessages(reversedNewMessages, prevMessages);
+          
+          console.log(`Paginación: Agregando ${uniqueNewMessages.length} mensajes únicos al inicio`);
+          return [...uniqueNewMessages, ...prevMessages];
         });
       } else {
         // Reemplazar todos los mensajes (carga inicial)
@@ -108,7 +133,7 @@ export const useMessagesPagination = (chatId) => {
       setIsLoadingMore(false);
       abortControllerRef.current = null;
     }
-  }, [chatId, cancelPendingRequests]);
+  }, [chatId, cancelPendingRequests, deduplicateMessages]);
 
   /**
    * Cargar la siguiente página de mensajes (mensajes más antiguos)
@@ -141,7 +166,19 @@ export const useMessagesPagination = (chatId) => {
    * @param {Object} newMessage - Nuevo mensaje a agregar
    */
   const addNewMessage = useCallback((newMessage) => {
-    setMessages(prevMessages => [...prevMessages, newMessage]);
+    setMessages(prevMessages => {
+      // Verificar si el mensaje ya existe (evitar duplicados)
+      const messageExists = prevMessages.some(msg => 
+        msg.id === newMessage.id || 
+        (msg.tempSignature && msg.tempSignature === newMessage.tempSignature)
+      );
+      
+      if (messageExists) {
+        return prevMessages; // No agregar si ya existe
+      }
+      
+      return [...prevMessages, newMessage];
+    });
   }, []);
 
   /**
