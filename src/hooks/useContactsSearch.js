@@ -23,6 +23,7 @@ export const useContactsSearch = (options = {}) => {
   const [hasMore, setHasMore] = useState(true);
   const [totalItems, setTotalItems] = useState(0);
   const [isSearchMode, setIsSearchMode] = useState(false);
+  const [isSearching, setIsSearching] = useState(false); // Estado para loader de búsqueda
 
   // Referencias
   const abortControllerRef = useRef(null);
@@ -91,7 +92,6 @@ export const useContactsSearch = (options = {}) => {
    */
   const searchContacts = useCallback(async (query) => {
     if (!query || query.trim() === '') {
-      console.log('searchContacts: Query vacío, llamando loadContacts');
       loadContacts(1, false);
       return;
     }
@@ -116,7 +116,6 @@ export const useContactsSearch = (options = {}) => {
       setError(null);
       setIsSearchMode(true);
 
-      console.log('Buscando contactos:', validation.query);
       const response = await ContactsService.search(validation.query, controller.signal);
 
       if (response.success) {
@@ -136,28 +135,47 @@ export const useContactsSearch = (options = {}) => {
       }
     } finally {
       setLoading(false);
+      setIsSearching(false); // Desactivar loader de búsqueda
       abortControllerRef.current = null;
     }
   }, [loadContacts]);
 
   /**
-   * Manejar cambio en el término de búsqueda con debounce
+   * Manejar cambio en el término de búsqueda con debounce optimizado
    */
   const handleSearchChange = useCallback((newSearchTerm) => {
     setSearchTerm(newSearchTerm);
 
     if (!autoSearch) return;
 
+    // Cancelar petición anterior si existe
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+
     // Limpiar timer anterior
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
     }
 
-    // Configurar nuevo timer
+    // Si el término está vacío, cargar todos los contactos inmediatamente
+    if (!newSearchTerm || newSearchTerm.trim() === '') {
+      setIsSearching(false); // Quitar loader
+      setIsSearchMode(false);
+      loadContacts(1, false);
+      return;
+    }
+
+    // Activar loader inmediatamente cuando se empieza a tipear
+    setIsSearching(true);
+
+    // Configurar nuevo timer con delay optimizado para mejor UX
     debounceTimerRef.current = setTimeout(() => {
       searchContacts(newSearchTerm);
     }, debounceDelay);
-  }, [searchContacts, autoSearch, debounceDelay]);
+  }, [searchContacts, autoSearch, debounceDelay, loadContacts]);
 
   /**
    * Cargar más contactos (paginación)
@@ -318,6 +336,7 @@ export const useContactsSearch = (options = {}) => {
     hasMore,
     totalItems,
     isSearchMode,
+    isSearching, // Estado del loader de búsqueda
 
     // Funciones
     handleSearchChange,

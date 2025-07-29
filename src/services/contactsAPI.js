@@ -301,6 +301,23 @@ export const ContactUtils = {
   },
 
   /**
+   * Normalizar número de teléfono para búsqueda
+   * @param {string} phoneNumber - Número de teléfono
+   * @returns {string} Número normalizado
+   */
+  normalizePhoneNumber(phoneNumber) {
+    // Remover espacios, guiones y paréntesis
+    const cleaned = phoneNumber.replace(/[\s\-\(\)\+]/g, '');
+    
+    // Si tiene 10 dígitos y empieza con 0, quitar el primer 0
+    if (cleaned.length === 10 && cleaned.startsWith('0')) {
+      return cleaned.substring(1);
+    }
+    
+    return cleaned;
+  },
+
+  /**
    * Validar término de búsqueda
    * @param {string} query - Término de búsqueda
    * @returns {Object} Resultado de validación
@@ -310,13 +327,20 @@ export const ContactUtils = {
       return { isValid: false, message: 'Término de búsqueda requerido' };
     }
 
-    const trimmed = query.trim();
+    let trimmed = query.trim();
     if (trimmed.length < 2) {
       return { isValid: false, message: 'Mínimo 2 caracteres para buscar' };
     }
 
     if (trimmed.length > 50) {
       return { isValid: false, message: 'Máximo 50 caracteres permitidos' };
+    }
+
+    // Detectar si es un número de teléfono y normalizarlo
+    const isPhoneNumber = /^[\d\s\-\(\)\+]+$/.test(trimmed);
+    if (isPhoneNumber) {
+      trimmed = this.normalizePhoneNumber(trimmed);
+      console.log('Número normalizado para búsqueda:', trimmed);
     }
 
     return { isValid: true, query: trimmed };

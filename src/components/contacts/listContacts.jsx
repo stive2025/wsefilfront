@@ -10,7 +10,7 @@ import { useTheme } from "@/contexts/themeContext";
 import useContactsSearch from "@/hooks/useContactsSearch.js";
 
 // Componentes reutilizables
-const SearchInput = ({ searchTerm, onSearchChange }) => {
+const SearchInput = ({ searchTerm, onSearchChange, isSearching = false }) => {
   const { theme } = useTheme();
 const handleClear = () => {
   onSearchChange('');
@@ -30,7 +30,11 @@ const handleClear = () => {
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
           />
-          <Search className={`absolute left-1 text-[rgb(var(--color-text-secondary-${theme}))]`} size={18} />
+          {isSearching ? (
+            <Loader2 className={`absolute left-1 text-[rgb(var(--color-primary-${theme}))] animate-spin`} size={18} />
+          ) : (
+            <Search className={`absolute left-1 text-[rgb(var(--color-text-secondary-${theme}))]`} size={18} />
+          )}
          {searchTerm && (
             <button
               onClick={handleClear}
@@ -267,6 +271,7 @@ const ListContacts = () => {
     searchTerm,
     hasMore,
     isSearchMode,
+    isSearching, // Estado del loader de búsqueda
     handleSearchChange,
     loadMore,
     clearError,
@@ -275,7 +280,7 @@ const ListContacts = () => {
     refresh
   } = useContactsSearch({
     pageSize: 20,
-    debounceDelay: 300,
+    debounceDelay: 600, // Aumentado de 300ms a 600ms para mejor UX al tipear rápido
     autoSearch: true
   });
 
@@ -445,7 +450,11 @@ const ListContacts = () => {
                 <label>CONTACTOS</label>
               </div>
             )}
-            <SearchInput searchTerm={searchTerm} onSearchChange={handleSearchChange} />
+            <SearchInput 
+              searchTerm={searchTerm} 
+              onSearchChange={handleSearchChange} 
+              isSearching={isSearching}
+            />
           </div>
 
           <div className="flex-1 overflow-y-auto scrollbar-hide">
