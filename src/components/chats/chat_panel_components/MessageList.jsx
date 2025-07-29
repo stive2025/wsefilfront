@@ -19,7 +19,7 @@ const MessageList = forwardRef(({
   const messageListRef = useRef(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const previousChatIdRef = useRef(null);
-  const shouldScrollToBottomRef = useRef(false);
+  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false);
   
   // Obtener la ruta del SVG basado en el tema
   const getBackgroundSVG = () => {
@@ -75,22 +75,22 @@ const MessageList = forwardRef(({
     
     // Si cambió el chat ID, marcar para hacer scroll al final
     if (currentChatId && currentChatId !== previousChatId) {
-      shouldScrollToBottomRef.current = true;
+      setShouldScrollToBottom(true);
       previousChatIdRef.current = currentChatId;
     }
   }, [selectedChatId?.id]);
   
-  // Hacer scroll al final solo cuando sea necesario
+  // Hacer scroll al final solo cuando sea necesario (cambio de chat)
   useEffect(() => {
-    if (shouldScrollToBottomRef.current && hasMessages && !isLoading) {
+    if (shouldScrollToBottom && hasMessages && !isLoading) {
       // Usar setTimeout para asegurar que el DOM se haya actualizado
       setTimeout(() => {
         scrollToBottom();
         setShowScrollButton(false); // Ocultar botón al cambiar de chat
-        shouldScrollToBottomRef.current = false; // Reset flag
+        setShouldScrollToBottom(false); // Reset flag
       }, 100);
     }
-  }, [hasMessages, isLoading]);
+  }, [shouldScrollToBottom, hasMessages, isLoading]);
 
   // Agregar listener de scroll
   useEffect(() => {
