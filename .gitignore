@@ -24,3 +24,5 @@ dist-ssr
 *.sw?
 
 dist.rar
+
+.env
