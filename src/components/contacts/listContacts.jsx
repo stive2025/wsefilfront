@@ -392,7 +392,11 @@ const ListContacts = () => {
                 <label>CONTACTOS</label>
               </div>
             )}
-            <SearchInput searchTerm={searchTerm} onSearchChange={handleSearchChange} />
+            <SearchInput 
+              searchTerm={searchTerm} 
+              onSearchChange={handleSearchChange} 
+              isSearching={isSearching}
+            />
           </div>
 
           <div className="flex-1 overflow-y-auto">

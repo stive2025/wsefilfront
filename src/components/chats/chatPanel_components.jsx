@@ -4,6 +4,7 @@ import AudioRecorderBar from "./chat_panel_components/AudioRecorderBar";
 import InputArea from "./chat_panel_components/InputArea";
 import MessageList from "./chat_panel_components/MessageList";
 import EmptyState from "./chat_panel_components/EmptyState";
+import ModernAudioPlayer from "./chat_panel_components/ModernAudioPlayer";
 import { formatTime } from "./chat_panel_components/utils";
 import {
     Send, Search, MessageSquareShare, SquarePlus,
@@ -557,31 +558,13 @@ const ChatInterface = () => {
                             className="mb-2 break-words"
                             dangerouslySetInnerHTML={{ __html: formatMessage(message.body) }}
                         />}
-                        <div className="flex items-center space-x-2">
-                            <audio
-                                controls
-                                src={mediaSource}
-                                className="max-w-[200px] h-8"
-                                onError={(e) => {
-                                    console.error('Error cargando audio:', {
-                                        src: e.target.src,
-                                        error: e.target.error,
-                                        messageId: message.id
-                                    });
-                                    handleMediaError(e.target, 'audio');
-                                }}
-                            />
-                            {!message.is_temp && (
-                                <AbilityGuard abilities={[ABILITIES.CHAT_PANEL.DOWNLOAD_HISTORY]}>
-                                    <button
-                                        onClick={() => handleDownload(mediaSource, message.filename)}
-                                        className="text-white hover:text-gray-300"
-                                    >
-                                        <Download size={20} />
-                                    </button>
-                                </AbilityGuard>
-                            )}
-                        </div>
+                        <ModernAudioPlayer
+                            src={mediaSource}
+                            filename={message.filename}
+                            onDownload={!message.is_temp ? handleDownload : null}
+                            isFromMe={message.from_me === "true"}
+                            showDownload={!message.is_temp}
+                        />
                     </div>
                 );
 
