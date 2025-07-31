@@ -26,7 +26,7 @@ const ChatComplete = () => {
     const isMobile = Resize();
     const [messageData, setMessageData] = useState(null);
     const { theme } = useTheme();
-    const notificationSound = "https://cdn.pixabay.com/audio/2022/03/15/audio_273c5b6e2f.mp3";
+    const notificationSound = "/audios/notification.mp3";
     const [audioInitialized, setAudioInitialized] = useState(false);
     const notificationAudio = useRef(null);
     const [isTabActive, setIsTabActive] = useState(true);
@@ -48,31 +48,49 @@ const ChatComplete = () => {
 
     const { hasAbility } = useAuth(); // Agregar este hook
 
-    // Modificar la inicialización del audio y agregar un useEffect para la carga inicial
+    // Inicialización del audio para notificaciones con manejo mejorado de errores
     useEffect(() => {
         const initAudio = () => {
             try {
+                // Crear una nueva instancia de audio si no existe
                 if (!notificationAudio.current) {
                     notificationAudio.current = new Audio(notificationSound);
                     notificationAudio.current.preload = 'auto';
                     notificationAudio.current.volume = 1.0;
+                    notificationAudio.current.muted = false;
+                    
+                    // Agregar listener para manejar errores de carga
+                    notificationAudio.current.addEventListener('error', (e) => {
+                        console.error('Error en el elemento de audio:', e);
+                    });
                 }
                 
-                // Intentar cargar y reproducir el audio (mudo) para inicializarlo
-                const playPromise = notificationAudio.current.play();
-                if (playPromise !== undefined) {
-                    playPromise
-                        .then(() => {
-                            notificationAudio.current.pause();
-                            notificationAudio.current.currentTime = 0;
-                            setAudioInitialized(true);
-                        })
-                        .catch(error => {
-                            console.error('Error en la inicialización del audio:', error);
-                        });
-                }
+                // Cargar el audio explícitamente
+                notificationAudio.current.load();
+                
+                // Esperar un momento antes de intentar reproducir
+                setTimeout(() => {
+                    // Inicializar reproduciendo brevemente y pausando
+                    const playPromise = notificationAudio.current.play();
+                    if (playPromise !== undefined) {
+                        playPromise
+                            .then(() => {
+                                notificationAudio.current.pause();
+                                notificationAudio.current.currentTime = 0;
+                                setAudioInitialized(true);
+                            })
+                            .catch(error => {
+                                console.error('Error en la inicialización del audio:', error);
+                                // Si el error es por restricciones de autoplay, marcamos como inicializado de todas formas
+                                // ya que se inicializará en la primera interacción del usuario
+                                if (error.name === 'NotAllowedError') {
+                                    setAudioInitialized(true);
+                                }
+                            });
+                    }
+                }, 100);
             } catch (error) {
-                console.error('Error crítico inicializando audio:', error);
+                console.error('Error inicializando audio:', error);
             }
         };
 
@@ -95,48 +113,82 @@ const ChatComplete = () => {
         };
     }, []); // Solo se ejecuta una vez al montar el componente
 
-    // Modificar el useEffect que maneja los mensajes
+    // UseEffect para manejar la reproducción de notificaciones cuando llegan mensajes
     useEffect(() => {
-        if (messageData && notificationAudio.current) {
+        if (!messageData) return;
 
-            // Obtener datos del usuario actual
-            const userData = JSON.parse(GetCookieItem('userData'));
-            const currentUserId = userData.id;
-
-            // Verificar si el usuario puede recibir la notificación
-            const canReceiveNotification =
-                hasAbility(ABILITIES.CHATS.FILTER_BY_AGENT) || // Si tiene el permiso especial
-                (messageData.user_id?.toString() === currentUserId?.toString()); // O si el mensaje es para este usuario
-
-            const shouldPlaySound =
-                canReceiveNotification && // Agregar esta nueva condición
-                (messageData.body || messageData.filename) &&
-                (messageData.from_me === false || messageData.from_me === "false") &&
-                soundEnabled &&
-                (!isTabActive || selectedChatId?.id !== messageData.chat_id);
-
-            if (shouldPlaySound) {
-                try {
-                    // Reiniciar y reproducir
-                    notificationAudio.current.currentTime = 0;
-                    notificationAudio.current.play().catch(error => {
-                        console.error('Error reproduciendo sonido:', error);
-                        // Intentar reinicializar si falla
-                        setAudioInitialized(false);
-                    });
-                } catch (error) {
-                    console.error('Error crítico reproduciendo sonido:', error);
-                    setAudioInitialized(false);
-                }
+        // Obtener datos del usuario actual
+        let userData, currentUserId;
+        try {
+            const userDataCookie = GetCookieItem('userData');
+            if (userDataCookie) {
+                userData = JSON.parse(userDataCookie);
+                currentUserId = userData?.id;
             }
+        } catch (error) {
+            console.error('Error obteniendo datos de usuario:', error);
         }
-    }, [messageData, soundEnabled, selectedChatId, hasAbility]); // Agregar hasAbility a las dependencias
+
+        // Verificar si el usuario puede recibir la notificación
+        const canReceiveNotification =
+            hasAbility(ABILITIES.CHATS.FILTER_BY_AGENT) || // Si tiene el permiso especial
+            (messageData.user_id?.toString() === currentUserId?.toString()); // O si el mensaje es para este usuario
+
+        const shouldPlaySound =
+            canReceiveNotification && 
+            (messageData.body || messageData.filename) &&
+            (messageData.from_me === false || messageData.from_me === "false") &&
+            soundEnabled &&
+            (!isTabActive || selectedChatId?.id !== messageData.chat_id);
+
+        if (shouldPlaySound) {
+            playNotificationSound();
+        }
+    }, [messageData, soundEnabled, selectedChatId, hasAbility, isTabActive]);
 
     // Función para alternar el sonido
     const toggleSound = () => {
         const newSoundState = !soundEnabled;
         setSoundEnabled(newSoundState);
         localStorage.setItem('chatSoundEnabled', newSoundState);
+    };
+
+
+    
+    // Función para reproducir el sonido de notificación con manejo de errores mejorado
+    const playNotificationSound = () => {
+        try {
+            if (notificationAudio.current) {
+                // Asegurarse de que cualquier reproducción anterior se detenga primero
+                if (!notificationAudio.current.paused) {
+                    notificationAudio.current.pause();
+                }
+                
+                // Reiniciar el audio
+                notificationAudio.current.currentTime = 0;
+                notificationAudio.current.volume = 1.0;
+                notificationAudio.current.muted = false;
+                
+                // Esperar un momento antes de reproducir para evitar conflictos
+                setTimeout(() => {
+                    notificationAudio.current.play().catch(error => {
+                        // Manejar específicamente el error AbortError
+                        if (error.name === 'AbortError') {
+                            console.log('Reproducción interrumpida, intentando nuevamente...');
+                            setTimeout(() => {
+                                notificationAudio.current.play().catch(e => {
+                                    console.error('Error en segundo intento de reproducción:', e);
+                                });
+                            }, 100);
+                        } else {
+                            console.error('Error reproduciendo notificación:', error);
+                        }
+                    });
+                }, 50);
+            }
+        } catch (error) {
+            console.error('Error reproduciendo sonido:', error);
+        }
     };
 
     // Default value to prevent null errors
@@ -182,8 +234,19 @@ const ChatComplete = () => {
                 bg-[rgb(var(--color-bg-${theme}))] 
                 text-[rgb(var(--color-text-primary-${theme}))]`}>
 
-                {/* Agregar botón de sonido */}
-                <div className="absolute top-4 right-4 z-50">
+                {/* Controles de sonido */}
+                <div className="absolute top-4 right-4 z-50 flex gap-2">
+                    {/* Botón de prueba de sonido */}
+                    {/* <button
+                        onClick={playNotificationSound}
+                        className={`p-2 rounded-full bg-blue-500 hover:bg-blue-600 text-white
+                        transition-colors duration-200`}
+                        title="Probar sonido"
+                    >
+                        🎵
+                    </button> */}
+                    
+                    {/* Botón para alternar sonido */}
                     <button
                         onClick={() => {
                             toggleSound();
