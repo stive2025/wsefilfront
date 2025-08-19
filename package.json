@@ -29,6 +29,7 @@
     "framer-motion": "^12.4.7",
     "js-cookie": "^3.0.5",
     "lucide-react": "^0.475.0",
+    "next-auth": "^4.24.11",
     "qrcode.react": "^4.2.0",
     "react": "^19.0.0",
     "react-datepicker": "^8.2.1",
