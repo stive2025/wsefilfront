@@ -10,12 +10,12 @@ const Navtopbar = () => {
   const { stateSelected, setStateSelected } = useContext(StateFilter);
   const location = useLocation();
   const { theme } = useTheme();
-  const [activeItem, setActiveItem] = useState(stateSelected || "PENDING");
+  const [activeItem, setActiveItem] = useState(stateSelected || "OPEN");
 
   useEffect(() => {
-    // Solo establecer PENDING si no hay estado seleccionado
+    // Solo establecer OPEN si no hay estado seleccionado
     if (!stateSelected) {
-      setStateSelected("OPEN"); // Cambiar a 'OPEN' como valor por defecto
+      setStateSelected("OPEN");
     }
     setActiveItem(stateSelected || "OPEN");
   }, [stateSelected, setStateSelected]);

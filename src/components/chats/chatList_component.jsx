@@ -496,7 +496,11 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
   if (loading && chats.length === 0) {
     return (
       <div className={`flex justify-center items-center py-10`}>
-        <Loader className="animate-spin" size={24} />
+        <Loader className={`animate-spin ${
+          theme === 'light' 
+            ? 'text-[rgb(var(--color-primary-light))]' 
+            : 'text-[rgb(var(--color-primary-dark))]'
+        }`} size={24} />
       </div>
     );
   } else if (chats.length === 0) {
@@ -627,7 +631,11 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
 
         {loading && chats.length > 0 && (
           <div className={`flex justify-center items-center py-4 bg-transparent`}>
-            <Loader className="animate-spin" size={20} />
+            <Loader className={`animate-spin ${
+              theme === 'light' 
+                ? 'text-[rgb(var(--color-primary-light))]' 
+                : 'text-[rgb(var(--color-primary-dark))]'
+            }`} size={20} />
           </div>
         )}
       </div>
