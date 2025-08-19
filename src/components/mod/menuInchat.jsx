@@ -28,17 +28,20 @@ const MenuInchat = ({ onClose, isOpen }) => {
     const MenuButton = ({ icon: Icon, onClick }) => (
         <li 
             className={`
-                cursor-pointer rounded-full p-2 transition-colors duration-200
-                relative group
+                cursor-pointer rounded-full p-3 transition-all duration-200
+                relative group shadow-lg border
                 ${theme === 'light' 
-                    ? 'bg-[rgb(var(--color-secondary-light))]' 
-                    : 'bg-[rgb(var(--color-secondary-dark))]'}
-                hover:opacity-80
+                    ? 'bg-white border-gray-200 hover:bg-gray-50' 
+                    : 'bg-gray-800 border-gray-600 hover:bg-gray-700'}
                 ${theme === 'light' 
-                    ? 'text-[rgb(var(--color-text-primary-light))]' 
-                    : 'text-[rgb(var(--color-text-primary-dark))]'}
+                    ? 'text-gray-700 hover:text-gray-900' 
+                    : 'text-gray-200 hover:text-white'}
+                hover:scale-105 active:scale-95
             `}
-            onClick={onClick}
+            onClick={(e) => {
+                e.stopPropagation(); // Prevenir propagación de eventos
+                onClick();
+            }}
         >
             <Icon size={20} />
             {/* Tooltip */}
@@ -68,7 +71,7 @@ const MenuInchat = ({ onClose, isOpen }) => {
                     className={`
                         fixed w-16 flex flex-col items-center py-4  mt-10
                     `}
-                    onClick={onClose}
+                    onClick={(e) => e.stopPropagation()} // Prevenir cierre accidental
                 >
                     <ul className="flex flex-col gap-6 flex-1 mr-10">
                         <MenuButton 
@@ -77,7 +80,11 @@ const MenuInchat = ({ onClose, isOpen }) => {
                         />
                         <MenuButton 
                             icon={StickyNote} 
-                            onClick={() => setTagClick(prev => !prev)} 
+                            onClick={() => {
+                                console.log('Abriendo modal de etiquetas');
+                                setTagClick(true); // Siempre abrir, no toggle
+                                onClose(); // Cerrar menú después de abrir modal
+                            }} 
                         />
                         <MenuButton 
                             icon={SquareCheck} 

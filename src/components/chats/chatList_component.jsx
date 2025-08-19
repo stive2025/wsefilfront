@@ -303,6 +303,35 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
   const { theme } = useTheme();
   //const userId = GetCookieItem("userData") ? JSON.parse(GetCookieItem("userData")).id : null;
 
+  // Función para obtener color de fondo del tag mejorado
+  const getTagBackgroundColor = (tagColor, tagName) => {
+    // Si el tag es "VOLVER A LLAMAR" o similar, usar un color más visible
+    if (tagName && tagName.toUpperCase().includes('VOLVER')) {
+      return '#2563eb'; // Azul más visible
+    }
+    
+    // Si el color es amarillo (#FFAA44, #FFA533, etc.), cambiarlo por uno más visible
+    if (tagColor && (tagColor.toLowerCase().includes('#ffa') || tagColor.toLowerCase().includes('yellow'))) {
+      return '#dc2626'; // Rojo más visible
+    }
+    
+    return tagColor || '#6b7280'; // Color por defecto gris
+  };
+
+  // Función para obtener color de texto del tag
+  const getTagTextColor = (tagColor, tagName) => {
+    // Para tags especiales o colores problemáticos, usar blanco
+    if (tagName && tagName.toUpperCase().includes('VOLVER')) {
+      return '#ffffff';
+    }
+    
+    if (tagColor && (tagColor.toLowerCase().includes('#ffa') || tagColor.toLowerCase().includes('yellow'))) {
+      return '#ffffff';
+    }
+    
+    return '#ffffff'; // Siempre blanco para mejor contraste
+  };
+
   const renderAckStatus = (ackStatus) => {
     switch (ackStatus) {
       case -1: // ACK_ERROR
@@ -523,10 +552,11 @@ const ChatItems = ({ chats, loading, loadMoreChats, hasMoreChats, incomingMessag
               {/* Tag del chat */}
               {item.tag_name && (
                 <div 
-                  className="absolute top-1 left-1 text-[10px] px-2 py-0.5 rounded-full font-semibold whitespace-nowrap"
+                  className="absolute top-1 left-1 text-[10px] px-2 py-0.5 rounded-full font-semibold whitespace-nowrap shadow-sm border"
                   style={{
-                    backgroundColor: item.tag_color || '#666',
-                    color: item.tag_color ? '#fff' : '#fff'
+                    backgroundColor: getTagBackgroundColor(item.tag_color, item.tag_name),
+                    color: getTagTextColor(item.tag_color, item.tag_name),
+                    borderColor: 'rgba(255, 255, 255, 0.2)'
                   }}
                 >
                   {item.tag_name}
@@ -720,6 +750,7 @@ const ChatList = ({ role = "admin" }) => {
       }
 
     } catch (error) {
+      console.error("Error obteniendo chats:", error);
       if (!append) {
         setChats([]);
       }
