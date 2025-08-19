@@ -100,10 +100,16 @@ const NavSlideBar = () => {
               : 'active:bg-[rgb(var(--color-primary-dark))]'}
           `}
           onClick={() => {
-            setSelectedChatId(null);
-            setTempIdChat(null);
-            navigate(item.path);
-            if (isMobileView) setShowMenu(false);
+            try {
+              setSelectedChatId(null);
+              setTempIdChat(null);
+              navigate(item.path, { replace: false });
+              if (isMobileView) setShowMenu(false);
+            } catch (error) {
+              console.error('Navigation error:', error);
+              // Fallback: force reload if navigation fails
+              window.location.href = `#${item.path}`;
+            }
           }}
         >
           {item.icon}
@@ -112,11 +118,11 @@ const NavSlideBar = () => {
           {/* Tooltip */}
           {!isMobileView && (
             <div className={`
-              absolute left-12 whitespace-nowrap px-2 py-1 rounded
+              absolute left-12 whitespace-nowrap px-2 py-1 rounded z-50
               opacity-0 group-hover:opacity-100 transition-opacity duration-200
               ${theme === 'light'
                 ? 'bg-[rgb(var(--color-bg-light-secondary))] text-[rgb(var(--color-text-primary-light))]'
-                : 'bg-[rgb(var(--color-bg-dark-secondary))] text-[rgb(var(--color-text-primary-dark))]'}
+                : 'bg-[rgb(var(--color-bg-dark-secondary))] text-[rgb(var(--color-text-primary-dark)))]'}
               shadow-lg text-sm
             `}>
               {item.label}
@@ -134,10 +140,10 @@ const NavSlideBar = () => {
 
   return isMobile ? (
     <header className={`
-      fixed w-full top-0 z-20 h-10
+      fixed w-full top-0 z-50 h-10
       ${theme === 'light' 
         ? 'bg-[rgb(var(--color-bg-light-secondary))]' 
-        : 'bg-[rgb(var(--color-bg-dark-secondary))]'}
+        : 'bg-[rgb(var(--color-bg-dark-secondary)))]'}
     `}>
       <div className="flex items-center justify-between h-full px-4">
         <button
@@ -158,11 +164,11 @@ const NavSlideBar = () => {
 
       {/* Mobile Menu */}
       <nav className={`
-        fixed top-10 left-0 w-full h-[calc(100vh-2.5rem)] transition-transform duration-300 ease-in-out
+        fixed top-10 left-0 w-full h-[calc(100vh-2.5rem)] z-40 transition-transform duration-300 ease-in-out
         ${showMenu ? 'translate-x-0' : '-translate-x-full'}
         ${theme === 'light' 
           ? 'bg-[rgb(var(--color-bg-light-secondary))]' 
-          : 'bg-[rgb(var(--color-bg-dark-secondary))]'}
+          : 'bg-[rgb(var(--color-bg-dark-secondary)))]'}
       `}>
         <ul className="flex flex-col gap-4 p-4">
           {menuOptions.map((item, index) => (
@@ -173,10 +179,10 @@ const NavSlideBar = () => {
     </header>
   ) : (
     <div className={`
-      fixed h-screen w-10 flex flex-col items-center py-4
+      fixed h-screen w-10 z-40 flex flex-col items-center py-4
       ${theme === 'light' 
         ? 'bg-[rgb(var(--color-bg-light-secondary))]' 
-        : 'bg-[rgb(var(--color-bg-dark-secondary))]'}
+        : 'bg-[rgb(var(--color-bg-dark-secondary)))]'}
     `}>
       <ul className="flex flex-col gap-6 flex-1">
         {menuOptions.map((item, index) => (
