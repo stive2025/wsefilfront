@@ -71,63 +71,65 @@ const NavSlideBar = () => {
     
     return (
       <AbilityGuard abilities={item.abilities}>
-        <li
-          className={`
-            cursor-pointer transition-colors duration-200 relative group
-            ${isMobileView
-              ? `flex items-center gap-2 p-2 rounded-md
-                 ${active 
-                   ? theme === 'light'
-                     ? 'text-[rgb(var(--color-primary-light))] font-medium' 
-                     : 'text-[rgb(var(--color-primary-dark))] font-medium'
-                   : theme === 'light' 
-                     ? 'text-[rgb(var(--color-text-primary-light))] hover:text-[rgb(var(--color-primary-light))]' 
-                     : 'text-[rgb(var(--color-text-primary-dark))] hover:text-[rgb(var(--color-primary-dark))]'
-                 }`
-              : `rounded-full p-2
-                 ${active
-                   ? theme === 'light'
-                     ? 'text-[rgb(var(--color-primary-light))]'
-                     : 'text-[rgb(var(--color-primary-dark))]'
-                   : theme === 'light'
-                     ? 'text-[rgb(var(--color-text-secondary-light))] hover:text-[rgb(var(--color-primary-light))]'
-                     : 'text-[rgb(var(--color-text-secondary-dark))] hover:text-[rgb(var(--color-primary-dark))]'
-                 }`
-            }
-            active:bg-opacity-20
-            ${theme === 'light' 
-              ? 'active:bg-[rgb(var(--color-primary-light))]' 
-              : 'active:bg-[rgb(var(--color-primary-dark))]'}
-          `}
-          onClick={() => {
-            try {
-              setSelectedChatId(null);
-              setTempIdChat(null);
-              navigate(item.path, { replace: false });
-              if (isMobileView) setShowMenu(false);
-            } catch (error) {
-              console.error('Navigation error:', error);
-              // Fallback: force reload if navigation fails
-              window.location.href = `#${item.path}`;
-            }
-          }}
-        >
-          {item.icon}
-          {isMobileView && <span>{item.label}</span>}
-          
-          {/* Tooltip */}
-          {!isMobileView && (
-            <div className={`
-              absolute left-12 whitespace-nowrap px-2 py-1 rounded z-50
-              opacity-0 group-hover:opacity-100 transition-opacity duration-200
-              ${theme === 'light'
-                ? 'bg-[rgb(var(--color-bg-light-secondary))] text-[rgb(var(--color-text-primary-light))]'
-                : 'bg-[rgb(var(--color-bg-dark-secondary))] text-[rgb(var(--color-text-primary-dark)))]'}
-              shadow-lg text-sm
-            `}>
-              {item.label}
-            </div>
-          )}
+        <li className="relative">
+          <button
+            className={`
+              cursor-pointer transition-colors duration-200 relative group w-full
+              ${isMobileView
+                ? `flex items-center gap-2 p-2 rounded-md
+                   ${active 
+                     ? theme === 'light'
+                       ? 'text-[rgb(var(--color-primary-light))] font-medium' 
+                       : 'text-[rgb(var(--color-primary-dark))] font-medium'
+                     : theme === 'light' 
+                       ? 'text-[rgb(var(--color-text-primary-light))] hover:text-[rgb(var(--color-primary-light))]' 
+                       : 'text-[rgb(var(--color-text-primary-dark))] hover:text-[rgb(var(--color-primary-dark))]'
+                   }`
+                : `rounded-full p-2
+                   ${active
+                     ? theme === 'light'
+                       ? 'text-[rgb(var(--color-primary-light))]'
+                       : 'text-[rgb(var(--color-primary-dark))]'
+                     : theme === 'light'
+                       ? 'text-[rgb(var(--color-text-secondary-light))] hover:text-[rgb(var(--color-primary-light))]'
+                       : 'text-[rgb(var(--color-text-secondary-dark))] hover:text-[rgb(var(--color-primary-dark))]'
+                   }`
+              }
+              active:bg-opacity-20
+              ${theme === 'light' 
+                ? 'active:bg-[rgb(var(--color-primary-light))]' 
+                : 'active:bg-[rgb(var(--color-primary-dark))]'}
+            `}
+            onClick={() => {
+              try {
+                setSelectedChatId(null);
+                setTempIdChat(null);
+                navigate(item.path, { replace: false });
+                if (isMobileView) setShowMenu(false);
+              } catch (error) {
+                console.error('Navigation error:', error);
+                // Fallback: force reload if navigation fails
+                window.location.href = `#${item.path}`;
+              }
+            }}
+          >
+            {item.icon}
+            {isMobileView && <span>{item.label}</span>}
+            
+            {/* Tooltip */}
+            {!isMobileView && (
+              <div className={`
+                absolute left-12 whitespace-nowrap px-2 py-1 rounded z-50
+                opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none
+                ${theme === 'light'
+                  ? 'bg-[rgb(var(--color-bg-light-secondary))] text-[rgb(var(--color-text-primary-light))]'
+                  : 'bg-[rgb(var(--color-bg-dark-secondary))] text-[rgb(var(--color-text-primary-dark)))]'}
+                shadow-lg text-sm
+              `}>
+                {item.label}
+              </div>
+            )}
+          </button>
         </li>
       </AbilityGuard>
     );
