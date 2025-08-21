@@ -1,4 +1,5 @@
-import React, { useRef, useEffect, useState, forwardRef, useImperativeHandle, useCallback } from "react";
+import { useRef, useEffect, useState, forwardRef, useImperativeHandle, useCallback } from "react";
+import PropTypes from 'prop-types';
 import { useTheme } from "@/contexts/themeContext";
 import { ChevronDown, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -44,11 +45,11 @@ const MessageList = forwardRef(({
   }), []);
 
   // Función para detectar si el usuario está cerca del final
-  const isNearBottom = () => {
+  const isNearBottom = useCallback(() => {
     if (!messageListRef.current) return true;
     const { scrollTop, scrollHeight, clientHeight } = messageListRef.current;
     return scrollHeight - scrollTop - clientHeight < 100; // 100px de margen
-  };
+  }, []);
 
   // Detectar si el usuario está cerca del top para cargar más mensajes
   const isNearTop = useCallback(() => {
@@ -244,5 +245,20 @@ const MessageList = forwardRef(({
 });
 
 MessageList.displayName = 'MessageList';
+
+// PropTypes validation
+MessageList.propTypes = {
+  isLoading: PropTypes.bool,
+  isNewChat: PropTypes.bool,
+  hasMessages: PropTypes.bool,
+  renderMessagesWithDateSeparators: PropTypes.func.isRequired,
+  selectedChatId: PropTypes.oneOfType([
+    PropTypes.string,
+    PropTypes.number
+  ]),
+  isLoadingMore: PropTypes.bool,
+  hasMoreMessages: PropTypes.bool,
+  onLoadMore: PropTypes.func
+};
 
 export default MessageList;

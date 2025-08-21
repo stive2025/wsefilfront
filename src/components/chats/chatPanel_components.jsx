@@ -1,16 +1,13 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import MediaPreview from "./chat_panel_components/MediaPreview";
-import AudioRecorderBar from "./chat_panel_components/AudioRecorderBar";
 import InputArea from "./chat_panel_components/InputArea";
 import MessageList from "./chat_panel_components/MessageList";
 import EmptyState from "./chat_panel_components/EmptyState";
 import ModernAudioPlayer from "./chat_panel_components/ModernAudioPlayer";
-import { formatTime } from "./chat_panel_components/utils";
 import {
-    Send, Search, MessageSquareShare, SquarePlus,
-    Mic, Paperclip, X, ArrowLeft, File,
-    Volume2, PlayCircle, Download, EyeOff, Loader, Clock, Check, AlertTriangle,
-    RefreshCcw, Eye
+    Search, MessageSquareShare, SquarePlus, X, ArrowLeft, File,
+    Download, EyeOff, Loader, Clock, Check, AlertTriangle,
+    RefreshCcw,
 } from "lucide-react";
 import { ABILITIES } from '@/constants/abilities';
 import AbilityGuard from '@/components/common/AbilityGuard';
@@ -24,7 +21,7 @@ import ChatResolved from "@/components/mod/chatResolved.jsx";
 import { TagClick, ResolveClick, SearchInChatClick, TempNewMessage, ChatInterfaceClick, WebSocketMessage } from "@/contexts/chats.js";
 import { useContext } from "react";
 import { useLocation } from "react-router-dom";
-import { getChat, updateChat } from "@/services/chats.js";
+import { updateChat } from "@/services/chats.js";
 import { sendMessage, sendPrivateMessage } from "@/services/messages.js";
 import toast from "react-hot-toast";
 import { useTheme } from "@/contexts/themeContext";
@@ -42,8 +39,6 @@ const ChatInterface = () => {
 
 
     const isScrollingManually = useRef(false);
-    const scrollTimeoutRef = useRef(null);
-    const scrollPositionRef = useRef(null);
     const SERVER_URL = 'http://193.46.198.228:8085/back/public/';
     const isMobile = Resize();
     const location = useLocation();
@@ -80,16 +75,16 @@ const ChatInterface = () => {
         updateMessage,
         hasMessages
     } = useMessagesPagination(selectedChatId?.id);
-    
+
     const [sendingMessage, setSendingMessage] = useState(false);
     const [isNewChat, setIsNewChat] = useState(false);
     const [reopeningChat, setReopeningChat] = useState(false);
     const [record_stream, setStream] = useState(null);  // Reemplaza mediaRecorderRef
-    
+
     // Referencias
     const fileInputRef = useRef(null);
     const messageListRef = useRef(null);
-    
+
     // Determinar si el chat está cerrado
     const isChatClosed = selectedChatId?.status === "CLOSED";
     const shouldShowChat = selectedChatId && (selectedChatId.id || selectedChatId.idContact || selectedChatId.number);
@@ -236,19 +231,19 @@ const ChatInterface = () => {
 
     // Referencia para rastrear el último mensaje y evitar scroll en paginación
     const lastMessageIdRef = useRef(null);
-    
+
     // Auto-scroll solo cuando se agrega un mensaje realmente nuevo al final
     useEffect(() => {
         if (chatMessages && chatMessages.length > 0) {
             const lastMessage = chatMessages[chatMessages.length - 1];
             const lastMessageId = lastMessage?.id;
-            
+
             // Solo hacer scroll si:
             // 1. Es un mensaje temporal (recién enviado)
             // 2. O es un mensaje nuevo que no habíamos visto antes (diferente ID)
             const isTemporaryMessage = lastMessage?.is_temp;
             const isNewMessageId = lastMessageId && lastMessageId !== lastMessageIdRef.current;
-            
+
             if ((isTemporaryMessage || isNewMessageId) && !isScrollingManually.current) {
                 scrollToBottom();
                 // Solo actualizar la referencia si no es un mensaje temporal
@@ -283,11 +278,48 @@ const ChatInterface = () => {
                 // Buscar y actualizar mensaje por ID o temp_signature
                 const messageId = messageData.id_message_wp || messageData.id;
                 const tempSignature = messageData.temp_signature;
-                
-                if (messageId || tempSignature) {
-                    updateMessage(messageId || tempSignature, { ack: messageData.ack });
+
+                let messageFound = false;
+
+                // 1. Buscar por ID del mensaje
+                if (messageId) {
+                    const messageByIdExists = chatMessages.some(msg => msg.id === messageId);
+                    if (messageByIdExists) {
+                        updateMessage(messageId, { ack: messageData.ack });
+                        messageFound = true;
+                        console.log('ACK actualizado por ID:', messageId, 'ACK:', messageData.ack);
+                    }
                 }
-                
+
+                // 2. Si no se encontró por ID, buscar por tempSignature
+                if (!messageFound && tempSignature) {
+                    const messageByTempSig = chatMessages.find(msg => msg.tempSignature === tempSignature);
+                    if (messageByTempSig) {
+                        updateMessage(messageByTempSig.id, { ack: messageData.ack });
+                        messageFound = true;
+                        console.log('ACK actualizado por tempSignature:', tempSignature, 'ACK:', messageData.ack);
+                    }
+                }
+
+                // 3. Si aún no se encontró, buscar por contenido del mensaje
+                if (!messageFound && messageData.body) {
+                    const normalizedFromMe = messageData.from_me === true || messageData.from_me === "true" || messageData.from_me === "yes";
+                    const messageByContent = chatMessages.find(msg => 
+                        msg.body === messageData.body && 
+                        msg.from_me === normalizedFromMe &&
+                        !msg.is_temp
+                    );
+                    if (messageByContent) {
+                        updateMessage(messageByContent.id, { ack: messageData.ack });
+                        messageFound = true;
+                        console.log('ACK actualizado por contenido:', messageData.body, 'ACK:', messageData.ack);
+                    }
+                }
+
+                if (!messageFound) {
+                    console.log('No se encontró mensaje para actualizar ACK:', { messageId, tempSignature, ack: messageData.ack });
+                }
+
                 // Si es ack=3 (leído), actualizar todos los mensajes enviados no leídos
                 if (messageData.ack === 3) {
                     chatMessages.forEach(msg => {
@@ -296,36 +328,75 @@ const ChatInterface = () => {
                         }
                     });
                 }
+
                 return;
             }
 
             // Continuar con el manejo normal de mensajes
             if (messageData.body || messageData.media_type) {
+                // Normalizar el valor de from_me para consistencia
+                const normalizedFromMe = messageData.from_me === true || messageData.from_me === "true" || messageData.from_me === "yes";
+
                 // Buscar mensaje temporal para actualizar
-                const tempMessage = chatMessages.find(msg =>
-                    msg.is_temp &&
-                    msg.body === messageData.body &&
-                    msg.from_me === (messageData.from_me === true || messageData.from_me === "true") &&
-                    (!msg.media_path || msg.media_path === messageData.media_url)
-                );
+                let tempMessage = null;
+                
+                // 1. Primero buscar por tempSignature si está disponible
+                if (messageData.temp_signature) {
+                    tempMessage = chatMessages.find(msg => 
+                        msg.tempSignature === messageData.temp_signature
+                    );
+                    console.log('Búsqueda por tempSignature:', messageData.temp_signature, tempMessage ? 'ENCONTRADO' : 'NO ENCONTRADO');
+                }
+                
+                // 2. Si no se encuentra por tempSignature, buscar por ID del mensaje
+                if (!tempMessage && (messageData.id_message_wp || messageData.id)) {
+                    const messageId = messageData.id_message_wp || messageData.id;
+                    tempMessage = chatMessages.find(msg => 
+                        msg.id === messageId && msg.is_temp
+                    );
+                    console.log('Búsqueda por ID temporal:', messageId, tempMessage ? 'ENCONTRADO' : 'NO ENCONTRADO');
+                }
+                
+                // 3. Si aún no se encuentra, buscar por otros criterios (fallback)
+                if (!tempMessage) {
+                    tempMessage = chatMessages.find(msg =>
+                        msg.is_temp &&
+                        msg.body === messageData.body &&
+                        msg.from_me === normalizedFromMe &&
+                        (!msg.media_path || msg.media_path === messageData.media_url)
+                    );
+                    console.log('Búsqueda por criterios fallback:', tempMessage ? 'ENCONTRADO' : 'NO ENCONTRADO');
+                }
 
                 if (tempMessage) {
                     // Actualizar mensaje temporal
+                    const newMessageId = messageData.id_message_wp || messageData.id;
+                    console.log('Actualizando mensaje temporal:', {
+                        tempId: tempMessage.id,
+                        newId: newMessageId,
+                        ack: messageData.ack || 1,
+                        tempSignature: tempMessage.tempSignature
+                    });
+                    
                     updateMessage(tempMessage.id, {
-                        id: messageData.id_message_wp || messageData.id,
+                        id: newMessageId,
                         is_temp: false,
                         ack: messageData.ack || 1,
                         media_path: messageData.media_url ? `${SERVER_URL}/${messageData.media_url}` : tempMessage.media_path,
                         filename: messageData.filename
                     });
                 } else {
-
-                    // Agregar nuevo mensaje si no es temporal
-                    if (!messageData.from_me || isNewChat) {
+                    // Agregar nuevo mensaje (evitar duplicados de mensajes propios)
+                    const shouldAddMessage = !normalizedFromMe || isNewChat ||
+                        !chatMessages.some(msg =>
+                            msg.id === (messageData.id_message_wp || messageData.id) &&
+                            msg.from_me === normalizedFromMe
+                        );
+                    if (shouldAddMessage) {
                         const normalizedMessage = {
                             id: messageData.id_message_wp || messageData.id,
                             body: messageData.body || '',
-                            from_me: messageData.from_me === true || messageData.from_me === "true",
+                            from_me: normalizedFromMe,
                             media_type: messageData.media_type || 'chat',
                             media_path: messageData.media_url ? `${SERVER_URL}/${messageData.media_url}` : '',
                             media_url: messageData.media_url ? `${SERVER_URL}/${messageData.media_url}` : '',
@@ -349,13 +420,12 @@ const ChatInterface = () => {
                 // Actualizar contador de mensajes no leídos
                 if (currentChatId &&
                     messageData.chat_id === currentChatId &&
-                    !messageData.from_me) {
+                    !normalizedFromMe) {
                     handleUpdateChat(currentChatId, { unread_message: 0 });
                 }
             }
         }
     }, [messageData, selectedChatId, tempIdChat, isNewChat]);
-
 
     useEffect(() => {
         return () => {
@@ -562,7 +632,7 @@ const ChatInterface = () => {
                             src={mediaSource}
                             filename={message.filename}
                             onDownload={!message.is_temp ? handleDownload : null}
-                            isFromMe={message.from_me === "true"}
+                            isFromMe={message.from_me === true || message.from_me === "true" || message.from_me === "yes"}
                             showDownload={!message.is_temp}
                         />
                     </div>
@@ -632,7 +702,7 @@ const ChatInterface = () => {
     // Modificar la función que maneja la visualización del mensaje para incluir el estilo privado
     const renderMessageContent = (message, prevMessageDate) => {
         const { created_at, created_by } = message;
-        const isSelf = message.from_me === "true";
+        const isSelf = message.from_me === true || message.from_me === "true" || message.from_me === "yes";
         const isPrivate = message.is_private === 1;
         const messageTime = formatMessageTime(created_at);
         const messageDate = formatMessageDate(created_at);
@@ -819,7 +889,7 @@ const ChatInterface = () => {
                     id_message_wp: tempId,
                     body: messageText,
                     ack: 0,
-                    from_me: "yes",
+                    from_me: true,
                     to: selectedChatId.number || "",           // destinatario
                     media_type: "chat",
                     timestamp: Math.floor(Date.now() / 1000).toString(),
@@ -1036,11 +1106,7 @@ const ChatInterface = () => {
         });
     };
 
-    function formatTime(secs) {
-        const m = Math.floor(secs / 60).toString().padStart(2, '0');
-        const s = (secs % 60).toString().padStart(2, '0');
-        return `${m}:${s}`;
-    }
+
 
     if (shouldShowChat && isLoading) {
         return (
@@ -1055,13 +1121,6 @@ const ChatInterface = () => {
                 </p>
             </div>
         );
-    }
-
-    // --- UI para la barra de progreso de grabación ---
-    function formatTime(secs) {
-        const m = Math.floor(secs / 60).toString().padStart(2, '0');
-        const s = (secs % 60).toString().padStart(2, '0');
-        return `${m}:${s}`;
     }
 
     return (
