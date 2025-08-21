@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from '@/contexts/authContext';
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
 
 const LoginForm = () => {
   const navigate = useNavigate();
@@ -15,6 +15,7 @@ const LoginForm = () => {
     password: ''
   });
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -78,16 +79,29 @@ const LoginForm = () => {
                 required
               />
 
-              <Input
-                type="password"
-                placeholder="Contraseña"
-                className="px-4 py-2 border rounded-lg"
-                value={credentials.password}
-                onChange={(e) =>
-                  setCredentials({ ...credentials, password: e.target.value })
-                }
-                required
-              />
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Contraseña"
+                  className="px-4 py-2 pr-12 border rounded-lg"
+                  value={credentials.password}
+                  onChange={(e) =>
+                    setCredentials({ ...credentials, password: e.target.value })
+                  }
+                  required
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                  ) : (
+                    <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                  )}
+                </button>
+              </div>
 
               <div className="flex justify-center mt-6">
                 <Button
